@@ -20,6 +20,7 @@ from ttkbootstrap.widgets import DateEntry
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from lector_facturas import procesar_factura, agrupar_por_categoria
 
 
 # ============================================================
@@ -103,16 +104,16 @@ CAMPOS = [
     ("u_iva",       "IVA (16%)",                 "U",              "number"),
     ("ac_importe",  "IMPORTE",                   "ACCESORIOS",     "number"),
     ("ac_iva",      "IVA (16%)",                 "ACCESORIOS",     "number"),
-    ("med_importe", "IMPORTE",                   "MEDICAMENTOS",   "number"),
-    ("med_sin_iva", "SIN IVA",                   "MEDICAMENTOS",   "number"),
-    ("med_iva",     "IVA (16%)",                 "MEDICAMENTOS",   "number"),
-    ("hig_importe", "IMPORTE",                   "HIGIENE",        "number"),
-    ("hig_sin_iva", "SIN IVA",                   "HIGIENE",        "number"),
-    ("hig_iva",     "IVA 16%",                   "HIGIENE",        "number"),
-    ("hig_sin_ieps_6", "SIN IEPS 6%",            "HIGIENE",        "number"),
-    ("hig_ieps_6",  "IEPS 6%",                   "HIGIENE",        "number"),
-    ("hig_sin_ieps_7", "SIN IEPS 7%",            "HIGIENE",        "number"),
-    ("hig_ieps_7",  "IEPS 7%",                   "HIGIENE",        "number"),
+    ("med_importe", "IMPORTE (sin IVA)",   "MEDICAMENTOS",   "number"),
+    ("med_sin_iva", "SIN IVA",             "MEDICAMENTOS",   "number"),
+    ("med_iva",     "IVA (16%)",           "MEDICAMENTOS",   "number"),
+    ("hig_importe",     "IMPORTE (sin IVA)", "HIGIENE", "number"),
+    ("hig_sin_iva",     "SIN IVA",           "HIGIENE", "number"),
+    ("hig_iva",         "IVA 16%",           "HIGIENE", "number"),
+    ("hig_sin_ieps_6",  "SIN IEPS 6%",       "HIGIENE", "number"),
+    ("hig_ieps_6",      "IEPS 6%",           "HIGIENE", "number"),
+    ("hig_sin_ieps_7",  "SIN IEPS 7%",       "HIGIENE", "number"),
+    ("hig_ieps_7",      "IEPS 7%",           "HIGIENE", "number"),
     ("est_importe", "IMPORTE",                   "ESTETICA",       "number"),
     ("est_iva",     "IVA (16%)",                 "ESTETICA",       "number"),
     ("tra_importe", "IMPORTE",                   "TRANSPORTE",     "number"),
@@ -140,33 +141,61 @@ CAMPOS = [
 
 CAMPOS_DICT = {c[0]: c for c in CAMPOS}
 
+# El IVA/IEPS se calcula desde el campo "SIN IVA" (base con IVA desglosado)
+# Solo Medicamentos e Higiene usan este esquema.
 REGLAS_AUTO = {
-    "u_iva":          ("u_importe",    0.16),
-    "ac_iva":         ("ac_importe",   0.16),
-    "med_iva":        ("med_importe",  0.16),
-    "hig_iva":        ("hig_importe",  0.16),
-    "hig_ieps_6":     ("hig_importe",  0.06),
-    "hig_ieps_7":     ("hig_importe",  0.07),
-    "est_iva":        ("est_importe",  0.16),
-    "tra_iva":        ("tra_importe",  0.16),
-    "pen_iva":        ("pen_importe",  0.16),
+    "med_iva":     ("med_sin_iva",     0.16),
+    "hig_iva":     ("hig_sin_iva",     0.16),
+    "hig_ieps_6":  ("hig_sin_ieps_6",  0.06),
+    "hig_ieps_7":  ("hig_sin_ieps_7",  0.07),
+    # El resto de secciones mantiene: importe calcula iva
+    "u_iva":       ("u_importe",       0.16),
+    "ac_iva":      ("ac_importe",      0.16),
+    "est_iva":     ("est_importe",     0.16),
+    "tra_iva":     ("tra_importe",     0.16),
+    "pen_iva":     ("pen_importe",     0.16),
 }
 
-BASES_PARA_TOTAL = [
+# IMPORTES exentos (no llevan IVA)
+BASES_EXENTAS = [
     "u_importe", "ac_importe", "med_importe", "hig_importe",
     "est_importe", "tra_importe", "pen_importe", "vac_importe", "cli_importe",
 ]
 
-EXENTAS_PARA_TOTAL = [
-    "med_sin_iva", "hig_sin_iva", "hig_sin_ieps_6", "hig_sin_ieps_7",
+# Bases con IVA (a las que se les calcula IVA)
+BASES_CON_IVA = [
+    "med_sin_iva", "hig_sin_iva",
+    # "u_sin_iva", "ac_sin_iva", "est_sin_iva", "tra_sin_iva", "pen_sin_iva",
 ]
 
-IMPUESTOS_PARA_TOTAL = [
+# Bases con IEPS
+BASES_CON_IEPS = [
+    "hig_sin_ieps_6", "hig_sin_ieps_7",
+]
+
+# Impuestos
+IMPUESTOS = [
+    "med_iva", "hig_iva", "hig_ieps_6", "hig_ieps_7",
+    # más los iva de otras secciones que sí apliquen
+]
+
+# Categorías para calcular el total por "suma de categorías"
+# (para comparar contra tipo de pago)
+CATEGORIAS_PARA_TOTAL = [
+    # bases exentas
+    "u_importe", "ac_importe", "med_importe", "hig_importe",
+    "est_importe", "tra_importe", "pen_importe", "vac_importe", "cli_importe",
+    # bases con IVA
+    "med_sin_iva", "hig_sin_iva",
+    # bases con IEPS
+    "hig_sin_ieps_6", "hig_sin_ieps_7",
+    # impuestos
     "u_iva", "ac_iva", "med_iva", "hig_iva", "hig_ieps_6", "hig_ieps_7",
     "est_iva", "tra_iva", "pen_iva",
 ]
 
-CATEGORIAS_PARA_TOTAL = BASES_PARA_TOTAL + EXENTAS_PARA_TOTAL + IMPUESTOS_PARA_TOTAL
+# Campos de tipo de pago
+CAMPOS_TIPO_PAGO = ["efectivo", "tarjeta", "cheque", "transfer", "vale"]
 
 # ============================================================
 # RUTAS
@@ -243,6 +272,40 @@ def existe_valor_unico(registros, clave, valor, ignorar_id=None):
         if str(r.get(clave, "")).strip().lower() == v:
             return True
     return False
+
+def obtener_no_factura_numerico(no_factura):
+    """Extrae el número entero de un No. de Factura. Devuelve None si no es numérico."""
+    s = str(no_factura).strip()
+    digitos = "".join(c for c in s if c.isdigit())
+    if not digitos:
+        return None
+    try:
+        return int(digitos)
+    except ValueError:
+        return None
+
+def obtener_consecutivo_esperado(registros, centro=None, anio=None, mes=None,
+                                  ignorar_id=None):
+    """
+    Devuelve el siguiente No. de Factura esperado según los registros
+    del mismo centro/año/mes. Si no hay registros, devuelve None.
+    """
+    numeros = []
+    for r in registros:
+        if ignorar_id is not None and r.get("id") == ignorar_id:
+            continue
+        if centro and r.get("centro") != centro:
+            continue
+        if anio and r.get("anio") != anio:
+            continue
+        if mes and r.get("mes") != mes:
+            continue
+        n = obtener_no_factura_numerico(r.get("no_factura", ""))
+        if n is not None:
+            numeros.append(n)
+    if not numeros:
+        return None
+    return max(numeros) + 1
 
 # ============================================================
 # GESTIÓN DE ARCHIVOS ADJUNTOS
@@ -451,11 +514,15 @@ def evaluar_expresion(texto):
 # WIDGETS PERSONALIZADOS
 # ============================================================
 class EntryMoneda(ttk.Entry):
-    """Entry con formato moneda, evaluación de expresiones y colores."""
+    """Entry con formato moneda, evaluación de expresiones y colores.
+    Al entrar al campo muestra la ÚLTIMA EXPRESIÓN escrita por el usuario
+    (ej. '1+1'), permitiendo editarla. Al salir, se evalúa.
+    """
     def __init__(self, master=None, callback=None, **kw):
         super().__init__(master, justify="right", **kw)
         self.callback = callback
         self._ultimo_valor = 0.0
+        self._ultima_expresion = ""
         self.insert(0, "0.00")
         self.bind("<FocusIn>", self._on_focus_in)
         self.bind("<FocusOut>", self._on_focus_out)
@@ -479,7 +546,6 @@ class EntryMoneda(ttk.Entry):
         try:
             color_fg = COLORES["texto_operacion"] if self._tiene_operacion(texto) else COLORES["texto_normal"]
             self.configure(foreground=color_fg)
-            # Forzar que también se aplique el fondo correcto del tema
             try:
                 self.configure(background=COLORES["fondo_entry"])
             except Exception:
@@ -489,16 +555,34 @@ class EntryMoneda(ttk.Entry):
 
     def _on_focus_in(self, e):
         self.delete(0, tk.END)
-        if self._ultimo_valor:
+        if self._ultima_expresion:
+            self.insert(0, self._ultima_expresion)
+        elif self._ultimo_valor:
             self.insert(0, f"{self._ultimo_valor:.2f}")
         self._pintar()
 
     def _on_focus_out(self, e):
         texto = self.get().strip()
         if self._tiene_operacion(texto):
+            # El usuario está dejando una operación
+            self._ultima_expresion = texto.replace(",", "").replace("$", "").strip()
             self._ultimo_valor = evaluar_expresion(texto)
         else:
-            self._ultimo_valor = limpiar_moneda(texto)
+            # No hay operación visible
+            # Si el texto coincide con el valor formateado Y ya tenemos una expresión,
+            # conservarla (no borrarla)
+            try:
+                valor_actual = limpiar_moneda(texto)
+            except Exception:
+                valor_actual = None
+            if (valor_actual is not None
+                    and abs(valor_actual - self._ultimo_valor) < 0.01
+                    and self._ultima_expresion):
+                # El texto es el valor ya evaluado; conservar la expresión
+                pass
+            else:
+                self._ultima_expresion = ""
+                self._ultimo_valor = limpiar_moneda(texto)
         self.delete(0, tk.END)
         self.insert(0, formatear_moneda(self._ultimo_valor))
         self._pintar()
@@ -511,8 +595,9 @@ class EntryMoneda(ttk.Entry):
             return evaluar_expresion(texto)
         return limpiar_moneda(texto)
 
-    def set_valor(self, v):
+    def set_valor(self, v, expresion=None):
         self._ultimo_valor = float(v or 0)
+        self._ultima_expresion = expresion or ""
         self.delete(0, tk.END)
         self.insert(0, formatear_moneda(self._ultimo_valor))
         self._pintar()
@@ -642,6 +727,9 @@ class AppIngresos(ttk.Window):
         self._construir_ui()
         self._refrescar_tabla()
         self._recalcular_total()
+        self._actualizar_titulo()
+        self._ultima_factura_xml = None
+        self._ultima_factura_pdf = None
 
     def _construir_ui(self):
         # --- Barra superior de configuración ---
@@ -661,6 +749,15 @@ class AppIngresos(ttk.Window):
 
         ttk.Label(top, text="Mes:").grid(row=0, column=4, padx=5, sticky="e")
         self.var_mes = ttk.StringVar(value=MESES_ES[datetime.now().month-1])
+
+        def _on_cambio_reporte(*args):
+            self._refrescar_tabla()
+            self._actualizar_titulo()
+
+        self.var_centro.trace_add("write", _on_cambio_reporte)
+        self.var_mes.trace_add("write", _on_cambio_reporte)
+        self.var_anio.trace_add("write", _on_cambio_reporte)
+
         ttk.Combobox(top, textvariable=self.var_mes, values=MESES_ES,
                      width=12, state="readonly", bootstyle="primary").grid(
             row=0, column=5, padx=5)
@@ -668,6 +765,10 @@ class AppIngresos(ttk.Window):
         ttk.Button(top, text="📁 Abrir carpeta Ingreso",
                    command=self._abrir_carpeta_ingreso,
                    bootstyle="info").grid(row=0, column=6, padx=10)
+
+        ttk.Button(top, text="📊 Reportes",
+                   command=self._ver_reportes,
+                   bootstyle="primary-outline").grid(row=0, column=8, padx=5)
 
         ttk.Button(top, text="🎨 Cambiar tema",
                    command=self._elegir_tema,
@@ -741,6 +842,10 @@ class AppIngresos(ttk.Window):
             base.bind("<FocusOut>",
                       lambda e, b=base, i=iva, t=tasa: self._auto_iva(b, i, t), add="+")
 
+        # --- Label de alerta de total ---
+        self.lbl_alerta_total = ttk.Label(self, text="", bootstyle="danger")
+        self.lbl_alerta_total.pack(fill="x", padx=15, pady=(0, 5))
+
         # --- Barra de botones ---
         bar = ttk.Frame(self)
         bar.pack(fill="x", padx=10, pady=8)
@@ -754,6 +859,9 @@ class AppIngresos(ttk.Window):
                    bootstyle="warning").pack(side="left", padx=4)
         ttk.Button(bar, text="🗑️ Eliminar", command=self._eliminar,
                    bootstyle="danger").pack(side="left", padx=4)
+        ttk.Button(bar, text="📥 Leer factura",
+                   command=self._leer_factura,
+                   bootstyle="info").pack(side="left", padx=4)
         ttk.Button(bar, text="📎 Adjuntar factura",
                    command=self._adjuntar_factura,
                    bootstyle="info").pack(side="left", padx=4)
@@ -817,6 +925,15 @@ class AppIngresos(ttk.Window):
         self._validar_no_factura_visual()
         self._validar_qvet_visual()
 
+        # ---- Refrescar tabla y título al cambiar centro/año/mes ----
+        def _on_cambio_reporte(*args):
+            self._refrescar_tabla()
+            self._actualizar_titulo()
+
+        self.var_centro.trace_add("write", _on_cambio_reporte)
+        self.var_mes.trace_add("write", _on_cambio_reporte)
+        self.var_anio.trace_add("write", _on_cambio_reporte)
+
     # ---------------- SCROLL ----------------
     def _on_mousewheel(self, event):
         if sys.platform == "darwin":
@@ -840,14 +957,29 @@ class AppIngresos(ttk.Window):
     # ---------------- ENTER ----------------
     def _enter_siguiente(self, event):
         widget_actual = event.widget
+
         if isinstance(widget_actual, EntryAutoComplete) and widget_actual._lista:
             widget_actual._seleccionar()
             return "break"
+
+        if isinstance(widget_actual, EntryMoneda):
+            texto = widget_actual.get().strip()
+            if widget_actual._tiene_operacion(texto):
+                widget_actual._ultima_expresion = texto.replace(",", "").replace("$", "").strip()
+                widget_actual._ultimo_valor = evaluar_expresion(texto)
+            else:
+                widget_actual._ultima_expresion = ""
+                widget_actual._ultimo_valor = limpiar_moneda(texto)
+            widget_actual.delete(0, tk.END)
+            widget_actual.insert(0, formatear_moneda(widget_actual._ultimo_valor))
+            widget_actual._pintar()
+            if widget_actual.callback:
+                widget_actual.callback()
+
         try:
             idx = self.widgets_ordenados.index(widget_actual)
         except ValueError:
             return
-        widget_actual.event_generate("<FocusOut>")
         if idx + 1 < len(self.widgets_ordenados):
             siguiente = self.widgets_ordenados[idx + 1]
             siguiente.focus_set()
@@ -862,21 +994,66 @@ class AppIngresos(ttk.Window):
     # ---------------- CÁLCULOS AUTOMÁTICOS ----------------
     def _auto_iva(self, entrada_base, entrada_iva, tasa):
         base = entrada_base.get_valor()
-        if base > 0:
+        if base != 0:
             entrada_iva.set_valor(round(base * tasa, 2))
             self._recalcular_total()
 
     def _recalcular_total(self, *args):
-        total = 0.0
+        """
+        Opción C:
+        - El campo TOTAL muestra la suma de tipo de pago
+          (efectivo + tarjeta + cheque + transfer + vale).
+        - Adicionalmente compara con la suma de categorías
+          (bases + impuestos).
+        - Si hay diferencia > $0.01 y ambos son > 0, alerta visual
+          (borde rojo + mensaje).
+        """
+        # Suma por tipo de pago
+        total_pago = 0.0
+        for clave in CAMPOS_TIPO_PAGO:
+            w = self.entradas.get(clave)
+            if isinstance(w, EntryMoneda):
+                total_pago += w.get_valor()
+
+        # Suma por categorías
+        total_categorias = 0.0
         for clave in CATEGORIAS_PARA_TOTAL:
             w = self.entradas.get(clave)
             if isinstance(w, EntryMoneda):
-                total += w.get_valor()
+                total_categorias += w.get_valor()
+
+        # Actualizar el campo TOTAL (solo lectura, muestra el de pago)
         w_total = self.entradas.get("total")
         if isinstance(w_total, EntryMoneda):
             w_total.configure(state="normal")
-            w_total.set_valor(round(total, 2))
+            w_total.set_valor(round(total_pago, 2))
             w_total.configure(state="readonly")
+
+        # Alerta si no cuadran
+        if total_pago > 0 and total_categorias > 0:
+            dif = abs(total_pago - total_categorias)
+            if dif > 0.01:
+                try:
+                    w_total.configure(foreground="red")
+                    self.lbl_alerta_total.configure(
+                        text=f"⚠️ Diferencia: ${dif:,.2f} "
+                             f"(pago: ${total_pago:,.2f} / "
+                             f"categorías: ${total_categorias:,.2f})"
+                    )
+                except Exception:
+                    pass
+            else:
+                try:
+                    w_total.configure(foreground=COLORES["texto_normal"])
+                    self.lbl_alerta_total.configure(text="")
+                except Exception:
+                    pass
+        else:
+            try:
+                w_total.configure(foreground=COLORES["texto_normal"])
+                self.lbl_alerta_total.configure(text="")
+            except Exception:
+                pass
 
     # ---------------- VALIDACIÓN VISUAL ----------------
     def _validar_campo_unico(self, clave, event=None):
@@ -914,7 +1091,23 @@ class AppIngresos(ttk.Window):
         for clave, _, _, tipo in CAMPOS:
             w = self.entradas[clave]
             if tipo == "number":
-                d[clave] = w.get_valor() if isinstance(w, EntryMoneda) else limpiar_moneda(w.get())
+                if isinstance(w, EntryMoneda):
+                    # Si el usuario dejó una operación sin evaluar,
+                    # evaluarla y guardarla como expresión
+                    texto = w.get().strip()
+                    if w._tiene_operacion(texto):
+                        w._ultima_expresion = texto.replace(",", "").replace("$", "").strip()
+                        w._ultimo_valor = evaluar_expresion(texto)
+                        # Refrescar visualmente el campo
+                        w.delete(0, tk.END)
+                        w.insert(0, formatear_moneda(w._ultimo_valor))
+                    else:
+                        w._ultimo_valor = limpiar_moneda(texto)
+
+                    d[clave] = w._ultimo_valor
+                    d[f"{clave}__expr"] = w._ultima_expresion
+                else:
+                    d[clave] = limpiar_moneda(w.get())
             elif tipo == "date":
                 if isinstance(w, DateEntry):
                     d[clave] = w.entry.get()
@@ -933,7 +1126,8 @@ class AppIngresos(ttk.Window):
             valor = r.get(clave, "")
             if tipo == "number":
                 if isinstance(w, EntryMoneda):
-                    w.set_valor(float(valor or 0))
+                    expr = r.get(f"{clave}__expr", "")
+                    w.set_valor(float(valor or 0), expresion=expr)
             elif tipo == "date":
                 if isinstance(w, DateEntry):
                     try:
@@ -950,11 +1144,13 @@ class AppIngresos(ttk.Window):
 
     def _nuevo(self):
         self.id_actual = None
+        self._ultima_factura_xml = None
+        self._ultima_factura_pdf = None
         hoy = datetime.now().strftime("%d/%m/%Y")
         for clave, _, _, tipo in CAMPOS:
             w = self.entradas[clave]
             if tipo == "number" and isinstance(w, EntryMoneda):
-                w.set_valor(0)
+                w.set_valor(0, expresion="")
             elif tipo == "date":
                 if isinstance(w, DateEntry):
                     try:
@@ -968,12 +1164,37 @@ class AppIngresos(ttk.Window):
             w = self.entradas[clave]
             if isinstance(w, EntryAutoComplete):
                 w.set_opciones(self.historial.get(clave, []))
+        
+        # Sugerir siguiente No. de Factura
+        try:
+            anio_actual = int(self.var_anio.get())
+        except Exception:
+            anio_actual = datetime.now().year
+        esperado = obtener_consecutivo_esperado(
+            self.registros,
+            centro=self.var_centro.get(),
+            anio=anio_actual,
+            mes=self.var_mes.get()
+        )
+        if esperado is not None:
+            self.entradas["no_factura"].insert(0, str(esperado))
+        
         self._recalcular_total()
         self._validar_no_factura_visual()
         self._validar_qvet_visual()
         self.entradas["no_factura"].focus_set()
 
     def _guardar(self):
+        # Forzar que el widget con foco dispare su FocusOut antes de leer,
+        # así se evalúa la expresión que el usuario acaba de escribir.
+        w_foco = self.focus_get()
+        if w_foco is not None:
+            try:
+                w_foco.event_generate("<FocusOut>")
+            except Exception:
+                pass
+            self.update_idletasks()
+
         datos = self._leer_form()
 
         if not datos["no_factura"]:
@@ -1003,6 +1224,27 @@ class AppIngresos(ttk.Window):
                 messagebox.showerror("Duplicado",
                                      f"Ya existe OTRO registro con QVET {datos['qvet']}.")
                 return
+
+        # --- Validación de consecutivo ---
+        if self.id_actual is None:  # solo al crear un registro nuevo
+            esperado = obtener_consecutivo_esperado(
+                self.registros,
+                centro=datos["centro"],
+                anio=datos["anio"],
+                mes=datos["mes"]
+            )
+            actual = obtener_no_factura_numerico(datos["no_factura"])
+            if esperado is not None and actual is not None and actual != esperado:
+                respuesta = messagebox.askyesno(
+                    "No. de Factura no consecutivo",
+                    f"El último No. de Factura registrado es "
+                    f"{esperado - 1}.\n\n"
+                    f"El siguiente debería ser: {esperado}\n"
+                    f"Pero estás ingresando: {actual}\n\n"
+                    "¿Estás seguro de continuar?"
+                )
+                if not respuesta:
+                    return
 
         for clave, _, _, tipo in CAMPOS:
             if tipo == "date":
@@ -1045,13 +1287,42 @@ class AppIngresos(ttk.Window):
         if es_edicion and reg_viejo:
             msgs_archivos = self._gestionar_adjuntos_al_editar(reg_viejo, datos)
 
-        self._refrescar_tabla()
+        # Auto-adjuntar si venimos de una lectura de factura
+                # Auto-adjuntar si venimos de una lectura de factura
+        if self._ultima_factura_xml or self._ultima_factura_pdf:
+            rutas = []
+            if self._ultima_factura_xml:
+                rutas.append(self._ultima_factura_xml)
+            if self._ultima_factura_pdf:
+                rutas.append(self._ultima_factura_pdf)
+
+            try:
+                copiados, errores = adjuntar_archivos(datos, rutas)
+                if copiados:
+                    msgs_archivos.append("")
+                    msgs_archivos.append(f"📎 {len(copiados)} archivo(s) adjuntado(s):")
+                    for _, destino in copiados:
+                        msgs_archivos.append(f"   • {destino.name}")
+                if errores:
+                    msgs_archivos.append("")
+                    msgs_archivos.append("⚠️ Errores al adjuntar:")
+                    for origen, err in errores:
+                        msgs_archivos.append(f"   • {origen}: {err}")
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                msgs_archivos.append(f"⚠️ Excepción al adjuntar: {e}")
+
+            self._ultima_factura_xml = None
+            self._ultima_factura_pdf = None
 
         partes = [msg, f"Carpeta: {ruta}"]
         if msgs_archivos:
             partes.append("")
             partes.extend(msgs_archivos)
         messagebox.showinfo("OK", "\n".join(partes))
+
+        self._refrescar_tabla()
 
         # Limpiar formulario
         self._nuevo()
@@ -1176,10 +1447,268 @@ class AppIngresos(ttk.Window):
                 partes.append(f"   • {a.name}: {e}")
         messagebox.showinfo("Resultado", "\n".join(partes))
 
+    def _leer_factura(self):
+        """Lee un XML (y opcionalmente un PDF) y llena el formulario."""
+        from tkinter import filedialog, messagebox
+
+        # 1. Seleccionar XML
+        ruta_xml = filedialog.askopenfilename(
+            title="Selecciona el XML de la factura",
+            filetypes=[("XML CFDI", "*.xml"), ("Todos", "*.*")]
+        )
+        if not ruta_xml:
+            return
+
+        # 2. Preguntar si quiere adjuntar el PDF también
+        ruta_pdf = filedialog.askopenfilename(
+            title="Selecciona el PDF de la factura (opcional, cancelar para omitir)",
+            filetypes=[("PDF", "*.pdf"), ("Todos", "*.*")]
+        )
+
+        # 3. Procesar
+        try:
+            datos = procesar_factura(ruta_xml, ruta_pdf or None)
+        except Exception as e:
+            messagebox.showerror("Error al leer factura",
+                                 f"No se pudo procesar la factura:\n{e}")
+            return
+
+        # 4. Llenar formulario
+        self._llenar_desde_factura(datos)
+
+        # 5. Guardar rutas para adjuntar después
+        self._ultima_factura_xml = ruta_xml
+        self._ultima_factura_pdf = ruta_pdf
+
+        messagebox.showinfo(
+            "Factura leída",
+            f"Se cargaron los datos de la factura:\n\n"
+            f"No. Factura: {datos['no_factura']}\n"
+            f"RFC: {datos['rfc']}\n"
+            f"Nombre: {datos['nombre']}\n"
+            f"Total: ${datos['total']:,.2f}\n\n"
+            f"Conceptos: {len(datos['conceptos'])}\n\n"
+            "Revisa el formulario y ajusta si algo no cuadra."
+        )
+
+    def _llenar_desde_factura(self, datos):
+        """Llena el formulario con los datos extraídos de la factura."""
+        # 1. Limpiar el formulario
+        self._nuevo()
+
+        # 2. Datos generales
+        self.entradas["no_factura"].delete(0, tk.END)
+        self.entradas["no_factura"].insert(0, datos["no_factura"])
+
+        self.entradas["qvet"].delete(0, tk.END)
+        self.entradas["qvet"].insert(0, datos.get("qvet", ""))
+
+        self.entradas["nombre"].delete(0, tk.END)
+        self.entradas["nombre"].insert(0, datos["nombre"])
+
+        self.entradas["rfc"].delete(0, tk.END)
+        self.entradas["rfc"].insert(0, datos["rfc"])
+
+        self.entradas["folio_fiscal"].delete(0, tk.END)
+        self.entradas["folio_fiscal"].insert(0, datos["folio_fiscal"])
+
+        # Fecha factura
+        if isinstance(self.entradas["fecha"], DateEntry):
+            try:
+                self.entradas["fecha"].entry.delete(0, tk.END)
+                self.entradas["fecha"].entry.insert(0, datos["fecha"])
+            except Exception:
+                pass
+
+        # Fecha impresión
+        if isinstance(self.entradas["fecha_impresion"], DateEntry):
+            try:
+                self.entradas["fecha_impresion"].entry.delete(0, tk.END)
+                self.entradas["fecha_impresion"].entry.insert(0, datos.get("fecha_impresion", ""))
+            except Exception:
+                pass
+
+        # 3. Agrupar conceptos por categoría
+        # Para cada categoría, sumar importes según tengan IVA o no
+        # Estructura: {categoria: {"con_iva": x, "exento": y, "ieps_6": z, "ieps_7": w}}
+        agrupado = {}
+
+        for conc in datos["conceptos"]:
+            cat = conc["categoria"]
+            if cat not in agrupado:
+                agrupado[cat] = {
+                    "importe": 0.0,        # importe de exentos (sin IVA)
+                    "sin_iva": 0.0,        # base con IVA (para med/hig)
+                    "iva": 0.0,
+                    "sin_ieps_6": 0.0,
+                    "ieps_6": 0.0,
+                    "sin_ieps_7": 0.0,
+                    "ieps_7": 0.0,
+                }
+            imp = conc["importe"]
+            tiene_iva = conc["tiene_iva"]
+            tasa_iva = conc["tasa_iva"]
+            tiene_ieps = conc["tiene_ieps"]
+            tasa_ieps = conc["tasa_ieps"]
+
+            # Regla: si la categoría es MEDICAMENTOS o HIGIENE, aplica el nuevo esquema
+            if cat in ("MEDICAMENTOS", "HIGIENE"):
+                if tiene_iva:
+                    # Va a sin_iva + iva
+                    agrupado[cat]["sin_iva"] += imp
+                    agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
+                else:
+                    # Va a importe (exento)
+                    agrupado[cat]["importe"] += imp
+
+                # IEPS solo en HIGIENE
+                if cat == "HIGIENE" and tiene_ieps:
+                    if abs(tasa_ieps - 0.06) < 0.001:
+                        agrupado[cat]["sin_ieps_6"] += imp
+                        agrupado[cat]["ieps_6"] += round(imp * 0.06, 2)
+                    elif abs(tasa_ieps - 0.07) < 0.001:
+                        agrupado[cat]["sin_ieps_7"] += imp
+                        agrupado[cat]["ieps_7"] += round(imp * 0.07, 2)
+            else:
+                # Categorías tradicionales (U, Accesorios, Estética, Transporte, Pensión, Vacuna, Clínica)
+                # Importe = base (que puede o no tener IVA aplicado)
+                # El IVA se calcula después
+                agrupado[cat]["importe"] += imp
+                if tiene_iva:
+                    agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
+
+        # 4. Volcar los totales a los campos
+        mapa_campos = {
+            "U":            {"importe": "u_importe", "iva": "u_iva"},
+            "ACCESORIOS":   {"importe": "ac_importe", "iva": "ac_iva"},
+            "ESTETICA":     {"importe": "est_importe", "iva": "est_iva"},
+            "TRANSPORTE":   {"importe": "tra_importe", "iva": "tra_iva"},
+            "PENSION":      {"importe": "pen_importe", "iva": "pen_iva"},
+            "VACUNA":       {"importe": "vac_importe"},
+            "CLINICA":      {"importe": "cli_importe"},
+            "MEDICAMENTOS": {
+                "importe": "med_importe",
+                "sin_iva": "med_sin_iva",
+                "iva": "med_iva",
+            },
+            "HIGIENE": {
+                "importe": "hig_importe",
+                "sin_iva": "hig_sin_iva",
+                "iva": "hig_iva",
+                "sin_ieps_6": "hig_sin_ieps_6",
+                "ieps_6": "hig_ieps_6",
+                "sin_ieps_7": "hig_sin_ieps_7",
+                "ieps_7": "hig_ieps_7",
+            },
+        }
+
+        for cat, valores in agrupado.items():
+            if cat not in mapa_campos:
+                continue
+            for subclave, campo in mapa_campos[cat].items():
+                valor = valores.get(subclave, 0.0)
+                w = self.entradas.get(campo)
+                if isinstance(w, EntryMoneda):
+                    w.set_valor(round(valor, 2))
+
+        # 5. Total = suma de tipo de pago (el usuario lo llenará)
+        # O si quieres, pre-llenar EFECTIVO con el total:
+        w_efectivo = self.entradas.get("efectivo")
+        if isinstance(w_efectivo, EntryMoneda) and datos["total"] > 0:
+            w_efectivo.set_valor(datos["total"])
+
+        # 6. Recalcular total
+        self._recalcular_total()
+
+    def _actualizar_titulo(self):
+        try:
+            self.title(
+                f"Sistema de Ingresos — {self.var_centro.get()} "
+                f"{self.var_mes.get()} {self.var_anio.get()}"
+            )
+        except Exception:
+            pass
+
+    def _ver_reportes(self):
+        """Muestra todos los reportes existentes con su conteo de registros."""
+        from collections import defaultdict
+        conteos = defaultdict(int)
+        for r in self.registros:
+            key = (r.get("centro", "?"), r.get("anio", "?"), r.get("mes", "?"))
+            conteos[key] += 1
+
+        ventana = ttk.Toplevel(self)
+        ventana.title("📊 Reportes disponibles")
+        ventana.geometry("520x420")
+        ventana.transient(self)
+
+        ttk.Label(ventana, text="Selecciona un reporte:",
+                  font=("Segoe UI", 12, "bold")).pack(pady=10)
+
+        frame = ttk.Frame(ventana)
+        frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+        lb = tk.Listbox(frame, font=("Consolas", 10))
+        lb.pack(side="left", fill="both", expand=True)
+        sb = ttk.Scrollbar(frame, orient="vertical", command=lb.yview)
+        sb.pack(side="right", fill="y")
+        lb.configure(yscrollcommand=sb.set)
+
+        items = []
+        if not conteos:
+            lb.insert(tk.END, "(No hay reportes todavía)")
+        else:
+            for (centro, anio, mes), n in sorted(conteos.items()):
+                txt = f"{centro:>10}  {mes:<12} {anio}   →  {n} registro(s)"
+                lb.insert(tk.END, txt)
+                items.append((centro, anio, mes))
+
+        def ir_a():
+            sel = lb.curselection()
+            if not sel:
+                return
+            centro, anio, mes = items[sel[0]]
+            self.var_centro.set(centro)
+            self.var_anio.set(str(anio))
+            self.var_mes.set(mes)
+            self._refrescar_tabla()
+            self._actualizar_titulo()
+            ventana.destroy()
+
+        lb.bind("<Double-Button-1>", lambda e: ir_a())
+
+        fr = ttk.Frame(ventana)
+        fr.pack(pady=8)
+        ttk.Button(fr, text="➡️ Ir a este reporte", command=ir_a,
+                   bootstyle="success").pack(side="left", padx=4)
+        ttk.Button(fr, text="Cerrar", command=ventana.destroy,
+                   bootstyle="secondary").pack(side="left", padx=4)
+
     def _refrescar_tabla(self):
+        """Muestra solo los registros del centro/año/mes activos, ordenados por No. Factura."""
         for i in self.tabla.get_children():
             self.tabla.delete(i)
-        for r in self.registros:
+
+        try:
+            anio_activo = int(self.var_anio.get())
+        except Exception:
+            anio_activo = None
+        mes_activo = self.var_mes.get()
+        centro_activo = self.var_centro.get()
+
+        filtrados = [
+            r for r in self.registros
+            if r.get("centro") == centro_activo
+            and r.get("anio") == anio_activo
+            and r.get("mes") == mes_activo
+        ]
+
+        def clave_orden(r):
+            n = obtener_no_factura_numerico(r.get("no_factura", ""))
+            return (n is None, n or 0, str(r.get("no_factura", "")))
+        filtrados.sort(key=clave_orden)
+
+        for r in filtrados:
             try:
                 n_adj = len(archivos_del_registro(r))
             except Exception:
@@ -1484,6 +2013,14 @@ class AppIngresos(ttk.Window):
         self._abrir_carpeta(carpeta)
 
     def _escribir_excel(self, ruta, regs):
+        """
+        Genera el Excel con:
+        - Celdas combinadas en encabezados
+        - Formato moneda
+        - Colores por sección
+        - Auto-ajuste de ancho
+        - Preservación de expresiones del usuario como fórmulas de Excel
+        """
         wb = Workbook()
         ws = wb.active
         ws.title = "Hoja1"
@@ -1523,10 +2060,10 @@ class AppIngresos(ttk.Window):
             "G":  ("IVA (16%)",                   "U",             "money"),
             "H":  ("IMPORTE",                     "ACCESORIOS",    "money"),
             "I":  ("IVA (16%)",                   "ACCESORIOS",    "money"),
-            "J":  ("IMPORTE",                     "MEDICAMENTOS",  "money"),
+            "J":  ("IMPORTE (sin IVA)",           "MEDICAMENTOS",  "money"),
             "K":  ("SIN IVA",                     "MEDICAMENTOS",  "money"),
             "L":  ("IVA (16%)",                   "MEDICAMENTOS",  "money"),
-            "M":  ("IMPORTE",                     "HIGIENE",       "money"),
+            "M":  ("IMPORTE (sin IVA)",           "HIGIENE",       "money"),
             "N":  ("SIN IVA",                     "HIGIENE",       "money"),
             "O":  ("IVA (16%)",                   "HIGIENE",       "money"),
             "P":  ("SIN IEPS 6%",                 "HIGIENE",       "money"),
@@ -1558,6 +2095,50 @@ class AppIngresos(ttk.Window):
             "AP": ("FOLIO FISCAL",                "CONTROL",       "text"),
         }
 
+        # Mapeo columna -> clave del JSON
+        mapa_claves = {
+            "A": "no_factura", "B": "qvet", "C": "fecha",
+            "D": "nombre", "E": "rfc",
+            "F": "u_importe", "G": "u_iva",
+            "H": "ac_importe", "I": "ac_iva",
+            "J": "med_importe", "K": "med_sin_iva", "L": "med_iva",
+            "M": "hig_importe", "N": "hig_sin_iva", "O": "hig_iva",
+            "P": "hig_sin_ieps_6", "Q": "hig_ieps_6",
+            "R": "hig_sin_ieps_7", "S": "hig_ieps_7",
+            "T": "est_importe", "U": "est_iva",
+            "V": "tra_importe", "W": "tra_iva",
+            "X": "pen_importe", "Y": "pen_iva",
+            "Z": "vac_importe",
+            "AA": "cli_importe",
+            "AB": "total",
+            "AC": "efectivo", "AD": "tarjeta", "AE": "cheque",
+            "AF": "transfer", "AG": "vale",
+            "AH": "fecha_impresion", "AI": "fecha_ficha",
+            "AJ": "monto_ficha", "AK": "fecha_santander",
+            "AL": "edo_santander_deb", "AM": "edo_santander_cre",
+            "AN": "fecha_bancomer", "AO": "transfer_santander",
+            "AP": "folio_fiscal",
+        }
+
+        # Fórmulas automáticas por columna
+        # (se usan cuando el campo NO tiene expresión guardada)
+        # El número de fila se agrega al final: '=J{r}*0.16'
+        FORMULAS_AUTO = {
+            "G":  "=F{r}*0.16",         # u_iva     desde u_importe
+            "I":  "=H{r}*0.16",         # ac_iva    desde ac_importe
+            "L":  "=K{r}*0.16",         # med_iva   desde med_sin_iva
+            "O":  "=N{r}*0.16",         # hig_iva   desde hig_sin_iva
+            "Q":  "=P{r}*0.06",         # hig_ieps_6 desde hig_sin_ieps_6
+            "S":  "=R{r}*0.07",         # hig_ieps_7 desde hig_sin_ieps_7
+            "U":  "=T{r}*0.16",         # est_iva   desde est_importe
+            "W":  "=V{r}*0.16",         # tra_iva   desde tra_importe
+            "Y":  "=X{r}*0.16",         # pen_iva   desde pen_importe
+            "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}",   # TOTAL desde tipo de pago
+        }
+
+        # ============================================================
+        # FILA 1: GRUPOS (celdas combinadas, sin color de fondo)
+        # ============================================================
         grupos = [
             (6,  7,  "U"),
             (8,  9,  "ACCESORIOS"),
@@ -1583,6 +2164,9 @@ class AppIngresos(ttk.Window):
                 ws.cell(row=1, column=col).border = border
                 ws.cell(row=1, column=col).alignment = centro
 
+        # ============================================================
+        # FILA 2: SUBENCABEZADOS (con color por sección)
+        # ============================================================
         for letra, (titulo, seccion, tipo) in columnas.items():
             c = ws[f"{letra}2"]
             c.value = titulo
@@ -1591,41 +2175,31 @@ class AppIngresos(ttk.Window):
             c.alignment = centro
             c.border = border
 
-        mapa_claves = {
-            "A": "no_factura", "B": "qvet", "C": "fecha",
-            "D": "nombre", "E": "rfc",
-            "F": "u_importe", "G": "u_iva",
-            "H": "ac_importe", "I": "ac_iva",
-            "J": "med_importe", "K": "med_sin_iva", "L": "med_iva",
-            "M": "hig_importe", "N": "hig_sin_iva", "O": "hig_iva",
-            "P": "hig_sin_ieps_6", "Q": "hig_ieps_6",
-            "R": "hig_sin_ieps_7", "S": "hig_ieps_7",
-            "T": "est_importe", "U": "est_iva",
-            "V": "tra_importe", "W": "tra_iva",
-            "X": "pen_importe", "Y": "pen_iva",
-            "Z": "vac_importe",
-            "AA": "cli_importe",
-            "AB": "total",
-            "AC": "efectivo", "AD": "tarjeta", "AE": "cheque",
-            "AF": "transfer", "AG": "vale",
-            "AH": "fecha_impresion", "AI": "fecha_ficha",
-            "AJ": "monto_ficha", "AK": "fecha_santander",
-            "AL": "edo_santander_deb", "AM": "edo_santander_cre",
-            "AN": "fecha_bancomer", "AO": "transfer_santander",
-            "AP": "folio_fiscal",
-        }
-
+        # ============================================================
+        # FILAS DE DATOS
+        # ============================================================
         fila = 3
         for r in regs:
             for letra, (titulo, seccion, tipo) in columnas.items():
                 clave = mapa_claves[letra]
                 valor = r.get(clave, 0 if tipo == "money" else "")
+                expresion = r.get(f"{clave}__expr", "")  # expresión guardada por el user
                 c = ws[f"{letra}{fila}"]
                 c.border = border
+
                 if tipo == "money":
-                    c.value = float(valor or 0)
+                    # 1. Si el usuario escribió una expresión, usarla
+                    if expresion:
+                        c.value = f"={expresion}"
+                    # 2. Si no, y hay fórmula auto, usarla
+                    elif letra in FORMULAS_AUTO:
+                        c.value = FORMULAS_AUTO[letra].format(r=fila)
+                    # 3. Si no, usar el valor numérico
+                    else:
+                        c.value = float(valor or 0)
                     c.number_format = formato_moneda
                     c.alignment = Alignment(horizontal="right", vertical="center")
+
                 elif tipo == "date":
                     if valor:
                         try:
@@ -1635,11 +2209,16 @@ class AppIngresos(ttk.Window):
                         except (ValueError, TypeError):
                             c.value = valor
                     c.alignment = Alignment(horizontal="center", vertical="center")
+
                 else:
                     c.value = valor
                     c.alignment = Alignment(horizontal="left", vertical="center")
+
             fila += 1
 
+        # ============================================================
+        # FILA DE TOTALES
+        # ============================================================
         fila_total = fila
         c_tot = ws.cell(row=fila_total, column=1, value="TOTALES")
         c_tot.font = bold_dark
@@ -1660,6 +2239,9 @@ class AppIngresos(ttk.Window):
             c.fill = fill_total
             c.border = border
 
+        # ============================================================
+        # AUTO-AJUSTE DE ANCHO
+        # ============================================================
         for letra in columnas.keys():
             largo_max = len(str(columnas[letra][0]))
             for ini, fin, texto in grupos:
