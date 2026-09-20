@@ -4,7 +4,7 @@ lector_facturas.py
 Lee facturas CFDI 4.0 (XML) + PDF de representación impresa.
 Clasifica conceptos por descripción usando catalogo_qvet.json (editado a mano).
 """
-
+import sys
 import re
 import json
 import xml.etree.ElementTree as ET
@@ -18,34 +18,37 @@ from pathlib import Path
 _CATALOGO = None
 
 def cargar_catalogo():
-    """Carga catalogo_qvet.json una sola vez."""
+    """Carga catalogo_qvet.json (solo lectura, va en el bundle)."""
     global _CATALOGO
     if _CATALOGO is not None:
         return _CATALOGO
 
-    ruta = Path(__file__).parent / "catalogo_qvet.json"
+    # Buscar primero en la carpeta de datos del usuario
+    ruta_usuario = _carpeta_datos() / "catalogo_qvet.json"
+    ruta_recurso = _ruta_recurso("catalogo_qvet.json")
+
+    ruta = ruta_usuario if ruta_usuario.exists() else ruta_recurso
+
     if not ruta.exists():
-        print(f"⚠️  No se encontró {ruta}")
-        print("   Asegúrate de tener el archivo catalogo_qvet.json en la misma carpeta.")
+        print(f"⚠️  No se encontró catalogo_qvet.json")
         _CATALOGO = {}
         return _CATALOGO
 
     with open(ruta, "r", encoding="utf-8") as f:
         _CATALOGO = json.load(f)
 
-    print(f"✅ Catálogo cargado: {len(_CATALOGO)} productos")
+    print(f"✅ Catálogo cargado: {len(_CATALOGO)} productos desde {ruta}")
     return _CATALOGO
 
 
-_EXCEPCIONES_MANUALES = None
-
-
 def cargar_excepciones_manuales():
-    """Carga categorias_manuales.json."""
+    """Carga categorias_manuales.json (editables por el usuario)."""
     global _EXCEPCIONES_MANUALES
     if _EXCEPCIONES_MANUALES is not None:
         return _EXCEPCIONES_MANUALES
-    ruta = Path(__file__).parent / "categorias_manuales.json"
+
+    # Las excepciones SIEMPRE se leen/escriben en la carpeta de datos
+    ruta = _carpeta_datos() / "categorias_manuales.json"
     if ruta.exists():
         try:
             with open(ruta, "r", encoding="utf-8") as f:
@@ -58,16 +61,17 @@ def cargar_excepciones_manuales():
 
 
 def guardar_excepciones_manuales(exc):
-    """Guarda el dict completo de excepciones."""
+    """Guarda las excepciones en la carpeta de datos del usuario."""
     global _EXCEPCIONES_MANUALES
     _EXCEPCIONES_MANUALES = dict(exc)
 
-    ruta = Path(__file__).parent / "categorias_manuales.json"
+    carpeta = _carpeta_datos()
+    ruta = carpeta / "categorias_manuales.json"
 
-    # Backup diario antes de sobrescribir
+    # Backup diario
     if ruta.exists():
         hoy = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        backup_dir = Path(__file__).parent / "backups"
+        backup_dir = carpeta / "backups"
         backup_dir.mkdir(exist_ok=True)
         backup = backup_dir / f"categorias_manuales_{hoy}.json"
         try:
@@ -78,6 +82,35 @@ def guardar_excepciones_manuales(exc):
 
     with open(ruta, "w", encoding="utf-8") as f:
         json.dump(exc, f, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+_EXCEPCIONES_MANUALES = None
+
+
+def _carpeta_datos():
+    """
+    Carpeta única de datos de la app.
+    Compartida entre años: catálogo, excepciones, backups.
+    """
+    if getattr(sys, 'frozen', False):
+        carpeta = Path.home() / "Documents" / "Contabilidad App"
+        carpeta.mkdir(parents=True, exist_ok=True)
+        return carpeta
+    else:
+        return Path(__file__).parent
+
+
+def _ruta_recurso(nombre_archivo):
+    """
+    Devuelve la ruta de un archivo empaquetado como recurso (solo lectura).
+    Si corremos desde ejecutable, lo busca en el bundle.
+    Si no, en la carpeta del script.
+    """
+    if getattr(sys, 'frozen', False):
+        # PyInstaller guarda los recursos en sys._MEIPASS
+        return Path(sys._MEIPASS) / nombre_archivo
+    else:
+        return Path(__file__).parent / nombre_archivo
 
 
 def normalizar(texto):

@@ -22,6 +22,27 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from lector_facturas import procesar_factura, agrupar_por_categoria
 
+def _carpeta_datos_ingresos():
+    """
+    Carpeta única de datos de la app.
+    Compartida entre años.
+    """
+    if getattr(sys, 'frozen', False):
+        carpeta = Path.home() / "Documents" / "Contabilidad App"
+        carpeta.mkdir(parents=True, exist_ok=True)
+        return carpeta
+    else:
+        return Path(__file__).parent
+
+
+def _carpeta_registros(anio=None):
+    """
+    Carpeta donde viven los registros de un año específico.
+    """
+    anio = anio or datetime.now().year
+    carpeta = _carpeta_datos_ingresos() / f"Contabilidad {anio}"
+    carpeta.mkdir(parents=True, exist_ok=True)
+    return carpeta
 
 # ============================================================
 # CONFIGURACIÓN
@@ -30,9 +51,12 @@ MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
             "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
 
 BASE_DIR = Path.home() / "Documents"
-DB_FILE = Path(__file__).parent / "registros_ingresos.json"
-HISTORIAL_FILE = Path(__file__).parent / "historial_autocompletado.json"
-CONFIG_FILE = Path(__file__).parent / "config_ui.json"
+_CARPETA_DATOS = _carpeta_datos_ingresos()
+# El archivo de registros vive dentro de la subcarpeta del año
+_CARPETA_REGISTROS_ACTUAL = _carpeta_registros()
+DB_FILE = _CARPETA_REGISTROS_ACTUAL / "registros_ingresos.json"
+HISTORIAL_FILE = _CARPETA_DATOS / "historial_autocompletado.json"
+CONFIG_FILE = _CARPETA_DATOS / "config_ui.json"
 
 CONFIG_DEFAULT = {
     "tema": "darkly"

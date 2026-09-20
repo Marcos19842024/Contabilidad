@@ -5,7 +5,7 @@ a = Analysis(
     ['ingresos.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('catalogo_qvet.json', '.'), ('categorias_manuales.json', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
