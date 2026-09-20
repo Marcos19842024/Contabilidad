@@ -124,9 +124,10 @@ CAMPOS = [
     ("cli_importe", "IMPORTE",                   "CLINICA",        "number"),
     ("total",       "TOTAL (auto)",              "TOTAL",          "number"),
     ("efectivo",    "EFECTIVO",                  "TIPO DE PAGO",   "number"),
-    ("tarjeta",     "TARJETA",                   "TIPO DE PAGO",   "number"),
+    ("tc",          "TARJETA CRÉDITO",           "TIPO DE PAGO",   "number"),
+    ("td",          "TARJETA DÉBITO",            "TIPO DE PAGO",   "number"),
     ("cheque",      "CHEQUE",                    "TIPO DE PAGO",   "number"),
-    ("transfer",    "TRANSF.",                   "TIPO DE PAGO",   "number"),
+    ("transfer",    "TRANSFERENCIA",                   "TIPO DE PAGO",   "number"),
     ("vale",        "VALE",                      "TIPO DE PAGO",   "number"),
     ("fecha_impresion",    "FECHA DE IMPRESIÓN",                "CONTROL", "date"),
     ("fecha_ficha",        "FECHA FICHA DE DEPÓSITO",           "CONTROL", "date"),
@@ -195,7 +196,7 @@ CATEGORIAS_PARA_TOTAL = [
 ]
 
 # Campos de tipo de pago
-CAMPOS_TIPO_PAGO = ["efectivo", "tarjeta", "cheque", "transfer", "vale"]
+CAMPOS_TIPO_PAGO = ["efectivo", "tc", "td", "cheque", "transfer", "vale"]
 
 # ============================================================
 # RUTAS
@@ -774,6 +775,10 @@ class AppIngresos(ttk.Window):
                    command=self._elegir_tema,
                    bootstyle="warning-outline").grid(row=0, column=7, padx=10)
         
+        ttk.Button(top, text="🏷️ Reclasificar",
+                   command=self._abrir_reclasificador,
+                   bootstyle="warning-outline").grid(row=0, column=9, padx=5)
+
         # --- Formulario con scroll ---
         cont = ttk.Frame(self)
         cont.pack(fill="both", expand=True, padx=10, pady=5)
@@ -882,7 +887,8 @@ class AppIngresos(ttk.Window):
         self.frame_tabla = ttk.LabelFrame(self, text="Registros guardados", padding=5)
         self.frame_tabla.pack(fill="both", expand=True, padx=10, pady=5)
         cols_vis = ["no_factura", "fecha", "nombre", "rfc", "total",
-                    "efectivo", "tarjeta", "transfer", "folio_fiscal", "adjuntos"]
+                    "efectivo", "tc", "td", "cheque", "transfer",
+                    "folio_fiscal", "adjuntos"]
         self.tabla = ttk.Treeview(self.frame_tabla, columns=cols_vis,
                                   show="headings", height=8,
                                   bootstyle="primary")
@@ -892,7 +898,7 @@ class AppIngresos(ttk.Window):
                 self.tabla.column(c, width=45, anchor="center")
             else:
                 self.tabla.heading(c, text=CAMPOS_DICT[c][1])
-                self.tabla.column(c, width=110, anchor="center")
+                self.tabla.column(c, width=100, anchor="center")
         self.tabla.pack(fill="both", expand=True, side="left")
         sb = ttk.Scrollbar(self.frame_tabla, orient="vertical",
                            command=self.tabla.yview)
@@ -1287,32 +1293,27 @@ class AppIngresos(ttk.Window):
         if es_edicion and reg_viejo:
             msgs_archivos = self._gestionar_adjuntos_al_editar(reg_viejo, datos)
 
-        # Auto-adjuntar si venimos de una lectura de factura
-                # Auto-adjuntar si venimos de una lectura de factura
-        if self._ultima_factura_xml or self._ultima_factura_pdf:
-            rutas = []
-            if self._ultima_factura_xml:
-                rutas.append(self._ultima_factura_xml)
-            if self._ultima_factura_pdf:
-                rutas.append(self._ultima_factura_pdf)
+        # Auto-adjuntar la factura leída (si hay archivos pendientes)
+        if not es_edicion and (self._ultima_factura_xml or self._ultima_factura_pdf):
+            rutas_adjuntar = []
+            if self._ultima_factura_xml and Path(self._ultima_factura_xml).exists():
+                rutas_adjuntar.append(self._ultima_factura_xml)
+            if self._ultima_factura_pdf and Path(self._ultima_factura_pdf).exists():
+                rutas_adjuntar.append(self._ultima_factura_pdf)
 
-            try:
-                copiados, errores = adjuntar_archivos(datos, rutas)
-                if copiados:
-                    msgs_archivos.append("")
-                    msgs_archivos.append(f"📎 {len(copiados)} archivo(s) adjuntado(s):")
-                    for _, destino in copiados:
-                        msgs_archivos.append(f"   • {destino.name}")
-                if errores:
-                    msgs_archivos.append("")
-                    msgs_archivos.append("⚠️ Errores al adjuntar:")
-                    for origen, err in errores:
-                        msgs_archivos.append(f"   • {origen}: {err}")
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-                msgs_archivos.append(f"⚠️ Excepción al adjuntar: {e}")
+            if rutas_adjuntar:
+                try:
+                    copiados, errores = adjuntar_archivos(datos, rutas_adjuntar)
+                    if copiados:
+                        nombres = ", ".join(d.name for _, d in copiados)
+                        msgs_archivos.append(f"\n📎 Adjuntados: {nombres}")
+                    if errores:
+                        for origen, err in errores:
+                            msgs_archivos.append(f"⚠️ Error al adjuntar {origen}: {err}")
+                except Exception as e:
+                    msgs_archivos.append(f"⚠️ Error al adjuntar: {e}")
 
+            # Limpiar rutas pendientes
             self._ultima_factura_xml = None
             self._ultima_factura_pdf = None
 
@@ -1450,8 +1451,9 @@ class AppIngresos(ttk.Window):
     def _leer_factura(self):
         """Lee un XML (y opcionalmente un PDF) y llena el formulario."""
         from tkinter import filedialog, messagebox
+        from lector_facturas import procesar_factura
 
-        # 1. Seleccionar XML
+        # 1. XML
         ruta_xml = filedialog.askopenfilename(
             title="Selecciona el XML de la factura",
             filetypes=[("XML CFDI", "*.xml"), ("Todos", "*.*")]
@@ -1459,7 +1461,7 @@ class AppIngresos(ttk.Window):
         if not ruta_xml:
             return
 
-        # 2. Preguntar si quiere adjuntar el PDF también
+        # 2. PDF (opcional)
         ruta_pdf = filedialog.askopenfilename(
             title="Selecciona el PDF de la factura (opcional, cancelar para omitir)",
             filetypes=[("PDF", "*.pdf"), ("Todos", "*.*")]
@@ -1474,26 +1476,29 @@ class AppIngresos(ttk.Window):
             return
 
         # 4. Llenar formulario
-        self._llenar_desde_factura(datos)
+        resumen = self._llenar_desde_factura(datos)
 
-        # 5. Guardar rutas para adjuntar después
+        # 5. Guardar rutas para auto-adjuntar
         self._ultima_factura_xml = ruta_xml
-        self._ultima_factura_pdf = ruta_pdf
+        self._ultima_factura_pdf = ruta_pdf or None
 
-        messagebox.showinfo(
-            "Factura leída",
-            f"Se cargaron los datos de la factura:\n\n"
-            f"No. Factura: {datos['no_factura']}\n"
-            f"RFC: {datos['rfc']}\n"
-            f"Nombre: {datos['nombre']}\n"
-            f"Total: ${datos['total']:,.2f}\n\n"
-            f"Conceptos: {len(datos['conceptos'])}\n\n"
-            "Revisa el formulario y ajusta si algo no cuadra."
-        )
+        # 6. Mostrar resumen
+        lineas = [
+            f"Factura leída: {datos['no_factura']}",
+            f"Nombre: {datos['nombre']}",
+            f"Total: ${datos['total']:,.2f}",
+            "",
+            "Campos llenados:",
+        ]
+        lineas.extend(resumen)
+        messagebox.showinfo("Factura leída", "\n".join(lineas))
 
     def _llenar_desde_factura(self, datos):
-        """Llena el formulario con los datos extraídos de la factura."""
-        # 1. Limpiar el formulario
+        """
+        Llena el formulario con los datos de la factura.
+        Devuelve la lista de resumen (para mostrar al usuario).
+        """
+        # 1. Limpiar formulario
         self._nuevo()
 
         # 2. Datos generales
@@ -1512,7 +1517,6 @@ class AppIngresos(ttk.Window):
         self.entradas["folio_fiscal"].delete(0, tk.END)
         self.entradas["folio_fiscal"].insert(0, datos["folio_fiscal"])
 
-        # Fecha factura
         if isinstance(self.entradas["fecha"], DateEntry):
             try:
                 self.entradas["fecha"].entry.delete(0, tk.END)
@@ -1520,7 +1524,6 @@ class AppIngresos(ttk.Window):
             except Exception:
                 pass
 
-        # Fecha impresión
         if isinstance(self.entradas["fecha_impresion"], DateEntry):
             try:
                 self.entradas["fecha_impresion"].entry.delete(0, tk.END)
@@ -1528,62 +1531,19 @@ class AppIngresos(ttk.Window):
             except Exception:
                 pass
 
-        # 3. Agrupar conceptos por categoría
-        # Para cada categoría, sumar importes según tengan IVA o no
-        # Estructura: {categoria: {"con_iva": x, "exento": y, "ieps_6": z, "ieps_7": w}}
-        agrupado = {}
+        # 3. Agrupar conceptos y calcular montos por categoría
+        from lector_facturas import agrupar_por_categoria
+        agrupado, detalle = agrupar_por_categoria(datos)
 
-        for conc in datos["conceptos"]:
-            cat = conc["categoria"]
-            if cat not in agrupado:
-                agrupado[cat] = {
-                    "importe": 0.0,        # importe de exentos (sin IVA)
-                    "sin_iva": 0.0,        # base con IVA (para med/hig)
-                    "iva": 0.0,
-                    "sin_ieps_6": 0.0,
-                    "ieps_6": 0.0,
-                    "sin_ieps_7": 0.0,
-                    "ieps_7": 0.0,
-                }
-            imp = conc["importe"]
-            tiene_iva = conc["tiene_iva"]
-            tasa_iva = conc["tasa_iva"]
-            tiene_ieps = conc["tiene_ieps"]
-            tasa_ieps = conc["tasa_ieps"]
+        # Guardar los importes individuales por campo (para la expresión)
+        importes_por_campo = {}
 
-            # Regla: si la categoría es MEDICAMENTOS o HIGIENE, aplica el nuevo esquema
-            if cat in ("MEDICAMENTOS", "HIGIENE"):
-                if tiene_iva:
-                    # Va a sin_iva + iva
-                    agrupado[cat]["sin_iva"] += imp
-                    agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
-                else:
-                    # Va a importe (exento)
-                    agrupado[cat]["importe"] += imp
-
-                # IEPS solo en HIGIENE
-                if cat == "HIGIENE" and tiene_ieps:
-                    if abs(tasa_ieps - 0.06) < 0.001:
-                        agrupado[cat]["sin_ieps_6"] += imp
-                        agrupado[cat]["ieps_6"] += round(imp * 0.06, 2)
-                    elif abs(tasa_ieps - 0.07) < 0.001:
-                        agrupado[cat]["sin_ieps_7"] += imp
-                        agrupado[cat]["ieps_7"] += round(imp * 0.07, 2)
-            else:
-                # Categorías tradicionales (U, Accesorios, Estética, Transporte, Pensión, Vacuna, Clínica)
-                # Importe = base (que puede o no tener IVA aplicado)
-                # El IVA se calcula después
-                agrupado[cat]["importe"] += imp
-                if tiene_iva:
-                    agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
-
-        # 4. Volcar los totales a los campos
+        # Mapa categoría → campos
         mapa_campos = {
             "U":            {"importe": "u_importe", "iva": "u_iva"},
             "ACCESORIOS":   {"importe": "ac_importe", "iva": "ac_iva"},
             "ESTETICA":     {"importe": "est_importe", "iva": "est_iva"},
             "TRANSPORTE":   {"importe": "tra_importe", "iva": "tra_iva"},
-            "PENSION":      {"importe": "pen_importe", "iva": "pen_iva"},
             "VACUNA":       {"importe": "vac_importe"},
             "CLINICA":      {"importe": "cli_importe"},
             "MEDICAMENTOS": {
@@ -1602,23 +1562,42 @@ class AppIngresos(ttk.Window):
             },
         }
 
+        resumen = []
         for cat, valores in agrupado.items():
             if cat not in mapa_campos:
                 continue
             for subclave, campo in mapa_campos[cat].items():
                 valor = valores.get(subclave, 0.0)
+                if valor == 0:
+                    continue
                 w = self.entradas.get(campo)
                 if isinstance(w, EntryMoneda):
-                    w.set_valor(round(valor, 2))
+                    # Construir la expresión a partir del detalle
+                    clave_det = f"{cat}__{subclave}"
+                    terminos = detalle.get(clave_det, [])
+                    if terminos:
+                        expresion = "+".join(terminos)
+                    else:
+                        expresion = f"{valor:.2f}"
 
-        # 5. Total = suma de tipo de pago (el usuario lo llenará)
-        # O si quieres, pre-llenar EFECTIVO con el total:
-        w_efectivo = self.entradas.get("efectivo")
-        if isinstance(w_efectivo, EntryMoneda) and datos["total"] > 0:
-            w_efectivo.set_valor(datos["total"])
+                    w.set_valor(round(valor, 2), expresion=expresion)
+                    resumen.append(f"  {cat} → {campo}: ${valor:,.2f}")
 
-        # 6. Recalcular total
+        # 4. Llenar el tipo de pago
+        pagos = datos.get("pagos", {})
+        for clave in ("efectivo", "tc", "td", "cheque", "transfer", "vale"):
+            valor = pagos.get(clave, 0)
+            if valor <= 0:
+                continue
+            w = self.entradas.get(clave)
+            if isinstance(w, EntryMoneda):
+                w.set_valor(round(valor, 2), expresion=f"{valor:.2f}")
+                resumen.append(f"  {clave.upper()}: ${valor:,.2f}")
+
+        # 5. Recalcular el TOTAL del formulario
         self._recalcular_total()
+
+        return resumen
 
     def _actualizar_titulo(self):
         try:
@@ -1713,15 +1692,17 @@ class AppIngresos(ttk.Window):
                 n_adj = len(archivos_del_registro(r))
             except Exception:
                 n_adj = 0
-            self.tabla.insert("", "end", iid=r["id"],
-                              values=(r.get("no_factura", ""), r.get("fecha", ""),
-                                      r.get("nombre", ""), r.get("rfc", ""),
-                                      formatear_moneda(r.get("total", 0)),
-                                      formatear_moneda(r.get("efectivo", 0)),
-                                      formatear_moneda(r.get("tarjeta", 0)),
-                                      formatear_moneda(r.get("transfer", 0)),
-                                      r.get("folio_fiscal", ""),
-                                      f"📎 {n_adj}" if n_adj else ""))
+                self.tabla.insert("", "end", iid=r["id"],
+                        values=(r.get("no_factura", ""), r.get("fecha", ""),
+                                r.get("nombre", ""), r.get("rfc", ""),
+                                formatear_moneda(r.get("total", 0)),
+                                formatear_moneda(r.get("efectivo", 0)),
+                                formatear_moneda(r.get("tc", 0)),
+                                formatear_moneda(r.get("td", 0)),
+                                formatear_moneda(r.get("cheque", 0)),
+                                formatear_moneda(r.get("transfer", 0)),
+                                r.get("folio_fiscal", ""),
+                                f"📎 {n_adj}" if n_adj else ""))
 
     # ---------------- ADJUNTOS ----------------
     def _adjuntar_factura(self):
@@ -2020,6 +2001,7 @@ class AppIngresos(ttk.Window):
         - Colores por sección
         - Auto-ajuste de ancho
         - Preservación de expresiones del usuario como fórmulas de Excel
+        - Columnas TC y TD en TIPO DE PAGO
         """
         wb = Workbook()
         ws = wb.active
@@ -2050,6 +2032,9 @@ class AppIngresos(ttk.Window):
         }
         fill_total = PatternFill("solid", fgColor="FFD966")
 
+        # ============================================================
+        # DEFINICIÓN DE COLUMNAS
+        # ============================================================
         columnas = {
             "A":  ("No. DE FACTURA",              "GENERAL",       "text"),
             "B":  ("QVET",                        "GENERAL",       "text"),
@@ -2079,23 +2064,26 @@ class AppIngresos(ttk.Window):
             "Z":  ("IMPORTE",                     "VACUNA",        "money"),
             "AA": ("IMPORTE",                     "CLINICA",       "money"),
             "AB": ("TOTAL",                       "TOTAL",         "money"),
+            # TIPO DE PAGO (ahora 6 columnas: efectivo, tc, td, cheque, transf, vale)
             "AC": ("EFECTIVO",                    "TIPO DE PAGO",  "money"),
-            "AD": ("TARJETA",                     "TIPO DE PAGO",  "money"),
-            "AE": ("CHEQUE",                      "TIPO DE PAGO",  "money"),
-            "AF": ("TRANSF.",                     "TIPO DE PAGO",  "money"),
-            "AG": ("VALE",                        "TIPO DE PAGO",  "money"),
-            "AH": ("FECHA DE IMPRESIÓN",          "CONTROL",       "date"),
-            "AI": ("FECHA FICHA DE DEPÓSITO",     "CONTROL",       "date"),
-            "AJ": ("MONTO DE FICHA DE DEPOSITO",  "CONTROL",       "money"),
-            "AK": ("FECHA SANTANDER",             "CONTROL",       "date"),
-            "AL": ("EDO. CUENTA SANTANDER DEBITO","CONTROL",       "money"),
-            "AM": ("EDO. CUENTA SANTANDER CREDITO","CONTROL",      "money"),
-            "AN": ("FECHA BANCOMER",              "CONTROL",       "date"),
-            "AO": ("TRANSFERENCIA SANTANDER",     "CONTROL",       "money"),
-            "AP": ("FOLIO FISCAL",                "CONTROL",       "text"),
+            "AD": ("TC",                          "TIPO DE PAGO",  "money"),
+            "AE": ("TD",                          "TIPO DE PAGO",  "money"),
+            "AF": ("CHEQUE",                      "TIPO DE PAGO",  "money"),
+            "AG": ("TRANSF.",                     "TIPO DE PAGO",  "money"),
+            "AH": ("VALE",                        "TIPO DE PAGO",  "money"),
+            # CONTROL (empieza en AI, todo corrido 2 columnas)
+            "AI": ("FECHA DE IMPRESIÓN",          "CONTROL",       "date"),
+            "AJ": ("FECHA FICHA DE DEPÓSITO",     "CONTROL",       "date"),
+            "AK": ("MONTO DE FICHA DE DEPOSITO",  "CONTROL",       "money"),
+            "AL": ("FECHA SANTANDER",             "CONTROL",       "date"),
+            "AM": ("EDO. CUENTA SANTANDER DEBITO","CONTROL",       "money"),
+            "AN": ("EDO. CUENTA SANTANDER CREDITO","CONTROL",      "money"),
+            "AO": ("FECHA BANCOMER",              "CONTROL",       "date"),
+            "AP": ("TRANSFERENCIA SANTANDER",     "CONTROL",       "money"),
+            "AQ": ("FOLIO FISCAL",                "CONTROL",       "text"),
         }
 
-        # Mapeo columna -> clave del JSON
+        # Mapeo columna → clave del JSON
         mapa_claves = {
             "A": "no_factura", "B": "qvet", "C": "fecha",
             "D": "nombre", "E": "rfc",
@@ -2111,33 +2099,31 @@ class AppIngresos(ttk.Window):
             "Z": "vac_importe",
             "AA": "cli_importe",
             "AB": "total",
-            "AC": "efectivo", "AD": "tarjeta", "AE": "cheque",
-            "AF": "transfer", "AG": "vale",
-            "AH": "fecha_impresion", "AI": "fecha_ficha",
-            "AJ": "monto_ficha", "AK": "fecha_santander",
-            "AL": "edo_santander_deb", "AM": "edo_santander_cre",
-            "AN": "fecha_bancomer", "AO": "transfer_santander",
-            "AP": "folio_fiscal",
+            "AC": "efectivo", "AD": "tc", "AE": "td",
+            "AF": "cheque", "AG": "transfer", "AH": "vale",
+            "AI": "fecha_impresion", "AJ": "fecha_ficha",
+            "AK": "monto_ficha", "AL": "fecha_santander",
+            "AM": "edo_santander_deb", "AN": "edo_santander_cre",
+            "AO": "fecha_bancomer", "AP": "transfer_santander",
+            "AQ": "folio_fiscal",
         }
 
-        # Fórmulas automáticas por columna
-        # (se usan cuando el campo NO tiene expresión guardada)
-        # El número de fila se agrega al final: '=J{r}*0.16'
+        # Fórmulas automáticas (todas corridas 2 columnas)
         FORMULAS_AUTO = {
-            "G":  "=F{r}*0.16",         # u_iva     desde u_importe
-            "I":  "=H{r}*0.16",         # ac_iva    desde ac_importe
-            "L":  "=K{r}*0.16",         # med_iva   desde med_sin_iva
-            "O":  "=N{r}*0.16",         # hig_iva   desde hig_sin_iva
-            "Q":  "=P{r}*0.06",         # hig_ieps_6 desde hig_sin_ieps_6
-            "S":  "=R{r}*0.07",         # hig_ieps_7 desde hig_sin_ieps_7
-            "U":  "=T{r}*0.16",         # est_iva   desde est_importe
-            "W":  "=V{r}*0.16",         # tra_iva   desde tra_importe
-            "Y":  "=X{r}*0.16",         # pen_iva   desde pen_importe
-            "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}",   # TOTAL desde tipo de pago
+            "G":  "=F{r}*0.16",
+            "I":  "=H{r}*0.16",
+            "L":  "=K{r}*0.16",
+            "O":  "=N{r}*0.16",
+            "Q":  "=P{r}*0.06",
+            "S":  "=R{r}*0.07",
+            "U":  "=T{r}*0.16",
+            "W":  "=V{r}*0.16",
+            "Y":  "=X{r}*0.16",
+            "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}+AH{r}",
         }
 
         # ============================================================
-        # FILA 1: GRUPOS (celdas combinadas, sin color de fondo)
+        # FILA 1: GRUPOS (con celdas combinadas)
         # ============================================================
         grupos = [
             (6,  7,  "U"),
@@ -2150,8 +2136,8 @@ class AppIngresos(ttk.Window):
             (26, 26, "VACUNA"),
             (27, 27, "CLINICA"),
             (28, 28, "TOTAL"),
-            (29, 33, "TIPO DE PAGO"),
-            (34, 42, "CONTROL"),
+            (29, 34, "TIPO DE PAGO"),     # ← ahora 6 columnas (AC..AH)
+            (35, 43, "CONTROL"),           # ← ahora 9 columnas (AI..AQ)
         ]
         for ini, fin, texto in grupos:
             if ini != fin:
@@ -2165,7 +2151,7 @@ class AppIngresos(ttk.Window):
                 ws.cell(row=1, column=col).alignment = centro
 
         # ============================================================
-        # FILA 2: SUBENCABEZADOS (con color por sección)
+        # FILA 2: SUBENCABEZADOS (con color)
         # ============================================================
         for letra, (titulo, seccion, tipo) in columnas.items():
             c = ws[f"{letra}2"]
@@ -2183,18 +2169,15 @@ class AppIngresos(ttk.Window):
             for letra, (titulo, seccion, tipo) in columnas.items():
                 clave = mapa_claves[letra]
                 valor = r.get(clave, 0 if tipo == "money" else "")
-                expresion = r.get(f"{clave}__expr", "")  # expresión guardada por el user
+                expresion = r.get(f"{clave}__expr", "")
                 c = ws[f"{letra}{fila}"]
                 c.border = border
 
                 if tipo == "money":
-                    # 1. Si el usuario escribió una expresión, usarla
                     if expresion:
                         c.value = f"={expresion}"
-                    # 2. Si no, y hay fórmula auto, usarla
                     elif letra in FORMULAS_AUTO:
                         c.value = FORMULAS_AUTO[letra].format(r=fila)
-                    # 3. Si no, usar el valor numérico
                     else:
                         c.value = float(valor or 0)
                     c.number_format = formato_moneda
@@ -2265,13 +2248,363 @@ class AppIngresos(ttk.Window):
             ancho = min(max(largo_max + 2, 8), 40)
             ws.column_dimensions[letra].width = ancho
 
-        ws.column_dimensions["AP"].width = max(ws.column_dimensions["AP"].width, 38)
+        ws.column_dimensions["AQ"].width = max(ws.column_dimensions["AQ"].width, 38)
         ws.column_dimensions["D"].width = max(ws.column_dimensions["D"].width, 22)
 
         ws.row_dimensions[1].height = 22
         ws.row_dimensions[2].height = 32
         ws.freeze_panes = "F3"
         wb.save(ruta)
+
+    def _abrir_reclasificador(self):
+        """
+        Ventana para editar las categorías de los productos.
+        Los cambios se acumulan en memoria; solo se guardan al presionar
+        'Guardar cambios'. Incluye opción de 'Deshacer todo'.
+        """
+        from lector_facturas import (
+            cargar_catalogo, cargar_excepciones_manuales,
+            guardar_excepciones_manuales
+        )
+
+        catalogo = cargar_catalogo()
+        excepciones_actuales = dict(cargar_excepciones_manuales())
+        excepciones_originales = dict(excepciones_actuales)
+
+        categorias = ["U", "ACCESORIOS", "MEDICAMENTOS", "HIGIENE",
+                      "ESTETICA", "TRANSPORTE", "PENSION", "VACUNA", "CLINICA"]
+
+        ventana = ttk.Toplevel(self)
+        ventana.title("🏷️ Reclasificador de productos")
+        ventana.geometry("1100x700")
+        ventana.transient(self)
+
+        # ============================================================
+        # BARRA SUPERIOR
+        # ============================================================
+        top = ttk.Frame(ventana)
+        top.pack(fill="x", padx=10, pady=8)
+
+        ttk.Label(top, text="Buscar:").pack(side="left", padx=(0, 5))
+        var_buscar = tk.StringVar()
+        entry_buscar = ttk.Entry(top, textvariable=var_buscar, width=40)
+        entry_buscar.pack(side="left", padx=5)
+
+        ttk.Label(top, text="Filtrar:").pack(side="left", padx=(15, 5))
+        var_filtro = tk.StringVar(value="TODAS")
+        ttk.Combobox(top, textvariable=var_filtro,
+                     values=["TODAS"] + categorias,
+                     width=15, state="readonly").pack(side="left", padx=5)
+
+        ttk.Label(top, text="Mostrar:").pack(side="left", padx=(15, 5))
+        var_origen = tk.StringVar(value="TODOS")
+        ttk.Combobox(top, textvariable=var_origen,
+                     values=["TODOS", "SOLO MODIFICADOS", "SOLO ORIGINALES"],
+                     width=20, state="readonly").pack(side="left", padx=5)
+
+        # ============================================================
+        # CONTENEDOR PRINCIPAL con scroll
+        # ============================================================
+        contenedor = ttk.Frame(ventana)
+        contenedor.pack(fill="both", expand=True, padx=10, pady=5)
+
+        # Canvas + scrollbars
+        canvas = tk.Canvas(contenedor, borderwidth=0, highlightthickness=0)
+        scroll_v = ttk.Scrollbar(contenedor, orient="vertical", command=canvas.yview)
+        frame_interno = ttk.Frame(canvas)
+
+        frame_interno.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        canvas_window = canvas.create_window((0, 0), window=frame_interno, anchor="nw")
+        canvas.configure(yscrollcommand=scroll_v.set)
+
+        canvas.pack(side="left", fill="both", expand=True)
+        scroll_v.pack(side="right", fill="y")
+
+        # Ajustar el ancho del frame interno al ancho del canvas
+        def _on_canvas_configure(event):
+            canvas.itemconfigure(canvas_window, width=event.width)
+        canvas.bind("<Configure>", _on_canvas_configure)
+
+        # ----------- SCROLL CON RUEDA DEL MOUSE -----------
+        def _on_mousewheel(event):
+            if sys.platform == "darwin":
+                delta = -1 * event.delta
+            elif sys.platform.startswith("win"):
+                delta = -1 * (event.delta // 120)
+            else:
+                delta = -1 if event.num == 5 else 1
+            canvas.yview_scroll(int(delta), "units")
+
+        def _bind_mousewheel(widget):
+            widget.bind("<MouseWheel>", _on_mousewheel, add="+")
+            widget.bind("<Button-4>", _on_mousewheel, add="+")
+            widget.bind("<Button-5>", _on_mousewheel, add="+")
+            for hijo in widget.winfo_children():
+                _bind_mousewheel(hijo)
+
+        # ============================================================
+        # ENCABEZADOS DE TABLA
+        # ============================================================
+        encabezados = ttk.Frame(frame_interno)
+        encabezados.pack(fill="x", pady=(0, 5))
+        encabezados.configure(style="Encabezados.TFrame")
+
+        ttk.Label(encabezados, text="DESCRIPCIÓN",
+                  font=("Segoe UI", 10, "bold"), width=60, anchor="w").pack(side="left", padx=5)
+        ttk.Label(encabezados, text="CATEGORÍA ORIGINAL",
+                  font=("Segoe UI", 10, "bold"), width=22, anchor="center").pack(side="left", padx=5)
+        ttk.Label(encabezados, text="CATEGORÍA ACTUAL",
+                  font=("Segoe UI", 10, "bold"), width=22, anchor="center").pack(side="left", padx=5)
+        ttk.Label(encabezados, text="ESTADO",
+                  font=("Segoe UI", 10, "bold"), width=15, anchor="center").pack(side="left", padx=5)
+
+        # Contenedor donde van las filas dinámicas
+        frame_filas = ttk.Frame(frame_interno)
+        frame_filas.pack(fill="both", expand=True)
+
+        # Referencias a los widgets de cada fila
+        filas_widgets = []
+        # Para saber qué fila está seleccionada
+        estado_sel = {"frame_seleccionado": None}
+
+        # ============================================================
+        # PANEL INFERIOR
+        # ============================================================
+        bot = ttk.Frame(ventana)
+        bot.pack(fill="x", padx=10, pady=8)
+
+        lbl_contador = ttk.Label(bot, text="")
+        lbl_contador.pack(side="left")
+
+        # ============================================================
+        # FUNCIONES INTERNAS
+        # ============================================================
+        def _hay_cambios():
+            return excepciones_actuales != excepciones_originales
+
+        def _actualizar_contador():
+            cambios = sum(
+                1 for k, v in excepciones_actuales.items()
+                if excepciones_originales.get(k) != v
+            )
+            lbl_contador.configure(
+                text=f"Cambios pendientes: {cambios} | Productos totales: {len(catalogo)}"
+            )
+
+        def _seleccionar_fila(fila_dict):
+            """Marca visualmente una fila como seleccionada."""
+            # Quitar selección previa
+            prev = estado_sel.get("frame_seleccionado")
+            if prev is not None:
+                try:
+                    prev.configure(style="TFrame")
+                except Exception:
+                    pass
+
+            # Marcar la nueva
+            nuevo = fila_dict.get("frame")
+            if nuevo is not None:
+                try:
+                    nuevo.configure(style="Seleccion.TFrame")
+                except Exception:
+                    pass
+                estado_sel["frame_seleccionado"] = nuevo
+
+        def _al_cambiar(desc, var):
+            nueva_cat = var.get()
+            cat_original = catalogo.get(desc, "CLINICA")
+            cat_previa = excepciones_originales.get(desc, cat_original)
+
+            if nueva_cat == cat_previa:
+                excepciones_actuales.pop(desc, None)
+            else:
+                excepciones_actuales[desc] = nueva_cat
+
+            for fila in filas_widgets:
+                if fila["desc"] == desc:
+                    if desc in excepciones_actuales and excepciones_actuales[desc] != cat_original:
+                        fila["lbl_estado"].configure(text="✏️ Modificado", foreground="blue")
+                    elif desc in excepciones_actuales:
+                        fila["lbl_estado"].configure(text="⚙️ Excepción", foreground="gray")
+                    else:
+                        fila["lbl_estado"].configure(text="—", foreground="black")
+                    break
+
+            _actualizar_contador()
+
+        def _refrescar_lista(*args):
+            nonlocal filas_widgets
+            # Limpiar
+            for w in frame_filas.winfo_children():
+                w.destroy()
+            filas_widgets = []
+            estado_sel["frame_seleccionado"] = None
+
+            busqueda = var_buscar.get().strip().lower()
+            filtro = var_filtro.get()
+            origen_filtro = var_origen.get()
+
+            todos = dict(catalogo)
+            for k, v in excepciones_actuales.items():
+                todos[k] = v
+
+            items = []
+            for desc, cat in sorted(todos.items()):
+                if busqueda and busqueda not in desc.lower():
+                    continue
+                if filtro != "TODAS" and cat != filtro:
+                    continue
+                es_modificado = desc in excepciones_actuales
+                if origen_filtro == "SOLO MODIFICADOS" and not es_modificado:
+                    continue
+                if origen_filtro == "SOLO ORIGINALES" and es_modificado:
+                    continue
+                items.append((desc, cat))
+
+            max_items = 500
+            for desc, _ in items[:max_items]:
+                cat_original = catalogo.get(desc, "CLINICA")
+                cat_actual = excepciones_actuales.get(desc, cat_original)
+
+                # Cada fila es un Frame
+                fila_frame = ttk.Frame(frame_filas, style="TFrame")
+                fila_frame.pack(fill="x", pady=1)
+
+                # Labels y widget que van dentro
+                lbl_desc = ttk.Label(fila_frame, text=desc, width=60, anchor="w")
+                lbl_desc.pack(side="left", padx=5)
+
+                lbl_orig = ttk.Label(fila_frame, text=cat_original,
+                                     width=22, anchor="center")
+                lbl_orig.pack(side="left", padx=5)
+
+                var_cat = tk.StringVar(value=cat_actual)
+                combo = ttk.Combobox(fila_frame, textvariable=var_cat,
+                                     values=categorias, width=20,
+                                     state="readonly")
+                combo.pack(side="left", padx=5)
+                combo.bind(
+                    "<<ComboboxSelected>>",
+                    lambda e, d=desc, v=var_cat: _al_cambiar(d, v)
+                )
+
+                estado_texto = "—"
+                color = "black"
+                if desc in excepciones_actuales:
+                    if excepciones_actuales[desc] != cat_original:
+                        estado_texto = "✏️ Modificado"
+                        color = "blue"
+                    else:
+                        estado_texto = "⚙️ Excepción"
+                        color = "gray"
+
+                lbl_estado = ttk.Label(fila_frame, text=estado_texto,
+                                       width=15, anchor="center",
+                                       foreground=color)
+                lbl_estado.pack(side="left", padx=5)
+
+                fila_dict = {
+                    "desc": desc,
+                    "frame": fila_frame,
+                    "combo_var": var_cat,
+                    "lbl_estado": lbl_estado,
+                }
+
+                # ---------- SELECCIÓN DESDE CUALQUIER PARTE ----------
+                def _click_en_fila(event, fd=fila_dict):
+                    _seleccionar_fila(fd)
+
+                # Aplicar el binding a la fila y a TODOS sus hijos
+                def _bind_click(widget, fd=fila_dict):
+                    widget.bind("<Button-1>", _click_en_fila, add="+")
+                    for hijo in widget.winfo_children():
+                        _bind_click(hijo, fd)
+
+                _bind_click(fila_frame)
+
+                filas_widgets.append(fila_dict)
+
+            if len(items) > max_items:
+                ttk.Label(frame_filas,
+                          text=f"... y {len(items) - max_items} más. Usa el buscador.",
+                          foreground="gray").pack(pady=10)
+
+            # Volver a aplicar scroll en todos los hijos
+            _bind_mousewheel(frame_interno)
+            _actualizar_contador()
+
+        def _guardar():
+            if not _hay_cambios():
+                messagebox.showinfo("Sin cambios",
+                                    "No hay cambios pendientes.", parent=ventana)
+                return
+
+            if not messagebox.askyesno(
+                "Guardar cambios",
+                f"Se guardarán {len(excepciones_actuales)} excepciones manuales.\n\n"
+                "Se hará un backup automático.\n¿Continuar?",
+                parent=ventana
+            ):
+                return
+
+            guardar_excepciones_manuales(excepciones_actuales)
+            nonlocal excepciones_originales
+            excepciones_originales = dict(excepciones_actuales)
+            _refrescar_lista()
+            messagebox.showinfo("Guardado",
+                                "Los cambios se guardaron correctamente.",
+                                parent=ventana)
+
+        def _deshacer_todo():
+            if not _hay_cambios():
+                messagebox.showinfo("Sin cambios",
+                                    "No hay cambios para deshacer.", parent=ventana)
+                return
+
+            if not messagebox.askyesno(
+                "Deshacer todo",
+                "Se revertirán TODOS los cambios sin guardar.\n\n"
+                "¿Continuar?",
+                parent=ventana
+            ):
+                return
+
+            excepciones_actuales.clear()
+            excepciones_actuales.update(excepciones_originales)
+            _refrescar_lista()
+            messagebox.showinfo("Deshecho",
+                                "Se revirtieron todos los cambios pendientes.",
+                                parent=ventana)
+
+        # Botones inferiores
+        ttk.Button(bot, text="💾 Guardar cambios",
+                   command=_guardar,
+                   bootstyle="success").pack(side="right", padx=4)
+        ttk.Button(bot, text="↶ Deshacer todo",
+                   command=_deshacer_todo,
+                   bootstyle="warning").pack(side="right", padx=4)
+        ttk.Button(bot, text="Cerrar",
+                   command=ventana.destroy,
+                   bootstyle="secondary").pack(side="right", padx=4)
+
+        # Conectar búsqueda y filtros
+        var_buscar.trace_add("write", _refrescar_lista)
+        var_filtro.trace_add("write", _refrescar_lista)
+        var_origen.trace_add("write", _refrescar_lista)
+
+        # Estilo visual para la fila seleccionada
+        style = ttk.Style()
+        style.configure("Seleccion.TFrame", background="#cce5ff")
+
+        # Primera carga
+        _refrescar_lista()
+
+        # Aplicar scroll con rueda a TODO el frame (por si acaso)
+        _bind_mousewheel(canvas)
+        _bind_mousewheel(frame_interno)
 
 # ============================================================
 if __name__ == "__main__":

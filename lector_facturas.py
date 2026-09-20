@@ -2,107 +2,138 @@
 """
 lector_facturas.py
 Lee facturas CFDI 4.0 (XML) + PDF de representación impresa.
-Clasifica conceptos por palabras clave y devuelve datos listos para el formulario.
+Clasifica conceptos por descripción usando catalogo_qvet.json (editado a mano).
 """
 
 import re
+import json
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
 
 # ============================================================
-# CONFIGURACIÓN: clasificación por palabras clave
-# (Diccionario provisional. Se ajustará con el catálogo del QVET.)
+# CARGA DEL CATÁLOGO DEL QVET
 # ============================================================
-PALABRAS_CLAVE = {
-    "VACUNA": [
-        "vacuna", "rabia", "parvovirus", "moquillo", "leptospira",
-        "bordetella", "giardia", "polivalente", "triple felina",
-    ],
-    "MEDICAMENTOS": [
-        # Analgésicos / antiinflamatorios
-        "paracetamol", "naproxeno", "aspirina", "ibuprofeno",
-        "meloxicam", "rimadyl", "carprofeno", "deracoxib",
-        "firocoxib", "ketoprofeno", "tramadol", "gabapentina",
-        "librela", "solensia", "onsior", "previcox",
-        # Antibióticos
-        "amoxicilina", "enrofloxacino", "cefalexina", "metronidazol",
-        "doxiciclina", "clindamicina", "azitromicina", "ciprofloxacino",
-        "bactrim", "synulox",
-        # Desparasitantes / antipulgas
-        "desparasitante", "antipulgas", "bravecto", "nexgard",
-        "simparica", "comfortis", "milbemax", "drontal", "panacur",
-        "praziquantel", "ivermectina", "fipronil", "advantix",
-        "revolution", "capstar", "cestex",
-        # Gastrointestinales
-        "omeprazol", "gastrointestinal", "lata gastrointestinal",
-        "ranitidina", "metoclopramida", "sucralfato", "probiótico",
-        "probotico", "fortiflora",
-        # Corticosteroides / otros
-        "prednisona", "dexametasona", "betametasona", "triamcinolona",
-        "antihistamínico", "antihistaminico", "difenhidramina",
-        # Oftálmicos / óticos
-        "gotas oftálmicas", "gotas oticas", "gotas óticas",
-        "tobramicina", "gentamicina",
-        # Genéricos
-        "medicamento", "antibiótico", "antibiotico", "jarabe",
-    ],
-    "HIGIENE": [
-        "shampoo", "champú", "champu", "jabón", "jabon",
-        "toalla", "paño", "pano", "cepillo dental", "crema dental",
-        "pasta dental", "desodorante", "limpiador", "solución",
-        "solucion", "enjuague", "sanitizante", "alcohol",
-    ],
-    "ESTETICA": [
-        "dermoplex", "crema", "perfume", "corte", "baño", "bano",
-        "estética", "estetica", "peluquería", "peluqueria",
-        "afeitado", "estético", "estetico", "hidratante",
-        "acondicionador",
-    ],
-    "ACCESORIOS": [
-        "plato", "b gde", "b chico", "b mediano",
-        "collar", "correa", "juguete", "ropa", "suéter", "sueter",
-        "cama", "transportadora", "bozal", "arnés", "arnes",
-        "comedero", "bebedero", "arete", "placa", "identificación",
-        "identificacion", "cinturón", "cinturon", "pretal",
-    ],
-    "PENSION": [
-        "cpt", "pensión", "pension", "alimento premium",
-        "hospedaje", "guardería", "guarderia", "estancia",
-        "alimento", "croquetas", "pienso",
-    ],
-    "TRANSPORTE": [
-        "cremación", "cremacion", "envío", "envio", "traslado",
-        "transporte", "flete",
-    ],
-    "CLINICA": [
-        "consulta", "tratamiento", "seguimiento", "eutanasia",
-        "cirugía", "cirugia", "hospitalización", "hospitalizacion",
-        "rayos x", "ultrasonido", "ecografía", "ecografia",
-        "análisis", "analisis", "laboratorio", "inyección",
-        "inyeccion", "curaciones", "curación", "curacion",
-        "veterinario", "veterinaria", "vacunación", "vacunacion",
-        "desparasitación", "desparasitacion", "esterilización",
-        "esterilizacion", "profilaxis", "odontología", "odontologia",
-        "limpieza dental", "electrocardiograma", "ecg",
-    ],
-    "U": [
-        "urgencia", "emergencia", "crítico", "critico",
-    ],
-}
+_CATALOGO = None
+
+def cargar_catalogo():
+    """Carga catalogo_qvet.json una sola vez."""
+    global _CATALOGO
+    if _CATALOGO is not None:
+        return _CATALOGO
+
+    ruta = Path(__file__).parent / "catalogo_qvet.json"
+    if not ruta.exists():
+        print(f"⚠️  No se encontró {ruta}")
+        print("   Asegúrate de tener el archivo catalogo_qvet.json en la misma carpeta.")
+        _CATALOGO = {}
+        return _CATALOGO
+
+    with open(ruta, "r", encoding="utf-8") as f:
+        _CATALOGO = json.load(f)
+
+    print(f"✅ Catálogo cargado: {len(_CATALOGO)} productos")
+    return _CATALOGO
 
 
-def clasificar_producto(descripcion):
-    """Devuelve la categoría según palabras clave. Default: 'CLINICA'."""
+_EXCEPCIONES_MANUALES = None
+
+
+def cargar_excepciones_manuales():
+    """Carga categorias_manuales.json."""
+    global _EXCEPCIONES_MANUALES
+    if _EXCEPCIONES_MANUALES is not None:
+        return _EXCEPCIONES_MANUALES
+    ruta = Path(__file__).parent / "categorias_manuales.json"
+    if ruta.exists():
+        try:
+            with open(ruta, "r", encoding="utf-8") as f:
+                _EXCEPCIONES_MANUALES = json.load(f)
+        except Exception:
+            _EXCEPCIONES_MANUALES = {}
+    else:
+        _EXCEPCIONES_MANUALES = {}
+    return _EXCEPCIONES_MANUALES
+
+
+def guardar_excepciones_manuales(exc):
+    """Guarda el dict completo de excepciones."""
+    global _EXCEPCIONES_MANUALES
+    _EXCEPCIONES_MANUALES = dict(exc)
+
+    ruta = Path(__file__).parent / "categorias_manuales.json"
+
+    # Backup diario antes de sobrescribir
+    if ruta.exists():
+        hoy = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        backup_dir = Path(__file__).parent / "backups"
+        backup_dir.mkdir(exist_ok=True)
+        backup = backup_dir / f"categorias_manuales_{hoy}.json"
+        try:
+            import shutil
+            shutil.copy2(ruta, backup)
+        except Exception:
+            pass
+
+    with open(ruta, "w", encoding="utf-8") as f:
+        json.dump(exc, f, ensure_ascii=False, indent=2, sort_keys=True)
+
+
+def normalizar(texto):
+    """Normaliza un texto para comparar."""
+    if not texto:
+        return ""
+    t = str(texto).strip().upper()
+    reemplazos = {
+        "Á": "A", "É": "E", "Í": "I", "Ó": "O", "Ú": "U",
+        "À": "A", "È": "E", "Ì": "I", "Ò": "O", "Ù": "U",
+        "Ñ": "N", "Ü": "U",
+    }
+    for a, b in reemplazos.items():
+        t = t.replace(a, b)
+    t = re.sub(r"\s+", " ", t)
+    return t
+
+
+def clasificar_por_descripcion(descripcion):
+    """
+    Busca la descripción en el catálogo del QVET.
+    Prioridad:
+      1. Excepciones manuales (categorias_manuales.json)
+      2. Catálogo (catalogo_qvet.json)
+    """
     if not descripcion:
         return "CLINICA"
-    d = descripcion.lower()
-    for categoria, palabras in PALABRAS_CLAVE.items():
-        for p in palabras:
-            if p in d:
-                return categoria
-    return "CLINICA"  # default razonable para servicios veterinarios
+
+    desc_norm = normalizar(descripcion)
+
+    # 1. Excepciones manuales
+    exc = cargar_excepciones_manuales()
+    if desc_norm in exc:
+        return exc[desc_norm]
+
+    # 2. Catálogo
+    catalogo = cargar_catalogo()
+    if desc_norm in catalogo:
+        return catalogo[desc_norm]
+
+    # 3. Por prefijo más largo
+    mejor_match = None
+    mejor_len = 0
+    for clave, cat in catalogo.items():
+        if desc_norm.startswith(clave) and len(clave) > mejor_len:
+            mejor_match = cat
+            mejor_len = len(clave)
+    if mejor_match:
+        return mejor_match
+
+    # 4. Inversa
+    for clave, cat in catalogo.items():
+        if desc_norm in clave and len(clave) - len(desc_norm) < 20:
+            return cat
+
+    return "CLINICA"
 
 
 # ============================================================
@@ -121,15 +152,16 @@ def leer_xml_factura(ruta_xml):
     root = tree.getroot()
 
     # --- Datos generales ---
-    serie = (root.get("Serie") or "").strip()      # "S1"
-    folio = (root.get("Folio") or "").strip()      # "8261"
-    no_factura = folio                              # solo el folio
+    serie = (root.get("Serie") or "").strip()
+    folio = (root.get("Folio") or "").strip()
+    no_factura = folio
+    qvet = serie
 
     fecha = _iso_a_ddmmyyyy(root.get("Fecha", ""))
     total = float(root.get("Total", 0) or 0)
     subtotal = float(root.get("SubTotal", 0) or 0)
 
-    # --- Receptor (cliente) ---
+    # --- Receptor ---
     receptor = root.find("cfdi:Receptor", NS)
     rfc_receptor = receptor.get("Rfc", "") if receptor is not None else ""
     nombre_receptor = receptor.get("Nombre", "") if receptor is not None else ""
@@ -138,10 +170,9 @@ def leer_xml_factura(ruta_xml):
     conceptos = []
     for conc in root.findall("cfdi:Conceptos/cfdi:Concepto", NS):
         remision = (conc.get("NoIdentificacion") or "").strip()
-        descripcion = (conc.get("Descripcion") or "").strip()
+        descripcion_xml = (conc.get("Descripcion") or "").strip()
         importe = float(conc.get("Importe", 0) or 0)
 
-        # Impuestos del concepto
         tiene_iva = False
         tasa_iva = 0.0
         tiene_ieps = False
@@ -153,29 +184,28 @@ def leer_xml_factura(ruta_xml):
             tipo = traslado.get("TipoFactor", "")
             if tipo == "Exento":
                 continue
-            if impuesto == "002":  # IVA
+            if impuesto == "002":
                 tiene_iva = True
                 try:
                     tasa_iva = float(traslado.get("TasaOCuota", 0) or 0)
                 except ValueError:
                     tasa_iva = 0.0
-            elif impuesto == "003":  # IEPS
+            elif impuesto == "003":
                 tiene_ieps = True
                 try:
                     tasa_ieps = float(traslado.get("TasaOCuota", 0) or 0)
                 except ValueError:
                     tasa_ieps = 0.0
 
-        categoria = clasificar_producto(descripcion)
         conceptos.append({
             "remision": remision,
-            "descripcion": descripcion,
+            "descripcion": descripcion_xml,
             "importe": importe,
             "tiene_iva": tiene_iva,
             "tasa_iva": tasa_iva,
             "tiene_ieps": tiene_ieps,
             "tasa_ieps": tasa_ieps,
-            "categoria": categoria,
+            "categoria": None,
         })
 
     # --- Impuestos totales ---
@@ -195,7 +225,7 @@ def leer_xml_factura(ruta_xml):
             base_con_iva += base
             iva_total += float(traslado.get("Importe", 0) or 0)
 
-    # --- Folio fiscal (UUID) ---
+    # --- Folio fiscal ---
     folio_fiscal = ""
     fecha_impresion = fecha
     tfd = root.find("cfdi:Complemento/tfd:TimbreFiscalDigital", NS)
@@ -207,7 +237,7 @@ def leer_xml_factura(ruta_xml):
         "serie": serie,
         "folio": folio,
         "no_factura": no_factura,
-        "qvet": serie,
+        "qvet": qvet,
         "fecha": fecha,
         "fecha_impresion": fecha_impresion,
         "nombre": nombre_receptor,
@@ -223,7 +253,6 @@ def leer_xml_factura(ruta_xml):
 
 
 def _iso_a_ddmmyyyy(fecha_iso):
-    """Convierte '2026-09-01T19:19:28' a '01/09/2026'."""
     if not fecha_iso:
         return ""
     try:
@@ -239,20 +268,40 @@ def _iso_a_ddmmyyyy(fecha_iso):
 # ============================================================
 # LECTOR DE PDF: extrae nombres por remisión
 # ============================================================
-def leer_pdf_nombres(ruta_pdf):
+def _conv_numero_simple(s):
+    """Convierte string numérico a float (acepta formato europeo y americano)."""
+    s = s.strip()
+    if not s:
+        return 0.0
+    tiene_punto = "." in s
+    tiene_coma = "," in s
+    if tiene_punto and tiene_coma:
+        pos_punto = s.rfind(".")
+        pos_coma = s.rfind(",")
+        if pos_coma > pos_punto:
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            s = s.replace(",", "")
+    elif tiene_coma:
+        s = s.replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+def leer_pdf_completo(ruta_pdf):
     """
-    Lee el PDF y devuelve {remision: "nombre del producto"}.
-    El PDF de Diverza/QVET tiene este patrón:
-        No. Remisión: 176881
-        Fecha de remisión: 01/09/2026 11:03 a.m.
-        B GDE PM
-        1,00 no aplica 300,00 0,00 16,00% 0, 300,00
+    Lee el PDF y devuelve:
+    {
+        "productos": {remision: [nombres]},
+        "pagos": {"efectivo": X, "tc": Y, "td": Z, "cheque": W, "transfer": V, "vale": U}
+    }
     """
     try:
         import pdfplumber
     except ImportError:
-        return {"nombres_por_remision": {},
-                "error": "pdfplumber no instalado. Ejecuta: pip install pdfplumber"}
+        return {"productos": {}, "pagos": {}}
 
     texto_completo = []
     with pdfplumber.open(ruta_pdf) as pdf:
@@ -261,158 +310,386 @@ def leer_pdf_nombres(ruta_pdf):
             texto_completo.append(t)
     texto = "\n".join(texto_completo)
 
-    # Normalizar espacios
-    texto = re.sub(r"[ \t]+", " ", texto)
+    # ============================================================
+    # 1. Productos por remisión
+    # ============================================================
+    texto_prod = re.sub(r"[ \t]+", " ", texto)
+    lineas = [l.strip() for l in texto_prod.split("\n")]
 
-    nombres = {}
+    productos_por_remision = {}
+    remision_actual = None
 
-    # Patrón: "No. Remisión: XXXXX" ... "Fecha de remisión: ..." ... nombre (línea siguiente)
-    # El nombre es una línea que contiene letras y números, no comas de miles, no "%"
-    patron = re.compile(
-        r"No\.\s*Remisi[oó]n:\s*(\d+)\s*"
-        r"Fecha de remisi[oó]n:\s*[\d/:.\sapm]+?\s*"
-        r"([^\n]+?)\s*\n",
+    for linea in lineas:
+        m_rem = re.match(
+            r"No\.\s*Remisi[oó]n:\s*(\d+)\s+Fecha de remisi[oó]n",
+            linea, re.IGNORECASE
+        )
+        if m_rem:
+            remision_actual = m_rem.group(1)
+            if remision_actual not in productos_por_remision:
+                productos_por_remision[remision_actual] = []
+            continue
+
+        if remision_actual and "no aplica" in linea.lower():
+            m_prod = re.match(
+                r"^(.*?)\s+(\d+)[,.](\d+)\s+no aplica\s+([\d.,]+)",
+                linea, re.IGNORECASE
+            )
+            if m_prod:
+                nombre = m_prod.group(1).strip()
+                nombre = re.sub(r"[\s,;:.]+$", "", nombre)
+                cantidad_str = f"{m_prod.group(2)}.{m_prod.group(3)}"
+                precio_str = m_prod.group(4)
+
+                if nombre and len(nombre) > 1:
+                    productos_por_remision[remision_actual].append({
+                        "nombre": nombre,
+                        "cantidad": float(cantidad_str) if cantidad_str else 1.0,
+                        "precio_con_iva": _conv_numero_simple(precio_str),
+                    })
+
+    # ============================================================
+    # 2. Desglose de pagos
+    # ============================================================
+    pagos = {
+        "efectivo": 0.0,
+        "tc": 0.0,
+        "td": 0.0,
+        "cheque": 0.0,
+        "transfer": 0.0,
+        "vale": 0.0,
+    }
+
+    MAPA_FORMA_PAGO = {
+        "01": "efectivo",
+        "02": "cheque",
+        "03": "transfer",
+        "04": "tc",
+        "28": "td",
+    }
+
+    def _conv_numero(s):
+        """
+        Convierte un string numérico a float, aceptando tanto
+        formato europeo (1.350,00) como americano (1,350.00).
+        """
+        s = s.strip()
+        if not s:
+            return 0.0
+        tiene_punto = "." in s
+        tiene_coma = "," in s
+
+        if tiene_punto and tiene_coma:
+            # ¿Cuál es el decimal? El último que aparece
+            pos_punto = s.rfind(".")
+            pos_coma = s.rfind(",")
+            if pos_coma > pos_punto:
+                # Formato europeo: 1.350,00 → 1350.00
+                s = s.replace(".", "").replace(",", ".")
+            else:
+                # Formato americano: 1,350.00 → 1350.00
+                s = s.replace(",", "")
+        elif tiene_coma:
+            # Solo coma: 1350,00 → 1350.00 (europeo)
+            s = s.replace(",", ".")
+        # else: solo punto → ya está bien (americano)
+
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+
+    # Patrón de pago: "DD/MM/YYYY NN FORMA_PAGO IMPORTE [resto]"
+    # Ejemplo europeo: "29/08/2026 04 T. CREDITO 1.350,00 0,00% 0,00 3.825,00 3.825,00"
+    # El IMPORTE es el primer número después de la forma de pago
+    patron_pago = re.compile(
+        r"(\d{1,2}/\d{1,2}/\d{2,4})\s+"                      # fecha
+        r"(\d{2})\s+"                                          # código SAT
+        r"(T\.\s*CREDITO|T\.\s*DEBITO|EFECTIVO|"
+        r"CHEQUE|TRANSFERENCIA|TRANSF\.?|VALE)"
+        r"\s+"
+        r"([\d.,]+)",                                          # importe (format agnóstico)
         re.IGNORECASE
     )
 
-    for m in patron.finditer(texto):
-        remision = m.group(1).strip()
-        nombre_crudo = m.group(2).strip()
+    for match in patron_pago.finditer(texto):
+        codigo = match.group(2)
+        importe_str = match.group(4)
+        importe = _conv_numero(importe_str)
+        clave = MAPA_FORMA_PAGO.get(codigo)
+        if clave and importe > 0:
+            pagos[clave] += importe
 
-        # Limpiar el nombre: quitar cantidades, medidas, números al inicio
-        # Ej: "B GDE PM1,00 no aplica 300,00 0,00 16,00% 0, 300,00"
-        # Queremos solo "B GDE PM"
-        nombre = re.split(
-            r"\d+[,.]\d+|\d+\s*,\s*\d+\s*(?:no aplica|pza|kg|ml|gr)?",
-            nombre_crudo
-        )[0].strip()
+    # Fallback: si el regex principal no encontró nada
+    if not any(v > 0 for v in pagos.values()):
+        for i, linea in enumerate(lineas):
+            linea_upper = linea.upper()
+            clave_detectada = None
 
-        # Quitar caracteres raros al final
-        nombre = re.sub(r"[\s,;:.]+$", "", nombre)
+            if "T. CREDITO" in linea_upper or "T.CREDITO" in linea_upper:
+                clave_detectada = "tc"
+            elif "T. DEBITO" in linea_upper or "T.DEBITO" in linea_upper:
+                clave_detectada = "td"
+            elif "EFECTIVO" in linea_upper:
+                clave_detectada = "efectivo"
+            elif "TRANSFERENCIA" in linea_upper:
+                clave_detectada = "transfer"
+            elif "CHEQUE" in linea_upper:
+                clave_detectada = "cheque"
+            elif "VALE" in linea_upper:
+                clave_detectada = "vale"
 
-        if remision and nombre and len(nombre) > 1:
-            nombres[remision] = nombre
+            if clave_detectada:
+                # Buscar el importe justo después de la forma de pago
+                m_imp = re.search(
+                    r"(?:T\.\s*CREDITO|T\.\s*DEBITO|EFECTIVO|"
+                    r"CHEQUE|TRANSFERENCIA|TRANSF\.?|VALE)\s+"
+                    r"([\d.,]+)",
+                    linea, re.IGNORECASE
+                )
+                if m_imp:
+                    importe = _conv_numero(m_imp.group(1))
+                    if importe > 0:
+                        pagos[clave_detectada] += importe
 
-    # Fallback: buscar patrones alternativos si el principal falla
-    if not nombres:
-        patron2 = re.compile(
-            r"No\.\s*Remisi[oó]n:\s*(\d+)[\s\S]{0,200}?"
-            r"Fecha de remisi[oó]n:[\s\S]{0,50}?\n\s*([A-Z][^\n\d]{2,60})",
-            re.IGNORECASE
-        )
-        for m in patron2.finditer(texto):
-            remision = m.group(1).strip()
-            nombre = m.group(2).strip()
-            nombre = re.sub(r"[\s,;:.]+$", "", nombre)
-            if remision and nombre:
-                nombres[remision] = nombre
+    return {"productos": productos_por_remision, "pagos": pagos}
 
-    return {"nombres_por_remision": nombres}
+
+def _leer_total_pdf(ruta_pdf):
+    """Lee el TOTAL del PDF."""
+    try:
+        import pdfplumber
+    except ImportError:
+        return None
+
+    with pdfplumber.open(ruta_pdf) as pdf:
+        texto = "\n".join((p.extract_text() or "") for p in pdf.pages)
+
+    # Buscar "TOTAL $ X,XXX.XX"
+    m = re.search(
+        r"TOTAL\s*\$?\s*(\d{1,3}(?:,\d{3})*\.\d{2})",
+        texto, re.IGNORECASE
+    )
+    if m:
+        try:
+            return float(m.group(1).replace(",", ""))
+        except ValueError:
+            pass
+    return None
+
+
+def _leer_forma_pago_xml(ruta_xml):
+    """Lee FormaPago del XML."""
+    NS = {
+        "cfdi": "http://www.sat.gob.mx/cfd/4",
+        "tfd": "http://www.sat.gob.mx/TimbreFiscalDigital",
+    }
+    try:
+        tree = ET.parse(ruta_xml)
+        root = tree.getroot()
+        forma = (root.get("FormaPago") or "").strip()
+    except Exception:
+        return None
+
+    mapa = {
+        "01": "efectivo",
+        "02": "cheque",
+        "03": "transfer",
+        "04": "tc",
+        "28": "td",
+    }
+    return mapa.get(forma)
 
 
 # ============================================================
-# CRUCE: XML + PDF
+# CRUCE FINAL: XML + PDF + CATÁLOGO
 # ============================================================
 def procesar_factura(ruta_xml=None, ruta_pdf=None):
     """
     Lee el XML (obligatorio) y opcionalmente el PDF.
-    Devuelve el dict del XML con los conceptos enriquecidos
-    con los nombres reales del PDF.
+    Devuelve datos de la factura + desglose de pagos.
     """
     if not ruta_xml:
         return {"error": "El XML es obligatorio"}
 
     datos = leer_xml_factura(ruta_xml)
 
-    # Enriquecer con nombres del PDF
+    productos_por_remision = {}
+    pagos = {}
+    total_pdf = None
+
     if ruta_pdf:
-        pdf_data = leer_pdf_nombres(ruta_pdf)
-        nombres = pdf_data.get("nombres_por_remision", {})
-        for conc in datos["conceptos"]:
-            rem = conc["remision"]
-            if rem in nombres:
-                conc["descripcion"] = nombres[rem]
-                # Reclasificar con el nombre real
-                conc["categoria"] = clasificar_producto(nombres[rem])
+        pdf_data = leer_pdf_completo(ruta_pdf)
+        productos_por_remision = pdf_data.get("productos", {})
+        pagos = pdf_data.get("pagos", {})
+        total_pdf = _leer_total_pdf(ruta_pdf)
+
+    # Enriquecer conceptos
+    for conc in datos["conceptos"]:
+        rem = conc["remision"]
+        productos = productos_por_remision.get(rem, [])
+        # productos es ahora una lista de dicts
+
+        if productos:
+            # Extraer solo los nombres para clasificar
+            nombres = [p["nombre"] for p in productos]
+            categorias = [clasificar_por_descripcion(n) for n in nombres]
+
+            if len(set(categorias)) == 1:
+                conc["categoria"] = categorias[0]
+            else:
+                from collections import Counter
+                conc["categoria"] = Counter(categorias).most_common(1)[0][0]
+
+            conc["descripcion"] = " + ".join(nombres)
+
+            # Guardar los precios CON IVA del PDF para la expresión
+            conc["precios_pdf"] = [p["precio_con_iva"] for p in productos]
+            conc["cantidades_pdf"] = [p["cantidad"] for p in productos]
+        else:
+            conc["categoria"] = clasificar_por_descripcion(conc["descripcion"])
+            conc["precios_pdf"] = []
+            conc["cantidades_pdf"] = []
+
+    # Ajustar total si el PDF lo tiene redondeado
+    if total_pdf is not None:
+        if abs(datos["total"] - total_pdf) < 1.0:
+            print(f"ℹ️  Total ajustado: XML=${datos['total']} → PDF=${total_pdf}")
+            datos["total"] = round(total_pdf, 2)
+
+    # Guardar pagos
+    datos["pagos"] = pagos
+
+    # Fallback: usar FormaPago del XML si el PDF no trajo pagos
+    if not any(v > 0 for v in pagos.values()):
+        forma_xml = _leer_forma_pago_xml(ruta_xml)
+        if forma_xml:
+            pagos[forma_xml] = datos["total"]
+            datos["pagos"] = pagos
+            print(f"ℹ️  Pagos del PDF no detectados. Usando FormaPago del XML: {forma_xml}")
 
     return datos
 
 
-# ============================================================
-# RESUMEN PARA EL FORMULARIO
-# ============================================================
-def agrupar_por_categoria(datos):
+def agrupar_por_categoria(datos, ajustar_centavos=True):
     """
-    Toma el dict de `procesar_factura` y devuelve los totales
-    listos para volcar en el formulario.
-
-    Estructura de retorno:
-    {
-        "MEDICAMENTOS": {
-            "importe": 200.0,      # exentos
-            "sin_iva": 300.0,      # base con IVA
-            "iva": 48.0,
-        },
-        "HIGIENE": {...},
-        "U": {"importe": 100.0, "iva": 16.0},
-        ...
-    }
+    Agrupa conceptos por categoría.
+    Devuelve:
+      - agrupado: totales por categoría
+      - detalle: lista de términos para construir la expresión
+                 Cada término es una tupla (clave_campo, string_expresion)
+                 Ej: ("U__importe", "(115.00*3)/1.16") o ("U__importe", "(210.00+180.00)/1.16")
     """
     agrupado = {}
+    # detalle: {clave_campo: [strings de expresión]}
+    detalle = {}
 
     for conc in datos.get("conceptos", []):
-        cat = conc["categoria"]
+        cat = conc.get("categoria") or "CLINICA"
         if cat not in agrupado:
             agrupado[cat] = {
-                "importe": 0.0,
-                "sin_iva": 0.0,
-                "iva": 0.0,
-                "sin_ieps_6": 0.0,
-                "ieps_6": 0.0,
-                "sin_ieps_7": 0.0,
-                "ieps_7": 0.0,
+                "importe": 0.0, "sin_iva": 0.0, "iva": 0.0,
+                "sin_ieps_6": 0.0, "ieps_6": 0.0,
+                "sin_ieps_7": 0.0, "ieps_7": 0.0,
             }
+
         imp = conc["importe"]
         tiene_iva = conc["tiene_iva"]
         tasa_iva = conc["tasa_iva"]
         tiene_ieps = conc["tiene_ieps"]
         tasa_ieps = conc["tasa_ieps"]
+        precios_pdf = conc.get("precios_pdf", [])
+        cantidades_pdf = conc.get("cantidades_pdf", [])
 
+        # Construir la expresión de este concepto
+        termino_expresion = None
+
+        if precios_pdf and cantidades_pdf:
+            # Usar los precios del PDF (que traen IVA incluido si aplica)
+            partes = []
+            for precio, cantidad in zip(precios_pdf, cantidades_pdf):
+                if cantidad == 1:
+                    partes.append(f"{precio:.2f}")
+                else:
+                    partes.append(f"({precio:.2f}*{cantidad:g})")
+
+            suma_precios = "+".join(partes)
+
+            if tiene_iva and tasa_iva > 0:
+                termino_expresion = f"({suma_precios})/{1+tasa_iva:.2f}"
+            elif tiene_ieps and tasa_ieps > 0:
+                termino_expresion = f"({suma_precios})/{1+tasa_ieps:.4f}"
+            else:
+                termino_expresion = f"({suma_precios})"
+
+        # ============================================================
+        # Clasificar en la categoría correcta
+        # ============================================================
         if cat in ("MEDICAMENTOS", "HIGIENE"):
-            # Nuevo esquema:
-            #   - con IVA   -> sin_iva + iva
-            #   - sin IVA   -> importe (exento)
             if tiene_iva:
                 agrupado[cat]["sin_iva"] += imp
                 agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
+                if termino_expresion:
+                    detalle.setdefault(f"{cat}__sin_iva", []).append(termino_expresion)
             else:
                 agrupado[cat]["importe"] += imp
+                if termino_expresion:
+                    detalle.setdefault(f"{cat}__importe", []).append(termino_expresion)
 
-            # IEPS solo en HIGIENE
             if cat == "HIGIENE" and tiene_ieps:
                 if abs(tasa_ieps - 0.06) < 0.001:
                     agrupado[cat]["sin_ieps_6"] += imp
                     agrupado[cat]["ieps_6"] += round(imp * 0.06, 2)
+                    if termino_expresion:
+                        detalle.setdefault(f"{cat}__sin_ieps_6", []).append(termino_expresion)
                 elif abs(tasa_ieps - 0.07) < 0.001:
                     agrupado[cat]["sin_ieps_7"] += imp
                     agrupado[cat]["ieps_7"] += round(imp * 0.07, 2)
+                    if termino_expresion:
+                        detalle.setdefault(f"{cat}__sin_ieps_7", []).append(termino_expresion)
         else:
-            # Esquema tradicional: importe = base (con o sin IVA)
-            # Si tiene IVA, se calcula aparte
             agrupado[cat]["importe"] += imp
+            if termino_expresion:
+                detalle.setdefault(f"{cat}__importe", []).append(termino_expresion)
             if tiene_iva:
                 agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
 
-    # Redondear todos los valores
+    # Redondear
     for cat, vals in agrupado.items():
         for k in vals:
             vals[k] = round(vals[k], 2)
 
-    return agrupado
+    # Ajuste de centavos
+    if ajustar_centavos:
+        suma_bases = 0.0
+        suma_exentas = 0.0
+        for cat, vals in agrupado.items():
+            if cat in ("MEDICAMENTOS", "HIGIENE"):
+                suma_bases += vals["sin_iva"]
+                suma_exentas += vals["importe"]
+            else:
+                suma_bases += vals["importe"]
+        suma_impuestos = sum(
+            vals["iva"] + vals["ieps_6"] + vals["ieps_7"]
+            for vals in agrupado.values()
+        )
+        total_calculado = suma_bases + suma_exentas + suma_impuestos
+        total_objetivo = datos.get("total", 0)
+        dif = round(total_objetivo - total_calculado, 2)
+
+        if abs(dif) == 0.01:
+            for cat in ["U", "ACCESORIOS", "ESTETICA", "TRANSPORTE",
+                        "MEDICAMENTOS", "HIGIENE"]:
+                if cat in agrupado and agrupado[cat]["iva"] > 0:
+                    agrupado[cat]["iva"] = round(agrupado[cat]["iva"] + dif, 2)
+                    print(f"ℹ️  Ajustando centavos: ${dif} → sumada al IVA de {cat}")
+                    break
+
+    return agrupado, detalle
 
 
 # ============================================================
-# PRUEBA RÁPIDA (ejecutar solo este archivo para probar)
+# PRUEBA RÁPIDA
 # ============================================================
 if __name__ == "__main__":
     import sys
@@ -425,7 +702,7 @@ if __name__ == "__main__":
     datos = procesar_factura(ruta_xml, ruta_pdf)
 
     print("\n=== DATOS DE LA FACTURA ===")
-    for k in ["no_factura", "fecha", "fecha_impresion", "rfc",
+    for k in ["no_factura", "qvet", "fecha", "fecha_impresion", "rfc",
               "nombre", "folio_fiscal", "total", "subtotal",
               "iva_total", "base_con_iva", "base_exenta"]:
         print(f"  {k:20}: {datos.get(k)}")
@@ -435,6 +712,11 @@ if __name__ == "__main__":
         iva_txt = f"IVA {c['tasa_iva']*100:.0f}%" if c["tiene_iva"] else "Exento"
         print(f"  [{c['remision']}] {c['categoria']:12} "
               f"${c['importe']:>8,.2f}  {iva_txt:12}  {c['descripcion']}")
+
+    print("\n=== PAGOS ===")
+    for k, v in datos.get("pagos", {}).items():
+        if v:
+            print(f"  {k:10}: ${v:,.2f}")
 
     print("\n=== AGRUPADO POR CATEGORÍA ===")
     agr = agrupar_por_categoria(datos)
