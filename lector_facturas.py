@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 lector_facturas.py
 Lee facturas CFDI 4.0 (XML) + PDF de representación impresa.
