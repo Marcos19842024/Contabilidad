@@ -2393,22 +2393,17 @@ class AppIngresos(ttk.Window):
 
         # ---- 7. Preguntar qué hacer ----
         ventana_prog.grab_release()
-        respuesta_procesar = messagebox.askyesnocancel(
-            "Facturas descargadas",
-            f"Se descargaron {len(descargados)} archivos ({len(grupos)} facturas únicas).\n\n"
-            "¿Qué quieres hacer?\n\n"
-            "• Sí → Procesar TODAS automáticamente\n"
-            "• No → Solo guardar los archivos (procesar manualmente después)\n"
-            "• Cancelar → No hacer nada (los archivos quedan en disco)",
+        respuesta_procesar = self._preguntar_accion_facturas(
+            len(descargados), len(grupos), carpeta_descargas
         )
         ventana_prog.grab_set()
 
-        if respuesta_procesar is None:
+        if respuesta_procesar == "cancelar":
             log("\n⏸️ Los archivos quedan en disco. Puedes procesarlos con '📥 Leer factura'.")
             log(f"   Carpeta: {carpeta_descargas}")
             return
 
-        if not respuesta_procesar:
+        if respuesta_procesar == "solo_guardar":
             log("\n📁 Archivos guardados (sin procesar).")
             log(f"   Carpeta: {carpeta_descargas}")
             messagebox.showinfo(
@@ -2573,6 +2568,119 @@ class AppIngresos(ttk.Window):
         except Exception:
             pass
 
+    def _preguntar_accion_facturas(self, num_archivos, num_facturas, carpeta):
+        """
+        Muestra un diálogo personalizado preguntando qué hacer con las
+        facturas descargadas.
+        
+        Devuelve:
+          - "procesar_todas" → procesar automáticamente
+          - "solo_guardar"   → solo guardar en disco
+        """
+        ventana = ttk.Toplevel(self)
+        ventana.title("Facturas descargadas")
+        ventana.transient(self)
+        ventana.grab_set()
+        ventana.resizable(False, False)
+
+        # ---- Centrar la ventana ----
+        ventana.update_idletasks()
+        ancho = 520
+        alto = 420
+        x = (ventana.winfo_screenwidth() - ancho) // 2
+        y = (ventana.winfo_screenheight() - alto) // 2
+        ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
+
+        # ---- Contenedor con padding ----
+        contenedor = ttk.Frame(ventana, padding=25)
+        contenedor.pack(fill="both", expand=True)
+
+        # ---- Encabezado ----
+        ttk.Label(
+            contenedor,
+            text="📬 Facturas descargadas",
+            font=("Segoe UI", 15, "bold"),
+        ).pack(pady=(0, 10))
+
+        # ---- Resumen ----
+        resumen = (
+            f"Se descargaron {num_archivos} archivo(s),\n"
+            f"correspondientes a {num_facturas} factura(s) única(s)."
+        )
+        ttk.Label(
+            contenedor,
+            text=resumen,
+            font=("Segoe UI", 11),
+            justify="center",
+        ).pack(pady=(0, 5))
+
+        # ---- Ruta de la carpeta ----
+        ttk.Label(
+            contenedor,
+            text=f"📁 {carpeta}",
+            font=("Segoe UI", 9),
+            foreground="gray",
+            wraplength=460,
+            justify="center",
+        ).pack(pady=(0, 20))
+
+        # ---- Pregunta ----
+        ttk.Label(
+            contenedor,
+            text="¿Qué quieres hacer?",
+            font=("Segoe UI", 11, "bold"),
+        ).pack(pady=(0, 15))
+
+        # ---- Resultado ----
+        resultado = {"accion": "cancelar"}
+
+        def _elegir(accion):
+            resultado["accion"] = accion
+            ventana.destroy()
+
+        # ---- Botón: Procesar todas ----
+        ttk.Button(
+            contenedor,
+            text="✅  Procesar TODAS automáticamente",
+            command=lambda: _elegir("procesar_todas"),
+            bootstyle="info-outline",
+            width=45,
+        ).pack(pady=5)
+
+        # Descripción del botón
+        ttk.Label(
+            contenedor,
+            text="Llena el formulario, guarda y adjunta XML+PDF automáticamente",
+            font=("Segoe UI", 8),
+            foreground="gray",
+        ).pack(pady=(0, 10))
+
+        # ---- Botón: Solo guardar ----
+        ttk.Button(
+            contenedor,
+            text="📁  Solo guardar los archivos",
+            command=lambda: _elegir("solo_guardar"),
+            bootstyle="info-outline",
+            width=45,
+        ).pack(pady=5)
+
+        # Descripción del botón
+        ttk.Label(
+            contenedor,
+            text="Los archivos quedan en disco para procesarlos después con '📥 Leer factura'",
+            font=("Segoe UI", 8),
+            foreground="gray",
+        ).pack(pady=(0, 10))
+
+        # ---- Cerrar con X = Cancelar ----
+        ventana.protocol("WM_DELETE_WINDOW", lambda: _elegir("cancelar"))
+
+        # ---- Atajos de teclado ----
+        ventana.bind("<Escape>", lambda e: _elegir("cancelar"))
+
+        ventana.wait_window()
+        return resultado["accion"]
+
     def _preguntar_modo_descarga(self, dias_atras):
         """
         Muestra un diálogo personalizado para elegir cómo descargar.
@@ -2580,7 +2688,6 @@ class AppIngresos(ttk.Window):
           - "no_leidos" → solo correos no leídos
           - "todos"     → todos los correos
           - "editar"    → abrir configuración
-          - "cancelar"  → abortar
         """
         ventana = ttk.Toplevel(self)
         ventana.title("Sincronizar facturas")
@@ -3374,9 +3481,6 @@ class AppIngresos(ttk.Window):
                    bootstyle="info-outline").pack(side="left", padx=5)
         ttk.Button(fr_btn, text="↺ Restaurar",
                    command=_restaurar,
-                   bootstyle="info-outline").pack(side="left", padx=5)
-        ttk.Button(fr_btn, text="Cancelar",
-                   command=ventana.destroy,
                    bootstyle="info-outline").pack(side="left", padx=5)
 
     def _repintar_sidebar(self):
