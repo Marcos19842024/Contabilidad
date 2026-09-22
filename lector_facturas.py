@@ -89,7 +89,7 @@ _EXCEPCIONES_MANUALES = None
 
 def _carpeta_datos():
     """
-    Carpeta única de datos de la app.
+    Carpeta única de datos de la app (NO por año).
     Compartida entre años: catálogo, excepciones, backups.
     """
     if getattr(sys, 'frozen', False):
