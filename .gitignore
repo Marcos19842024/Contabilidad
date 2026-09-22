@@ -1,0 +1,54 @@
+# ============================================
+# PYTHON
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ============================================
+# ENTORNOS VIRTUALES
+# ============================================
+venv/
+.venv/
+env/
+ENV/
+
+# ============================================
+# PYINSTALLER (BUILDS Y EJECUTABLES)
+# ============================================
+build/
+dist/
+*.spec
+*.manifest
+*.app/
+*.exe
+
+# ============================================
+# DATOS PERSONALES Y SENSIBLES
+# ============================================
+# JSONs con datos del usuario
+registros_ingresos_*.json
+historial_autocompletado.json
+config_ui.json
+categorias_manuales.json
+correos_procesados.json
+
+# Catálogo (opcional, ver nota abajo)
+# catalogo_qvet.json
+
+# Carpetas de datos
+facturas_descargadas/
+logs/
+backups/
+
+# ============================================
+# SISTEMA Y EDITORES
+# ============================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.bak

@@ -1,3 +1,0 @@
-([('SistemaIngresos',
-   '/Users/marcos/Applications/Contabilidad/dist/SistemaIngresos',
-   'EXECUTABLE')],)
