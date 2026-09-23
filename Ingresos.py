@@ -162,49 +162,54 @@ def refrescar_colores():
 # DEFINICIÓN DE CAMPOS
 # ============================================================
 CAMPOS = [
-    ("no_factura", "No. DE FACTURA", "GENERAL", "text"),
-    ("qvet", "QVET", "GENERAL", "text"),
-    ("fecha", "FECHA", "GENERAL", "date"),
-    ("nombre", "NOMBRE", "GENERAL", "text"),
-    ("rfc", "RFC", "GENERAL", "text"),
-    ("u_importe", "IMPORTE", "U", "number"),
-    ("u_iva", "IVA (16%)", "U", "number"),
-    ("ac_importe", "IMPORTE", "ACCESORIOS", "number"),
-    ("ac_iva", "IVA (16%)", "ACCESORIOS", "number"),
-    ("med_importe", "IMPORTE (sin IVA)", "MEDICAMENTOS", "number"),
-    ("med_sin_iva", "SIN IVA", "MEDICAMENTOS", "number"),
-    ("med_iva", "IVA (16%)", "MEDICAMENTOS", "number"),
-    ("hig_importe", "IMPORTE (sin IVA)", "HIGIENE", "number"),
-    ("hig_sin_iva", "SIN IVA", "HIGIENE", "number"),
-    ("hig_iva", "IVA 16%", "HIGIENE", "number"),
-    ("hig_sin_ieps_6", "SIN IEPS 6%", "HIGIENE", "number"),
-    ("hig_ieps_6", "IEPS 6%", "HIGIENE", "number"),
-    ("hig_sin_ieps_7", "SIN IEPS 7%", "HIGIENE", "number"),
-    ("hig_ieps_7", "IEPS 7%", "HIGIENE", "number"),
-    ("est_importe", "IMPORTE", "ESTETICA", "number"),
-    ("est_iva", "IVA (16%)", "ESTETICA", "number"),
-    ("tra_importe", "IMPORTE", "TRANSPORTE", "number"),
-    ("tra_iva", "IVA (16%)", "TRANSPORTE", "number"),
-    ("pen_importe", "IMPORTE", "PENSION", "number"),
-    ("pen_iva", "IVA (16%)", "PENSION", "number"),
-    ("vac_importe", "IMPORTE", "VACUNA", "number"),
-    ("cli_importe", "IMPORTE", "CLINICA", "number"),
-    ("total", "TOTAL (auto)", "TOTAL", "number"),
-    ("efectivo", "EFECTIVO", "TIPO DE PAGO", "number"),
-    ("tc", "TARJETA CRÉDITO", "TIPO DE PAGO", "number"),
-    ("td", "TARJETA DÉBITO", "TIPO DE PAGO", "number"),
-    ("cheque", "CHEQUE", "TIPO DE PAGO", "number"),
-    ("transfer", "TRANSFERENCIA", "TIPO DE PAGO", "number"),
-    ("vale", "VALE", "TIPO DE PAGO", "number"),
-    ("fecha_impresion", "FECHA DE IMPRESIÓN", "CONTROL", "date"),
-    ("fecha_ficha", "FECHA FICHA DE DEPÓSITO", "CONTROL", "date"),
-    ("monto_ficha", "MONTO DE FICHA DE DEPOSITO", "CONTROL", "number"),
-    ("fecha_santander", "FECHA SANTANDER", "CONTROL", "date"),
-    ("edo_santander_deb", "EDO. CUENTA SANTANDER DEBITO", "CONTROL", "number"),
-    ("edo_santander_cre", "EDO. CUENTA SANTANDER CREDITO", "CONTROL", "number"),
-    ("fecha_bancomer", "FECHA BANCOMER", "CONTROL", "date"),
-    ("transfer_santander", "TRANSFERENCIA SANTANDER", "CONTROL", "number"),
-    ("folio_fiscal", "FOLIO FISCAL", "CONTROL", "text"),
+    # GENERAL
+    ("no_factura",       "No. DE FACTURA",           "GENERAL",        "text"),
+    ("qvet",             "QVET",                     "GENERAL",        "text"),
+    ("fecha",            "FECHA DE EMISIÓN",         "GENERAL",        "date"),
+    ("nombre",           "NOMBRE",                   "GENERAL",        "text"),
+    ("rfc",              "RFC",                      "GENERAL",        "text"),
+    ("fecha_impresion",  "FECHA DE TIMBRADO",        "GENERAL",        "date"),
+    ("folio_fiscal",     "FOLIO FISCAL",             "GENERAL",        "text"),
+    # U
+    ("u_importe",        "IMPORTE",                  "U",              "number"),
+    ("u_iva",            "IVA (16%)",                "U",              "number"),
+    # ACCESORIOS
+    ("ac_importe",       "IMPORTE",                  "ACCESORIOS",     "number"),
+    ("ac_iva",           "IVA (16%)",                "ACCESORIOS",     "number"),
+    # MEDICAMENTOS
+    ("med_importe",      "IMPORTE (sin IVA)",        "MEDICAMENTOS",   "number"),
+    ("med_sin_iva",      "SIN IVA",                  "MEDICAMENTOS",   "number"),
+    ("med_iva",          "IVA (16%)",                "MEDICAMENTOS",   "number"),
+    # HIGIENE
+    ("hig_importe",      "IMPORTE (sin IVA)",        "HIGIENE",        "number"),
+    ("hig_sin_iva",      "SIN IVA",                  "HIGIENE",        "number"),
+    ("hig_iva",          "IVA 16%",                  "HIGIENE",        "number"),
+    ("hig_sin_ieps_6",   "SIN IEPS 6%",              "HIGIENE",        "number"),
+    ("hig_ieps_6",       "IEPS 6%",                  "HIGIENE",        "number"),
+    ("hig_sin_ieps_7",   "SIN IEPS 7%",              "HIGIENE",        "number"),
+    ("hig_ieps_7",       "IEPS 7%",                  "HIGIENE",        "number"),
+    # ESTETICA
+    ("est_importe",      "IMPORTE",                  "ESTETICA",       "number"),
+    ("est_iva",          "IVA (16%)",                "ESTETICA",       "number"),
+    # TRANSPORTE
+    ("tra_importe",      "IMPORTE",                  "TRANSPORTE",     "number"),
+    ("tra_iva",          "IVA (16%)",                "TRANSPORTE",     "number"),
+    # PENSION
+    ("pen_importe",      "IMPORTE",                  "PENSION",        "number"),
+    ("pen_iva",          "IVA (16%)",                "PENSION",        "number"),
+    # VACUNA
+    ("vac_importe",      "IMPORTE",                  "VACUNA",         "number"),
+    # CLINICA
+    ("cli_importe",      "IMPORTE",                  "CLINICA",        "number"),
+    # TOTAL
+    ("total",            "TOTAL (auto)",             "TOTAL",          "number"),
+    # TIPO DE PAGO
+    ("efectivo",         "EFECTIVO",                 "TIPO DE PAGO",   "number"),
+    ("tc",               "TARJETA CRÉDITO",          "TIPO DE PAGO",   "number"),
+    ("td",               "TARJETA DÉBITO",           "TIPO DE PAGO",   "number"),
+    ("cheque",           "CHEQUE",                   "TIPO DE PAGO",   "number"),
+    ("transfer",         "TRANSFERENCIA",            "TIPO DE PAGO",   "number"),
+    ("vale",             "VALE",                     "TIPO DE PAGO",   "number"),
 ]
 
 CAMPOS_DICT = {c[0]: c for c in CAMPOS}
@@ -237,13 +242,6 @@ CAMPOS_TIPO_PAGO = ["efectivo", "tc", "td", "cheque", "transfer", "vale"]
 # ============================================================
 # Cada serie del XML corresponde a un centro específico.
 # Ajusta este diccionario si agregas más series o centros.
-MAPEO_SERIE_CENTRO = {
-    "S1": "Central",
-    "PRADOS": "Prado",
-    "PRADO": "Prado",       # por si el QVET emite "Prado" (sin s)
-}
-
-
 def centro_desde_serie(serie):
     """
     Devuelve el nombre del centro según la serie del XML.
@@ -599,15 +597,24 @@ def evaluar_expresion(texto):
         return 0.0
 
 
-def agrupar_facturas_descargadas(carpeta):
+def agrupar_facturas_descargadas(carpeta, archivos_por_correo=None):
     """
-    Agrupa los archivos descargados por No. de factura.
-    Lee el XML para detectar el Folio con certeza.
-    Si no hay XML, usa el nombre del archivo PDF como fallback.
+    Agrupa los archivos descargados.
+    
+    Estrategia:
+      1. Si se pasa `archivos_por_correo` ({message_id: [paths]}), 
+         agrupa por correo (XML y PDF vienen juntos).
+      2. Si no, usa el método anterior (agrupar por folio del nombre).
     
     Devuelve:
       {
-        "8261": {"xml": Path, "pdf": Path, "serie": "S1", "uuid": "..."},
+        "grupo_1": {
+            "xml": Path,
+            "pdf": Path,
+            "no_factura": "196",
+            "serie": "Prados",
+            "uuid": "..."
+        },
         ...
       }
     """
@@ -615,13 +622,56 @@ def agrupar_facturas_descargadas(carpeta):
     from collections import defaultdict
 
     grupos = {}
-    xmls_huerfanos = []
-    pdfs_huerfanos = []
+    contador = 0
 
-    if not carpeta.exists():
-        return {}
+    # ---- Método 1: agrupar por correo ----
+    if archivos_por_correo:
+        for _, archivos in archivos_por_correo.items():
+            xml_path = None
+            pdf_path = None
 
-    # 1. Primero procesar todos los XML (fuente de verdad)
+            for ruta_str in archivos:
+                ruta = Path(ruta_str)
+                if not ruta.exists():
+                    continue
+                ext = ruta.suffix.lower()
+                if ext == ".xml" and xml_path is None:
+                    xml_path = ruta
+                elif ext == ".pdf" and pdf_path is None:
+                    pdf_path = ruta
+
+            if not xml_path:
+                continue  # sin XML, no se puede procesar
+
+            # Leer folio y serie del XML
+            try:
+                NS = {"cfdi": "http://www.sat.gob.mx/cfd/4"}
+                tree = ET.parse(str(xml_path))
+                root = tree.getroot()
+                folio = (root.get("Folio") or "").strip()
+                serie = (root.get("Serie") or "").strip()
+                if folio.isdigit():
+                    folio = str(int(folio))
+                uuid = ""
+                for elem in root.iter():
+                    if elem.tag.endswith("TimbreFiscalDigital"):
+                        uuid = elem.get("UUID", "")
+                        break
+            except Exception:
+                continue
+
+            contador += 1
+            grupos[contador] = {
+                "xml": xml_path,
+                "pdf": pdf_path,
+                "no_factura": folio,
+                "serie": serie,
+                "uuid": uuid,
+            }
+
+        return grupos
+
+    # ---- Método 2 (fallback): agrupar por folio del nombre ----
     for archivo in sorted(carpeta.glob("*.xml")):
         try:
             NS = {"cfdi": "http://www.sat.gob.mx/cfd/4"}
@@ -629,90 +679,47 @@ def agrupar_facturas_descargadas(carpeta):
             root = tree.getroot()
             folio = (root.get("Folio") or "").strip()
             serie = (root.get("Serie") or "").strip()
-            # Limpiar folio (quitar ceros a la izquierda)
             if folio.isdigit():
                 folio = str(int(folio))
-
             if not folio:
-                xmls_huerfanos.append(archivo)
                 continue
-
-            # UUID del timbre
             uuid = ""
             for elem in root.iter():
                 if elem.tag.endswith("TimbreFiscalDigital"):
                     uuid = elem.get("UUID", "")
                     break
-
-            grupos[folio] = {
+            contador += 1
+            grupos[f"grupo_{contador}"] = {
                 "xml": archivo,
                 "pdf": None,
+                "no_factura": folio,
                 "serie": serie,
                 "uuid": uuid,
             }
         except Exception:
-            xmls_huerfanos.append(archivo)
+            continue
 
-    # 2. Ahora procesar los PDF y asociarlos a los XML existentes
+    # Asociar PDFs por nombre (fallback antiguo)
     for archivo in sorted(carpeta.glob("*.pdf")):
-        # Detectar el No. de factura desde el nombre del archivo
         nombre = archivo.stem
         no_factura = None
-
-        # Patrón QVET: Factura_A4_CFD40_DDMMYYYYHHMMSS_NNNN.pdf
-        # El último segmento tras _ es el folio
         partes = nombre.split("_")
-        if partes:
-            ultimo = partes[-1]
-            if ultimo.isdigit():
-                no_factura = str(int(ultimo))
-
-        # Patrón alterno: _NNNNNN al final
+        if partes and partes[-1].isdigit():
+            no_factura = str(int(partes[-1]))
         if not no_factura:
             m = re.search(r"_(\d+)$", nombre)
             if m:
                 no_factura = str(int(m.group(1)))
-
-        # Patrón alterno: nombre puramente numérico
-        if not no_factura:
-            m = re.match(r"^(\d+)$", nombre)
-            if m:
-                no_factura = str(int(m.group(1)))
-
-        # Patrón final: la secuencia numérica más larga
         if not no_factura:
             digitos = re.findall(r"\d+", nombre)
             if digitos:
                 no_factura = str(int(max(digitos, key=len)))
-
         if not no_factura:
-            pdfs_huerfanos.append(archivo)
             continue
-
-        # Buscar el grupo correspondiente
-        if no_factura in grupos:
-            if grupos[no_factura]["pdf"] is None:
-                grupos[no_factura]["pdf"] = archivo
-            else:
-                pdfs_huerfanos.append(archivo)
-        else:
-            # No hay XML, pero guardamos el PDF igual
-            grupos[no_factura] = {
-                "xml": None,
-                "pdf": archivo,
-                "serie": "",
-                "uuid": "",
-            }
-
-    # 3. Log de huérfanos (para diagnóstico)
-    if xmls_huerfanos:
-        print(f"⚠️ XMLs sin folio detectado: {len(xmls_huerfanos)}")
-        for x in xmls_huerfanos:
-            print(f"   • {x.name}")
-    if pdfs_huerfanos:
-        print(f"⚠️ PDFs sin grupo: {len(pdfs_huerfanos)}")
-        for p in pdfs_huerfanos:
-            print(f"   • {p.name}")
+        for clave, grp in grupos.items():
+            if grp.get("no_factura") == no_factura and grp.get("pdf") is None:
+                grp["pdf"] = archivo
+                break
 
     return grupos
 
@@ -1224,6 +1231,8 @@ class AppIngresos(ttk.Window):
                                           style="Custom.TEntry")
                 else:
                     w = ttk.Entry(frame_grupo, width=20, style="Custom.TEntry")
+                # Forzar mayúsculas al escribir manualmente
+                self._forzar_mayusculas(w)
 
             w.grid(row=fila, column=columnas + 1, padx=5, pady=3, sticky="w")
             self.entradas[clave] = w
@@ -1383,11 +1392,6 @@ class AppIngresos(ttk.Window):
             label="📂  Ver adjuntos",
             command=self._ver_adjuntos
         )
-        self.menu_contextual.add_separator()
-        self.menu_contextual.add_command(
-            label="📁  Abrir carpeta del registro",
-            command=self._abrir_carpeta_registro
-        )
 
         # Bindings: clic derecho en Mac es Button-2 y Control+Click
         self.tabla.bind("<Button-3>", self._mostrar_menu_contextual)   # Windows/Linux
@@ -1407,25 +1411,6 @@ class AppIngresos(ttk.Window):
             self.menu_contextual.tk_popup(event.x_root, event.y_root)
         finally:
             self.menu_contextual.grab_release()
-
-    def _abrir_carpeta_registro(self):
-        """Abre la carpeta del registro seleccionado."""
-        sel = self.tabla.selection()
-        if not sel:
-            messagebox.showinfo("Abrir carpeta", "Selecciona un registro.")
-            return
-        id_sel = int(sel[0])
-        reg = next((r for r in self.registros if r["id"] == id_sel), None)
-        if not reg:
-            return
-        carpeta = carpeta_de_registro(reg)
-        if carpeta and carpeta.exists():
-            self._abrir_carpeta(carpeta)
-        else:
-            messagebox.showinfo(
-                "Carpeta no encontrada",
-                f"La carpeta del registro no existe:\n\n{carpeta}"
-            )
 
     # ---------------- SCROLL ----------------
     def _on_mousewheel(self, event):
@@ -1569,6 +1554,29 @@ class AppIngresos(ttk.Window):
         except Exception:
             pass
 
+    @staticmethod
+    def _forzar_mayusculas(widget):
+        """Convierte automáticamente a mayúsculas lo que se escriba en el widget."""
+        def _convertir(event):
+            # Ignorar teclas especiales
+            if event.keysym in ("BackSpace", "Delete", "Left", "Right",
+                                "Up", "Down", "Home", "End", "Tab",
+                                "Shift_L", "Shift_R", "Control_L", "Control_R",
+                                "Alt_L", "Alt_R"):
+                return
+            texto_actual = widget.get()
+            texto_mayus = texto_actual.upper()
+            if texto_actual != texto_mayus:
+                pos = widget.index(tk.INSERT)
+                widget.delete(0, tk.END)
+                widget.insert(0, texto_mayus)
+                try:
+                    widget.icursor(pos)
+                except Exception:
+                    pass
+
+        widget.bind("<KeyRelease>", _convertir, add="+")
+
     # ---------------- CRUD ----------------
     def _leer_form(self):
         d = {}
@@ -1595,7 +1603,7 @@ class AppIngresos(ttk.Window):
                 else:
                     d[clave] = w.get()
             else:
-                d[clave] = w.get().strip()
+                d[clave] = w.get().strip().upper()
         d["centro"] = self.var_centro.get()
         d["anio"] = int(self.var_anio.get())
         d["mes"] = self.var_mes.get()
@@ -1941,7 +1949,7 @@ class AppIngresos(ttk.Window):
                                  f"No se pudo procesar la factura:\n{e}")
             return
 
-        resumen = self._llenar_desde_factura(datos)
+        resumen, _ = self._llenar_desde_factura(datos)
 
         self._ultima_factura_xml = ruta_xml
         self._ultima_factura_pdf = ruta_pdf or None
@@ -1974,7 +1982,7 @@ class AppIngresos(ttk.Window):
                 f"La serie '{serie}' no está mapeada a ningún centro.\n\n"
                 "Verifica manualmente el Centro antes de guardar.\n\n"
                 "Si quieres agregarla, abre el código de ingresos.py "
-                "y añade la serie al diccionario MAPEO_SERIE_CENTRO."
+                "y añade la serie al diccionario 'SERIES_A_CENTRO'."
             )
 
     def _pedir_credenciales_correo(self):
@@ -1984,9 +1992,9 @@ class AppIngresos(ttk.Window):
         """
         ventana = ttk.Toplevel(self)
         ventana.title("Configuración de Gmail")
-        ventana.geometry("620x520")
-        ventana.resizable(True, True)
-        ventana.minsize(600, 500)
+        ventana.geometry("550x450")
+        ventana.resizable(False, False)
+        ventana.minsize(550, 450)
         ventana.transient(self)
         ventana.grab_set()
 
@@ -2388,7 +2396,11 @@ class AppIngresos(ttk.Window):
         log("PASO 2: Agrupando por No. de factura")
         log("=" * 80)
 
-        grupos = agrupar_facturas_descargadas(carpeta_descargas)
+        archivos_por_correo = info.get("archivos_por_correo", {})
+        grupos = agrupar_facturas_descargadas(
+            carpeta_descargas,
+            archivos_por_correo=archivos_por_correo
+        )
         log(f"Facturas únicas detectadas: {len(grupos)}")
 
         # ---- 7. Preguntar qué hacer ----
@@ -2437,7 +2449,16 @@ class AppIngresos(ttk.Window):
         facturas_sin_xml = []
         facturas_con_error = []
 
-        for i, (no_factura, files) in enumerate(sorted(grupos.items()), 1):
+        def _orden_grupo(item):
+            clave = item[0]
+            try:
+                return int(str(clave).replace("grupo_", ""))
+            except Exception:
+                return 0
+
+        for i, (_, files) in enumerate(sorted(grupos.items(), key=_orden_grupo), 1):
+            no_factura = files.get("no_factura", "?")
+            log(f"\n[{i}/{len(grupos)}] Procesando factura {no_factura}...")
             try:
                 self.barra_progreso["value"] = i
                 self.lbl_progreso.configure(
@@ -2446,8 +2467,6 @@ class AppIngresos(ttk.Window):
                 ventana_prog.update()
             except Exception:
                 pass
-
-            log(f"\n[{i}/{len(grupos)}] Procesando factura {no_factura}...")
 
             if not files["xml"]:
                 log(f"  ⚠️ No hay XML. Se omite.")
@@ -2487,11 +2506,21 @@ class AppIngresos(ttk.Window):
                     facturas_duplicadas.append(datos["no_factura"])
                     continue
 
-                self._llenar_desde_factura(datos)
+                _, datos_completos = self._llenar_desde_factura(datos)
+
+                # Aplicar QVET desde el asunto del correo (si está disponible)
+                qvet_por_archivo = info.get("qvet_por_archivo", {})
+                nombre_xml = Path(files["xml"]).name
+                qvet_email = qvet_por_archivo.get(nombre_xml, "")
+                if qvet_email:
+                    self.entradas["qvet"].delete(0, tk.END)
+                    self.entradas["qvet"].insert(0, qvet_email.upper())
+                    datos_completos["qvet"] = qvet_email.upper()
+                    log(f"  🔖 QVET asignado desde el correo: {qvet_email}")
                 self._ultima_factura_xml = str(files["xml"])
                 self._ultima_factura_pdf = str(files["pdf"]) if files["pdf"] else None
 
-                self._guardar_silencioso(datos)
+                self._guardar_silencioso(datos_completos)
 
                 if ff:
                     uuids_existentes.add(ff)
@@ -2585,8 +2614,8 @@ class AppIngresos(ttk.Window):
 
         # ---- Centrar la ventana ----
         ventana.update_idletasks()
-        ancho = 520
-        alto = 420
+        ancho = 450
+        alto = 250
         x = (ventana.winfo_screenwidth() - ancho) // 2
         y = (ventana.winfo_screenheight() - alto) // 2
         ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
@@ -2644,7 +2673,7 @@ class AppIngresos(ttk.Window):
             text="✅  Procesar TODAS automáticamente",
             command=lambda: _elegir("procesar_todas"),
             bootstyle="info-outline",
-            width=45,
+            width=35,
         ).pack(pady=5)
 
         # Descripción del botón
@@ -2661,7 +2690,7 @@ class AppIngresos(ttk.Window):
             text="📁  Solo guardar los archivos",
             command=lambda: _elegir("solo_guardar"),
             bootstyle="info-outline",
-            width=45,
+            width=35,
         ).pack(pady=5)
 
         # Descripción del botón
@@ -2691,16 +2720,16 @@ class AppIngresos(ttk.Window):
         """
         ventana = ttk.Toplevel(self)
         ventana.title("Sincronizar facturas")
-        ventana.geometry("500x340")
+        ventana.geometry("450x250")
         ventana.resizable(False, False)
         ventana.transient(self)
         ventana.grab_set()
 
         # Centrar la ventana
         ventana.update_idletasks()
-        x = (ventana.winfo_screenwidth() - 500) // 2
-        y = (ventana.winfo_screenheight() - 340) // 2
-        ventana.geometry(f"500x340+{x}+{y}")
+        x = (ventana.winfo_screenwidth() - 450) // 2
+        y = (ventana.winfo_screenheight() - 250) // 2
+        ventana.geometry(f"450x250+{x}+{y}")
 
         # ---- Encabezado ----
         ttk.Label(ventana, text="⚡ Sincronizar facturas",
@@ -2722,7 +2751,7 @@ class AppIngresos(ttk.Window):
             text="📥  Solo correos NO leídos  (más rápido)",
             command=lambda: _elegir("no_leidos"),
             bootstyle="info-outline",
-            width=45,
+            width=35,
         ).pack(pady=5)
 
         # Botón: Todos los correos
@@ -2736,11 +2765,11 @@ class AppIngresos(ttk.Window):
             text=texto_todos,
             command=lambda: _elegir("todos"),
             bootstyle="info-outline",
-            width=45,
+            width=35,
         ).pack(pady=5)
 
         # Separador
-        ttk.Separator(ventana).pack(fill="x", padx=30, pady=15)
+        ttk.Separator(ventana).pack(fill="x", padx=20, pady=10)
 
         # Botón: Editar configuración
         ttk.Button(
@@ -2748,7 +2777,7 @@ class AppIngresos(ttk.Window):
             text="⚙️  Editar configuración del correo",
             command=lambda: _elegir("editar"),
             bootstyle="info-outline",
-            width=45,
+            width=35,
         ).pack(pady=5)
 
         ventana.wait_window()
@@ -2803,9 +2832,24 @@ class AppIngresos(ttk.Window):
 
         if rutas_adjuntar:
             try:
-                adjuntar_archivos(datos, rutas_adjuntar)
-            except Exception:
-                pass
+                copiados, errores = adjuntar_archivos(datos, rutas_adjuntar)
+                # LOG para diagnosticar
+                print(f"[GUARDAR-SILENCIOSO] Copiados: {copiados}")
+                if errores:
+                    print(f"[GUARDAR-SILENCIOSO] Errores: {errores}")
+            except Exception as e:
+                print(f"[GUARDAR-SILENCIOSO] Excepción al adjuntar: {e}")
+
+        # ---- Eliminar los archivos originales de facturas_descargadas ----
+        carpeta_descargas = _CARPETA_DATOS / "facturas_descargadas"
+        for ruta in rutas_adjuntar:
+            try:
+                p = Path(ruta)
+                if p.exists() and p.parent == carpeta_descargas:
+                    p.unlink()
+                    print(f"[GUARDAR-SILENCIOSO] Eliminado de descargas: {p.name}")
+            except Exception as e:
+                print(f"[GUARDAR-SILENCIOSO] No se pudo eliminar {ruta}: {e}")
 
         self._ultima_factura_xml = None
         self._ultima_factura_pdf = None
@@ -2817,19 +2861,16 @@ class AppIngresos(ttk.Window):
     def _llenar_desde_factura(self, datos):
         """
         Llena el formulario con los datos de la factura.
-        Devuelve la lista de resumen.
+        Devuelve:
+          - resumen (lista de strings)
+          - datos_completos (dict con TODOS los campos del formulario)
         """
-        self._nuevo()
-
-        # Detectar y ajustar centro, año y mes según la factura
-        # ---------------------------------------------------------
-        # 1 Centro: según la serie del XML
+        # 0. Detectar centro, año y mes según la factura
         serie = datos.get("serie", "").strip()
         centro_detectado = centro_desde_serie(serie)
         if centro_detectado:
             self.var_centro.set(centro_detectado)
 
-        # 2 Año y mes: según la fecha de la factura
         fecha_factura = datos.get("fecha", "")
         mes_detectado, anio_detectado = mes_anio_desde_fecha(fecha_factura)
         if anio_detectado:
@@ -2837,8 +2878,6 @@ class AppIngresos(ttk.Window):
         if mes_detectado:
             self.var_mes.set(mes_detectado)
 
-        # 3 Recargar los registros del año/mes/centro correctos
-        #     (por si el año o centro cambiaron)
         try:
             anio_actual = int(self.var_anio.get())
         except Exception:
@@ -2847,17 +2886,21 @@ class AppIngresos(ttk.Window):
             self.registros = cargar_db(anio_actual)
             self._anio_cargado = anio_actual
 
+        # 1. Limpiar formulario
+        self._nuevo()
+
+        # 2. Datos generales
         self.entradas["no_factura"].delete(0, tk.END)
-        self.entradas["no_factura"].insert(0, datos["no_factura"])
+        self.entradas["no_factura"].insert(0, str(datos["no_factura"]).upper())
 
         self.entradas["qvet"].delete(0, tk.END)
-        self.entradas["qvet"].insert(0, datos.get("qvet", ""))
+        self.entradas["qvet"].insert(0, str(datos.get("qvet", "")).upper())
 
         self.entradas["nombre"].delete(0, tk.END)
-        self.entradas["nombre"].insert(0, datos["nombre"])
+        self.entradas["nombre"].insert(0, str(datos["nombre"]).upper())
 
         self.entradas["rfc"].delete(0, tk.END)
-        self.entradas["rfc"].insert(0, datos["rfc"])
+        self.entradas["rfc"].insert(0, str(datos["rfc"]).upper())
 
         self.entradas["folio_fiscal"].delete(0, tk.END)
         self.entradas["folio_fiscal"].insert(0, datos["folio_fiscal"])
@@ -2876,6 +2919,7 @@ class AppIngresos(ttk.Window):
             except Exception:
                 pass
 
+        # 3. Agrupar conceptos
         agrupado, detalle = agrupar_por_categoria(datos)
 
         mapa_campos = {
@@ -2917,10 +2961,10 @@ class AppIngresos(ttk.Window):
                         expresion = "+".join(terminos)
                     else:
                         expresion = f"{valor:.2f}"
-
                     w.set_valor(round(valor, 2), expresion=expresion)
                     resumen.append(f"  {cat} → {campo}: ${valor:,.2f}")
 
+        # 4. Tipo de pago
         pagos = datos.get("pagos", {})
         for clave in ("efectivo", "tc", "td", "cheque", "transfer", "vale"):
             valor = pagos.get(clave, 0)
@@ -2931,8 +2975,15 @@ class AppIngresos(ttk.Window):
                 w.set_valor(round(valor, 2), expresion=f"{valor:.2f}")
                 resumen.append(f"  {clave.upper()}: ${valor:,.2f}")
 
+        # 5. Recalcular
         self._recalcular_total()
-        return resumen
+
+        # 6. Leer TODOS los campos del formulario para tener el dict completo
+        datos_completos = self._leer_form()
+        # Preservar los pagos del XML
+        datos_completos["pagos"] = pagos
+
+        return resumen, datos_completos
 
     def _actualizar_titulo(self):
         try:
@@ -2985,8 +3036,10 @@ class AppIngresos(ttk.Window):
         # ============================================================
         ventana = ttk.Toplevel(self)
         ventana.title("📊 Reportes disponibles")
-        ventana.geometry("820x650")
+        ventana.geometry("600x400")
         ventana.transient(self)
+        ventana.resizable(False, True)
+        ventana.minsize(None,None)
 
         # --- Encabezado ---
         header = ttk.Frame(ventana)
@@ -3001,16 +3054,16 @@ class AppIngresos(ttk.Window):
 
         columnas = ("registros", "total", "ultimo_folio")
         arbol = ttk.Treeview(frame_arbol, columns=columnas, show="tree headings",
-                             height=20)
+                             height=10)
         arbol.heading("#0", text="Año / Mes / Centro", anchor="w")
         arbol.heading("registros", text="Registros", anchor="center")
         arbol.heading("total", text="Total", anchor="e")
         arbol.heading("ultimo_folio", text="Último folio", anchor="center")
 
-        arbol.column("#0", width=340, minwidth=250, anchor="w")
-        arbol.column("registros", width=100, anchor="center")
-        arbol.column("total", width=150, anchor="e")
-        arbol.column("ultimo_folio", width=120, anchor="center")
+        arbol.column("#0", width=150, minwidth=150, anchor="w")
+        arbol.column("registros", width=50, anchor="center")
+        arbol.column("total", width=100, anchor="e")
+        arbol.column("ultimo_folio", width=50, anchor="center")
 
         arbol.pack(fill="both", expand=True, side="left")
 
@@ -3314,7 +3367,8 @@ class AppIngresos(ttk.Window):
             return
         ventana = ttk.Toplevel(self)
         ventana.title(f"Adjuntos de {reg.get('no_factura', '')}")
-        ventana.geometry("520x380")
+        ventana.geometry("250x250")
+        ventana.resizable(False, False)
         ventana.transient(self)
         ttk.Label(ventana, text=f"Adjuntos de {reg.get('no_factura', '')}:",
                   font=("Segoe UI", 11, "bold")).pack(pady=8)
@@ -3342,10 +3396,6 @@ class AppIngresos(ttk.Window):
         lb.bind("<Double-Button-1>", lambda e: abrir_archivo())
         fr = ttk.Frame(ventana)
         fr.pack(pady=8)
-        ttk.Button(fr, text="📄 Abrir archivo", command=abrir_archivo,
-                   bootstyle="info-outline").pack(side="left", padx=4)
-        ttk.Button(fr, text="📁 Abrir carpeta", command=abrir_carpeta,
-                   bootstyle="info-outline").pack(side="left", padx=4)
         ttk.Button(fr, text="📎 Adjuntar más",
                    command=lambda: (ventana.destroy(), self._adjuntar_factura()),
                    bootstyle="info-outline").pack(side="left", padx=4)
@@ -3417,25 +3467,68 @@ class AppIngresos(ttk.Window):
 
         ventana = ttk.Toplevel(self)
         ventana.title("🎨 Elegir tema")
-        ventana.geometry("420x520")
+        ventana.geometry("300x400")
         ventana.transient(self)
         ventana.grab_set()
+        ventana.resizable(False, False)
+        ventana.minsize(300, 400)
 
+        # ---- Encabezado ----
         ttk.Label(ventana, text="Selecciona un tema:",
-                  font=("Segoe UI", 12, "bold")).pack(pady=10)
+                  font=("Segoe UI", 13, "bold")).pack(pady=(15, 5))
 
+        ttk.Label(ventana,
+                  text="Haz clic en un tema para previsualizarlo.\n"
+                       "Presiona 'Aplicar y guardar' para conservarlo.",
+                  font=("Segoe UI", 9),
+                  foreground="gray",
+                  justify="center").pack(pady=(0, 10))
+
+        # ---- Contenedor con scroll ----
         cont = ttk.Frame(ventana)
-        cont.pack(fill="both", expand=True, padx=10, pady=5)
-        canvas = tk.Canvas(cont, borderwidth=0, highlightthickness=0)
-        sb = ttk.Scrollbar(cont, orient="vertical", command=canvas.yview)
-        frame_lista = ttk.Frame(canvas)
-        frame_lista.bind("<Configure>",
-                         lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=frame_lista, anchor="nw")
-        canvas.configure(yscrollcommand=sb.set)
-        canvas.pack(side="left", fill="both", expand=True)
+        cont.pack(fill="both", expand=True, padx=15, pady=5)
+
+        # Treeview (tabla) como lista de temas
+        tree = ttk.Treeview(cont, columns=("tema",), show="headings",
+                            height=12, selectmode="browse")
+        tree.heading("tema", text="TEMA")
+        tree.column("tema", width=200, anchor="w")
+
+        # Scrollbar
+        sb = ttk.Scrollbar(cont, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=sb.set)
+        tree.pack(side="left", fill="both", expand=True)
         sb.pack(side="right", fill="y")
 
+        # Llenar la lista
+        for tema in temas:
+            tree.insert("", "end", iid=tema, values=(tema,))
+
+        # Seleccionar el tema actual
+        if TEMA in temas:
+            tree.selection_set(TEMA)
+            tree.see(TEMA)
+
+        # ---- Scroll con la rueda del mouse ----
+        def _on_mousewheel(event):
+            if sys.platform == "darwin":
+                delta = -1 * event.delta
+            elif sys.platform.startswith("win"):
+                delta = -1 * (event.delta // 120)
+            else:
+                delta = -1 if event.num == 5 else 1
+            tree.yview_scroll(int(delta), "units")
+
+        def _bind_wheel(widget):
+            widget.bind("<MouseWheel>", _on_mousewheel, add="+")
+            widget.bind("<Button-4>", _on_mousewheel, add="+")
+            widget.bind("<Button-5>", _on_mousewheel, add="+")
+            for h in widget.winfo_children():
+                _bind_wheel(h)
+
+        _bind_wheel(ventana)
+
+        # ---- Variable para el tema seleccionado ----
         var_tema = tk.StringVar(value=TEMA)
 
         def _preview(tema):
@@ -3450,11 +3543,29 @@ class AppIngresos(ttk.Window):
             except Exception as e:
                 print(f"[_preview] Error: {e}")
 
+        def _al_seleccionar(event=None):
+            """Se ejecuta al hacer clic en un tema de la lista."""
+            sel = tree.selection()
+            if not sel:
+                return
+            tema = sel[0]
+            var_tema.set(tema)
+            _preview(tema)
+            lbl_actual.configure(text=f"Tema actual: {tema}")
+
+        tree.bind("<<TreeviewSelect>>", _al_seleccionar)
+
+        # ---- Etiqueta con el tema actual ----
+        lbl_actual = ttk.Label(ventana, text=f"Tema actual: {TEMA}",
+                                font=("Segoe UI", 10, "bold"),
+                                bootstyle="info")
+        lbl_actual.pack(pady=8)
+
+        # ---- Botones ----
         def _confirmar():
             nuevo_tema = var_tema.get()
             CONFIG["tema"] = nuevo_tema
             guardar_config(CONFIG)
-            self._repintar_sidebar()
             messagebox.showinfo(
                 "Tema guardado",
                 f"Tema cambiado a: {nuevo_tema}\n\n"
@@ -3463,19 +3574,16 @@ class AppIngresos(ttk.Window):
             ventana.destroy()
 
         def _restaurar():
-            var_tema.set("superhero")
-            _preview("superhero")
-
-        for tema in temas:
-            rb = ttk.Radiobutton(
-                frame_lista, text=tema, value=tema, variable=var_tema,
-                command=lambda t=tema: _preview(t),
-                bootstyle="info",
-            )
-            rb.pack(anchor="w", padx=10, pady=3, fill="x")
+            tema_defecto = "superhero"
+            var_tema.set(tema_defecto)
+            if tema_defecto in temas:
+                tree.selection_set(tema_defecto)
+                tree.see(tema_defecto)
+            _preview(tema_defecto)
+            lbl_actual.configure(text=f"Tema actual: {tema_defecto}")
 
         fr_btn = ttk.Frame(ventana)
-        fr_btn.pack(pady=10)
+        fr_btn.pack(pady=12)
         ttk.Button(fr_btn, text="✅ Aplicar y guardar",
                    command=_confirmar,
                    bootstyle="info-outline").pack(side="left", padx=5)
@@ -3552,9 +3660,33 @@ class AppIngresos(ttk.Window):
         self._abrir_carpeta(carpeta)
 
     def _escribir_excel(self, ruta, regs):
+        # ---- Obtener mes y año para el nombre de la hoja ----
+        if regs:
+            # Tomar el primero registro como referencia
+            mes_actual = regs[0].get("mes", "")
+            anio_actual = regs[0].get("anio", "")
+        else:
+            mes_actual = MESES_ES[datetime.now().month - 1]
+            anio_actual = datetime.now().year
+
+        # Si por alguna razón el registro no tiene mes/año, usar los del form
+        if not mes_actual:
+            try:
+                mes_actual = self.var_mes.get()
+            except Exception:
+                mes_actual = MESES_ES[datetime.now().month - 1]
+        if not anio_actual:
+            try:
+                anio_actual = int(self.var_anio.get())
+            except Exception:
+                anio_actual = datetime.now().year
+
+        # Capitalizar el mes
+        nombre_hoja = f"{str(mes_actual).capitalize()} {anio_actual}"
+
         wb = Workbook()
         ws = wb.active
-        ws.title = "Hoja1"
+        ws.title = nombre_hoja[:31]   # por seguridad (máximo 31 caracteres)
 
         thin = Side(border_style="thin", color="808080")
         border = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -3582,49 +3714,50 @@ class AppIngresos(ttk.Window):
         fill_total = PatternFill("solid", fgColor="FFD966")
 
         columnas = {
-            "A": ("No. DE FACTURA", "GENERAL", "text"),
-            "B": ("QVET", "GENERAL", "text"),
-            "C": ("FECHA", "GENERAL", "date"),
-            "D": ("NOMBRE", "GENERAL", "text"),
-            "E": ("RFC", "GENERAL", "text"),
-            "F": ("IMPORTE", "U", "money"),
-            "G": ("IVA (16%)", "U", "money"),
-            "H": ("IMPORTE", "ACCESORIOS", "money"),
-            "I": ("IVA (16%)", "ACCESORIOS", "money"),
-            "J": ("IMPORTE (sin IVA)", "MEDICAMENTOS", "money"),
-            "K": ("SIN IVA", "MEDICAMENTOS", "money"),
-            "L": ("IVA (16%)", "MEDICAMENTOS", "money"),
-            "M": ("IMPORTE (sin IVA)", "HIGIENE", "money"),
-            "N": ("SIN IVA", "HIGIENE", "money"),
-            "O": ("IVA (16%)", "HIGIENE", "money"),
-            "P": ("SIN IEPS 6%", "HIGIENE", "money"),
-            "Q": ("IEPS (6%)", "HIGIENE", "money"),
-            "R": ("SIN IEPS 7%", "HIGIENE", "money"),
-            "S": ("IEPS (7%)", "HIGIENE", "money"),
-            "T": ("IMPORTE", "ESTETICA", "money"),
-            "U": ("IVA (16%)", "ESTETICA", "money"),
-            "V": ("IMPORTE", "TRANSPORTE", "money"),
-            "W": ("IVA (16%)", "TRANSPORTE", "money"),
-            "X": ("IMPORTE", "PENSION", "money"),
-            "Y": ("IVA (16%)", "PENSION", "money"),
-            "Z": ("IMPORTE", "VACUNA", "money"),
-            "AA": ("IMPORTE", "CLINICA", "money"),
-            "AB": ("TOTAL", "TOTAL", "money"),
-            "AC": ("EFECTIVO", "TIPO DE PAGO", "money"),
-            "AD": ("TC", "TIPO DE PAGO", "money"),
-            "AE": ("TD", "TIPO DE PAGO", "money"),
-            "AF": ("CHEQUE", "TIPO DE PAGO", "money"),
-            "AG": ("TRANSF.", "TIPO DE PAGO", "money"),
-            "AH": ("VALE", "TIPO DE PAGO", "money"),
-            "AI": ("FECHA DE IMPRESIÓN", "CONTROL", "date"),
-            "AJ": ("FECHA FICHA DE DEPÓSITO", "CONTROL", "date"),
-            "AK": ("MONTO DE FICHA DE DEPOSITO", "CONTROL", "money"),
-            "AL": ("FECHA SANTANDER", "CONTROL", "date"),
-            "AM": ("EDO. CUENTA SANTANDER DEBITO", "CONTROL", "money"),
-            "AN": ("EDO. CUENTA SANTANDER CREDITO", "CONTROL", "money"),
-            "AO": ("FECHA BANCOMER", "CONTROL", "date"),
-            "AP": ("TRANSFERENCIA SANTANDER", "CONTROL", "money"),
-            "AQ": ("FOLIO FISCAL", "CONTROL", "text"),
+            "A":  ("No. DE FACTURA",              "GENERAL",       "text"),
+            "B":  ("QVET",                        "GENERAL",       "text"),
+            "C":  ("FECHA DE EMISIÓN",            "GENERAL",       "date"),
+            "D":  ("NOMBRE",                      "GENERAL",       "text"),
+            "E":  ("RFC",                         "GENERAL",       "text"),
+            "F":  ("IMPORTE",                     "U",             "money"),
+            "G":  ("IVA (16%)",                   "U",             "money"),
+            "H":  ("IMPORTE",                     "ACCESORIOS",    "money"),
+            "I":  ("IVA (16%)",                   "ACCESORIOS",    "money"),
+            "J":  ("IMPORTE (sin IVA)",           "MEDICAMENTOS",  "money"),
+            "K":  ("SIN IVA",                     "MEDICAMENTOS",  "money"),
+            "L":  ("IVA (16%)",                   "MEDICAMENTOS",  "money"),
+            "M":  ("IMPORTE (sin IVA)",           "HIGIENE",       "money"),
+            "N":  ("SIN IVA",                     "HIGIENE",       "money"),
+            "O":  ("IVA (16%)",                   "HIGIENE",       "money"),
+            "P":  ("SIN IEPS 6%",                 "HIGIENE",       "money"),
+            "Q":  ("IEPS (6%)",                   "HIGIENE",       "money"),
+            "R":  ("SIN IEPS 7%",                 "HIGIENE",       "money"),
+            "S":  ("IEPS (7%)",                   "HIGIENE",       "money"),
+            "T":  ("IMPORTE",                     "ESTETICA",      "money"),
+            "U":  ("IVA (16%)",                   "ESTETICA",      "money"),
+            "V":  ("IMPORTE",                     "TRANSPORTE",    "money"),
+            "W":  ("IVA (16%)",                   "TRANSPORTE",    "money"),
+            "X":  ("IMPORTE",                     "PENSION",       "money"),
+            "Y":  ("IVA (16%)",                   "PENSION",       "money"),
+            "Z":  ("IMPORTE",                     "VACUNA",        "money"),
+            "AA": ("IMPORTE",                     "CLINICA",       "money"),
+            "AB": ("TOTAL",                       "TOTAL",         "money"),
+            # TIPO DE PAGO (5 columnas: efectivo, tarjeta, cheque, transf, vale)
+            "AC": ("EFECTIVO",                    "TIPO DE PAGO",  "money"),
+            "AD": ("TARJETA",                     "TIPO DE PAGO",  "money"),        # suma TC + TD
+            "AE": ("CHEQUE",                      "TIPO DE PAGO",  "money"),
+            "AF": ("TRANSF.",                     "TIPO DE PAGO",  "money"),
+            "AG": ("VALE",                        "TIPO DE PAGO",  "money"),
+            # CONTROL (7 columnas, todas mantienen encabezado pero algunas sin datos)
+            "AH": ("FECHA DE TIMBRADO",                "CONTROL",       "date"),
+            "AI": ("FECHA FICHA DE DEPÓSITO",           "CONTROL",       "date"),   # sin dato
+            "AJ": ("MONTO DE FICHA DE DEPOSITO",        "CONTROL",       "money"),  # mismo que EFECTIVO
+            "AK": ("FECHA SANTANDER TARJETA",           "CONTROL",       "date"),   # sin dato
+            "AL": ("EDO. CUENTA SANTANDER DEBITO",      "CONTROL",       "money"),  # TD
+            "AM": ("EDO. CUENTA SANTANDER CREDITO",     "CONTROL",       "money"),  # TC
+            "AN": ("FECHA SANTANDER TRANSFERENCIA",     "CONTROL",       "date"),   # sin dato
+            "AO": ("TRANSFERENCIA SANTANDER",           "CONTROL",       "money"),  # mismo que TRANSFER
+            "AP": ("FOLIO FISCAL",                      "CONTROL",       "text"),
         }
 
         mapa_claves = {
@@ -3642,31 +3775,38 @@ class AppIngresos(ttk.Window):
             "Z": "vac_importe",
             "AA": "cli_importe",
             "AB": "total",
-            "AC": "efectivo", "AD": "tc", "AE": "td",
-            "AF": "cheque", "AG": "transfer", "AH": "vale",
-            "AI": "fecha_impresion", "AJ": "fecha_ficha",
-            "AK": "monto_ficha", "AL": "fecha_santander",
-            "AM": "edo_santander_deb", "AN": "edo_santander_cre",
-            "AO": "fecha_bancomer", "AP": "transfer_santander",
-            "AQ": "folio_fiscal",
+            "AC": "efectivo",
+            "AD": "__tarjeta__",         # marcador especial (suma TC + TD)
+            "AE": "cheque",
+            "AF": "transfer",
+            "AG": "vale",
+            "AH": "fecha_impresion",
+            "AI": "",                    # FECHA FICHA DE DEPÓSITO (sin dato)
+            "AJ": "__efectivo_dup__",    # MONTO FICHA = EFECTIVO
+            "AK": "",                    # FECHA SANTANDER TARJETA (sin dato)
+            "AL": "td",                  # EDO SANTANDER DEBITO = TD
+            "AM": "tc",                  # EDO SANTANDER CREDITO = TC
+            "AN": "",                    # FECHA SANTANDER TRANSFERENCIA (sin dato)
+            "AO": "__transfer_dup__",    # TRANSFERENCIA SANTANDER = TRANSFER
+            "AP": "folio_fiscal",
         }
 
         FORMULAS_AUTO = {
-            "G": "=F{r}*0.16",
-            "I": "=H{r}*0.16",
-            "L": "=K{r}*0.16",
-            "O": "=N{r}*0.16",
-            "Q": "=P{r}*0.06",
-            "S": "=R{r}*0.07",
-            "U": "=T{r}*0.16",
-            "W": "=V{r}*0.16",
-            "Y": "=X{r}*0.16",
-            "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}+AH{r}",
+            "G":  "=F{r}*0.16",
+            "I":  "=H{r}*0.16",
+            "L":  "=K{r}*0.16",
+            "O":  "=N{r}*0.16",
+            "Q":  "=P{r}*0.06",
+            "S":  "=R{r}*0.07",
+            "U":  "=T{r}*0.16",
+            "W":  "=V{r}*0.16",
+            "Y":  "=X{r}*0.16",
+            "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}",
         }
 
         grupos = [
-            (6, 7, "U"),
-            (8, 9, "ACCESORIOS"),
+            (6,  7,  "U"),
+            (8,  9,  "ACCESORIOS"),
             (10, 12, "MEDICAMENTOS"),
             (13, 19, "HIGIENE"),
             (20, 21, "ESTETICA"),
@@ -3675,9 +3815,10 @@ class AppIngresos(ttk.Window):
             (26, 26, "VACUNA"),
             (27, 27, "CLINICA"),
             (28, 28, "TOTAL"),
-            (29, 34, "TIPO DE PAGO"),
-            (35, 43, "CONTROL"),
+            (29, 33, "TIPO DE PAGO"),   # 5 columnas (AC..AG)
+            (34, 42, "CONTROL"),        # 9 columnas (AH..AP)
         ]
+        
         for ini, fin, texto in grupos:
             if ini != fin:
                 ws.merge_cells(start_row=1, start_column=ini,
@@ -3699,12 +3840,71 @@ class AppIngresos(ttk.Window):
 
         fila = 3
         for r in regs:
+            # Calcular valores especiales primero
+            valor_tc = float(r.get("tc", 0) or 0)
+            valor_td = float(r.get("td", 0) or 0)
+            valor_tarjeta = valor_tc + valor_td
+            valor_efectivo = float(r.get("efectivo", 0) or 0)
+            valor_transfer = float(r.get("transfer", 0) or 0)
+
             for letra, (titulo, seccion, tipo) in columnas.items():
                 clave = mapa_claves[letra]
-                valor = r.get(clave, 0 if tipo == "money" else "")
-                expresion = r.get(f"{clave}__expr", "")
                 c = ws[f"{letra}{fila}"]
                 c.border = border
+
+                # ---- Casos especiales ----
+                # Buscar letras de columnas auxiliares (se hace una vez por celda)
+                def _buscar_letra(clave_buscada):
+                    for letra_temp, clave_temp in mapa_claves.items():
+                        if clave_temp == clave_buscada:
+                            return letra_temp
+                    return None
+
+                if clave == "__tarjeta__":
+                    # TARJETA = TC + TD (fórmula)
+                    letra_tc = _buscar_letra("tc")
+                    letra_td = _buscar_letra("td")
+                    if letra_tc and letra_td:
+                        c.value = f"={letra_tc}{fila}+{letra_td}{fila}"
+                        c.number_format = formato_moneda
+                    elif valor_tarjeta > 0:
+                        c.value = valor_tarjeta
+                        c.number_format = formato_moneda
+                    c.alignment = Alignment(horizontal="right", vertical="center")
+                    continue
+
+                if clave == "__efectivo_dup__":
+                    # MONTO DE FICHA = EFECTIVO (fórmula)
+                    letra_efectivo = _buscar_letra("efectivo")
+                    if letra_efectivo:
+                        c.value = f"={letra_efectivo}{fila}"
+                        c.number_format = formato_moneda
+                    elif valor_efectivo > 0:
+                        c.value = valor_efectivo
+                        c.number_format = formato_moneda
+                    c.alignment = Alignment(horizontal="right", vertical="center")
+                    continue
+
+                if clave == "__transfer_dup__":
+                    # TRANSFERENCIA SANTANDER = TRANSF. (fórmula)
+                    letra_transfer = _buscar_letra("transfer")
+                    if letra_transfer:
+                        c.value = f"={letra_transfer}{fila}"
+                        c.number_format = formato_moneda
+                    elif valor_transfer > 0:
+                        c.value = valor_transfer
+                        c.number_format = formato_moneda
+                    c.alignment = Alignment(horizontal="right", vertical="center")
+                    continue
+
+                if clave == "":
+                    # Campo sin dato (solo encabezado)
+                    c.alignment = Alignment(horizontal="center", vertical="center")
+                    continue
+
+                # ---- Casos normales ----
+                valor = r.get(clave, 0 if tipo == "money" else "")
+                expresion = r.get(f"{clave}__expr", "")
 
                 if tipo == "money":
                     if expresion:
@@ -3775,7 +3975,7 @@ class AppIngresos(ttk.Window):
             ancho = min(max(largo_max + 2, 8), 40)
             ws.column_dimensions[letra].width = ancho
 
-        ws.column_dimensions["AQ"].width = max(ws.column_dimensions["AQ"].width, 38)
+        ws.column_dimensions["AP"].width = max(ws.column_dimensions["AP"].width, 38)
         ws.column_dimensions["D"].width = max(ws.column_dimensions["D"].width, 22)
 
         ws.row_dimensions[1].height = 22
@@ -3806,6 +4006,7 @@ class AppIngresos(ttk.Window):
         ventana.title("🏷️ Reclasificador de productos")
         ventana.geometry("1100x700")
         ventana.transient(self)
+        ventana.resizable(False, False)
 
         # --- Barra superior ---
         top = ttk.Frame(ventana)

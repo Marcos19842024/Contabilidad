@@ -96,6 +96,39 @@ def _imap_fecha(dias_atras):
     return f"{fecha.day:02d}-{meses[fecha.month-1]}-{fecha.year}"
 
 
+def normalizar_qvet(serie, folio):
+    """
+    Normaliza el QVET al formato Serie/Folio.
+    
+    Reglas:
+      - S1 → S1 (todo mayúsculas)
+      - Prados / Prado / PRADOS / prados → PRADOS
+      - Siempre con '/' entre serie y folio
+    
+    Ejemplos:
+      normalizar_qvet("S1", "8407")     → "S1/8407"
+      normalizar_qvet("PRADOS", "197")  → "PRADOS/197"
+      normalizar_qvet("prado", "198")   → "PRADOS/198"
+    """
+    serie = str(serie).strip()
+    folio = str(folio).strip()
+    
+    # Normalizar la serie
+    s_upper = serie.upper()
+    
+    if s_upper == "S1":
+        # S1 siempre en mayúsculas
+        serie_norm = "S1"
+    elif s_upper in ("PRADOS"):
+        # Prados siempre en mayúsculas
+        serie_norm = s_upper  # "PRADOS"
+    else:
+        # Otras series: mayúscula
+        serie_norm = serie.upper()
+    
+    return f"{serie_norm}/{folio}"
+
+
 def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
     carpeta_destino=None,
     solo_no_leidos=False,
@@ -131,10 +164,12 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
     Devuelve:
       - (lista_archivos_descargados, lista_errores, info)
     """
-    # Log a archivo + callback
+
+    # 1. Definir ruta_log y abrir archivo
     ruta_log = _ruta_log()
     archivo_log = open(ruta_log, "w", encoding="utf-8")
 
+    # 2. Definir función log (usa ruta_log indirectamente)
     def log(msg):
         timestamp = datetime.now().strftime("%H:%M:%S")
         linea = f"[{timestamp}] {msg}"
@@ -148,6 +183,7 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
         else:
             print(linea)
 
+    # 3. Definir función progreso
     def progreso(texto):
         """Actualiza la barra/texto de progreso (independiente del log)."""
         if callback_progreso:
@@ -156,22 +192,28 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
             except Exception:
                 pass
 
+    # 4. Log inicial (ya puede usar ruta_log)
     log(f"Log guardado en: {ruta_log}")
 
+    # 5. Preparar carpeta destino
     carpeta_destino = Path(carpeta_destino) if carpeta_destino else _carpeta_datos() / "facturas_descargadas"
     carpeta_destino.mkdir(parents=True, exist_ok=True)
 
+    # 6. Inicializar variables
     descargados = []
     errores = []
+    qvet_por_archivo = {}
+    archivos_por_correo = {}
     info = {
         "total_correos": 0,
         "procesados": 0,
         "omitidos_cache": 0,
         "omitidos_filtros": 0,
         "log": str(ruta_log),
+        "qvet_por_archivo": qvet_por_archivo
     }
 
-    # Cargar caché de correos ya procesados
+    # 7. Cargar caché de correos ya procesados
     cache_ids = cargar_cache_correos() if usar_cache else set()
     ids_procesados_esta_vez = set()
 
@@ -276,6 +318,47 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
                 log(f"          De: {remitente}")
                 log(f"          Fecha: {fecha}")
 
+                # ---- Extraer el QVET del asunto del correo ----
+                qvet_detectado = ""
+                
+                # Formato 1: "S1/8407" o "PRADOS/197" (con slash)
+                m_qvet = re.search(
+                    r"\b(S1|PRADOS|PRADO)\s*/\s*(\d+)\b",
+                    asunto,
+                    re.IGNORECASE
+                )
+                if m_qvet:
+                    qvet_detectado = normalizar_qvet(
+                        m_qvet.group(1), m_qvet.group(2)
+                    )
+                    log(f"          🔖 QVET detectado (formato 1): {qvet_detectado}")
+                else:
+                    # Formato 2: "S1 8407" o "PRADOS 197" (con espacio)
+                    m_qvet2 = re.search(
+                        r"\b(S1|PRADOS|PRADO)\s+(\d+)\b",
+                        asunto,
+                        re.IGNORECASE
+                    )
+                    if m_qvet2:
+                        qvet_detectado = normalizar_qvet(
+                            m_qvet2.group(1), m_qvet2.group(2)
+                        )
+                        log(f"          🔖 QVET detectado (formato 2): {qvet_detectado}")
+                    else:
+                        # Formato 3: "S18407" o "Prados197" (pegado)
+                        m_qvet3 = re.search(
+                            r"\b(S1|PRADOS|PRADO)(\d+)\b",
+                            asunto,
+                            re.IGNORECASE
+                        )
+                        if m_qvet3:
+                            qvet_detectado = normalizar_qvet(
+                                m_qvet3.group(1), m_qvet3.group(2)
+                            )
+                            log(f"          🔖 QVET detectado (formato 3): {qvet_detectado}")
+                        else:
+                            log(f"          ⚠️ No se pudo extraer el QVET del asunto")
+
                 # ---- Verificar filtro de remitente (doble check) ----
                 if filtro_remitente:
                     if filtro_remitente.lower() not in remitente.lower():
@@ -318,6 +401,14 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
                     adjuntos_correo.append(destino)
                     descargados.append(destino)
                     log(f"          📎 {destino.name}")
+
+                    # Guardar QVET
+                    if qvet_detectado:
+                        qvet_por_archivo[destino.name] = qvet_detectado
+
+                    # Guardar en archivos_por_correo
+                    if message_id:
+                        archivos_por_correo.setdefault(message_id, []).append(str(destino))
 
                 if adjuntos_correo:
                     info["procesados"] += 1
@@ -368,4 +459,6 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
         except Exception:
             pass
 
+    info["qvet_por_archivo"] = qvet_por_archivo
+    info["archivos_por_correo"] = archivos_por_correo
     return descargados, errores, info
