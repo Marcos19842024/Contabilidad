@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 compilar.py
-Compila SistemaIngresos incluyendo los archivos de datos necesarios.
-Ejecutar desde la misma carpeta donde están ingresos.py y lector_facturas.py.
+Compila SistemaIngresos para Windows (o Mac/Linux) incluyendo los
+archivos de datos necesarios.
+
+Ejecutar desde la misma carpeta donde están:
+  - Ingresos.py
+  - lector_facturas.py
+  - correo_facturas.py
+  - catalogo_qvet.json
 """
 
 import subprocess
@@ -17,16 +23,28 @@ from pathlib import Path
 # ============================================================
 NOMBRE_APP = "SistemaIngresos"
 
-# Archivos que deben existir antes de compilar
+# Archivos Python que deben existir antes de compilar
 ARCHIVOS_REQUERIDOS = [
-    "ingresos.py",
+    "Ingresos.py",
     "lector_facturas.py",
+    "correo_facturas.py",
 ]
 
-# Archivos de datos que se incluirán en el ejecutable
+# Archivos de datos que se incluirán DENTRO del ejecutable
+# (solo los que son de solo lectura; los editables se crean en
+#  ~/Documents/Contabilidad App/)
 ARCHIVOS_DATOS = [
     "catalogo_qvet.json",
+]
+
+# Archivos de datos que el usuario edita (NO se empaquetan;
+# se crean solos en Documents/Contabilidad App/)
+ARCHIVOS_USUARIO = [
     "categorias_manuales.json",
+    "config_ui.json",
+    "historial_autocompletado.json",
+    "correos_procesados.json",
+    "registros_ingresos_<año>.json",
 ]
 
 
@@ -62,11 +80,12 @@ def instalar_dependencias():
         "pyinstaller",
         "ttkbootstrap",
         "pdfplumber",
+        "pillow",
     ]
     for paquete in paquetes:
         print(f"   Instalando {paquete}...")
         subprocess.run(
-            [sys.executable, "-m", "pip", "install", paquete],
+            [sys.executable, "-m", "pip", "install", "--upgrade", paquete],
             check=True, capture_output=True
         )
     print("   ✅ Dependencias instaladas")
@@ -88,10 +107,11 @@ def limpiar_builds_anteriores():
 
 def construir_comando_pyinstaller():
     """Arma el comando de PyInstaller con todos los archivos."""
+    # Usamos "python -m PyInstaller" para no depender del PATH
     cmd = [
-        "pyinstaller",
-        "--onefile",
-        "--windowed",
+        sys.executable, "-m", "PyInstaller",
+        "--onedir",                # ✅ más rápido al abrir que --onefile
+        "--windowed",              # sin consola
         "--name", NOMBRE_APP,
         "--clean",
         "--noconfirm",
@@ -105,17 +125,46 @@ def construir_comando_pyinstaller():
         cmd.append("--icon=icono.icns")
         print("   🎨 Ícono: icono.icns")
 
-    # Incluir archivos de datos
-    # Formato: --add-data "origen:destino" (Mac/Linux) o "origen;destino" (Windows)
+    # Separador de --add-data según plataforma
     separador = ";" if sys.platform.startswith("win") else ":"
 
+    # Incluir archivos de datos (solo los de solo lectura)
     for archivo in ARCHIVOS_DATOS:
         if Path(archivo).exists():
             cmd.append(f"--add-data={archivo}{separador}.")
             print(f"   📎 Incluir: {archivo}")
 
+    # Hidden imports que PyInstaller no detecta bien
+    hidden_imports = [
+        "ttkbootstrap",
+        "PIL",
+        "PIL._tkinter_finder",
+        "pdfplumber",
+        "pdfminer",
+        "pdfminer.high_level",
+        "pdfminer.layout",
+        "imghdr",
+        "openpyxl",
+        "openpyxl.styles",
+        "openpyxl.utils",
+    ]
+    for h in hidden_imports:
+        cmd.append(f"--hidden-import={h}")
+
+    # Excluir módulos pesados que no se usan
+    excluir = [
+        "matplotlib",
+        "numpy",
+        "pandas",
+        "scipy",
+        "tkinter.test",
+        "test",
+    ]
+    for e in excluir:
+        cmd.append(f"--exclude-module={e}")
+
     # Punto de entrada
-    cmd.append("ingresos.py")
+    cmd.append("Ingresos.py")
 
     return cmd
 
@@ -160,30 +209,37 @@ def compilar():
     print("=" * 60)
 
     if sistema == "Windows":
-        exe = Path("dist") / f"{NOMBRE_APP}.exe"
+        exe = Path("dist") / NOMBRE_APP / f"{NOMBRE_APP}.exe"
         if exe.exists():
             size_mb = exe.stat().st_size / (1024 * 1024)
-            print(f"\n📄 Ejecutable: {exe}")
+            print(f"\n📁 Carpeta: {exe.parent}")
+            print(f"📄 Ejecutable: {exe.name}")
             print(f"   Tamaño: {size_mb:.1f} MB")
-            print(f"\n💡 Copia este archivo a donde quieras.")
+            print(f"\n💡 Copia TODA la carpeta '{NOMBRE_APP}' a donde quieras.")
+            print(f"   El .exe solo no funciona: necesita los archivos vecinos.")
+
     elif sistema == "Mac":
         app = Path("dist") / f"{NOMBRE_APP}.app"
         if app.exists():
             print(f"\n📄 Aplicación: {app}")
             print(f"\n💡 Para distribuir:")
-            print(f"   1. Comprime la app: zip -r {NOMBRE_APP}.zip dist/{NOMBRE_APP}.app")
+            print(f"   1. Comprime: zip -r {NOMBRE_APP}.zip dist/{NOMBRE_APP}.app")
             print(f"   2. Envíala al destinatario")
-            print(f"   3. Si macOS la bloquea, ejecuta:")
+            print(f"   3. Si macOS la bloquea:")
             print(f"      xattr -cr /ruta/a/{NOMBRE_APP}.app")
 
     print("\n📌 IMPORTANTE:")
     print("   Al ejecutar la app por primera vez, se crearán los")
-    print("   siguientes archivos en la misma carpeta del ejecutable:")
-    print("   • registros_ingresos.json")
+    print("   siguientes archivos en ~/Documents/Contabilidad App/:")
+    print("   • registros_ingresos_<año>.json   (uno por año)")
     print("   • historial_autocompletado.json")
     print("   • config_ui.json")
-    print("   • categorias_manuales.json (si editas categorías)")
-    print("   • backups/ (carpeta con respaldos)")
+    print("   • correos_procesados.json")
+    print("   • categorias_manuales.json        (si editas categorías)")
+    print("   • catalogo_qvet.json              (copia editable)")
+    print("   • backups/                        (respaldos automáticos)")
+    print("   • logs/                           (logs de sincronización)")
+    print("   • facturas_descargadas/           (temporal del correo)")
 
 
 if __name__ == "__main__":
