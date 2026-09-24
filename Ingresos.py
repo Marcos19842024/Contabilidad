@@ -2615,7 +2615,7 @@ class AppIngresos(ttk.Window):
         # ---- Centrar la ventana ----
         ventana.update_idletasks()
         ancho = 450
-        alto = 250
+        alto = 300
         x = (ventana.winfo_screenwidth() - ancho) // 2
         y = (ventana.winfo_screenheight() - alto) // 2
         ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
