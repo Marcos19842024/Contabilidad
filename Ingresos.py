@@ -238,6 +238,131 @@ CATEGORIAS_PARA_TOTAL = [
 CAMPOS_TIPO_PAGO = ["efectivo", "tc", "td", "cheque", "transfer", "vale"]
 
 # ============================================================
+# CONSTANTES PARA EL EXCEL
+# ============================================================
+COLORES_SECCION_EXCEL = {
+    "GENERAL":      "1F4E3D",
+    "U":            "2E5A88",
+    "ACCESORIOS":   "7B3F00",
+    "MEDICAMENTOS": "8B1A1A",
+    "HIGIENE":      "4B6B00",
+    "ESTETICA":     "6A1B9A",
+    "TRANSPORTE":   "0D47A1",
+    "PENSION":      "B85C00",
+    "VACUNA":       "00695C",
+    "CLINICA":      "37474F",
+    "TOTAL":        "000000",
+    "TIPO DE PAGO": "4A148C",
+    "CONTROL":      "455A64",
+}
+
+# letra → (título, sección, tipo)
+COLUMNAS_EXCEL = {
+    "A":  ("No. DE FACTURA",              "GENERAL",       "text"),
+    "B":  ("QVET",                        "GENERAL",       "text"),
+    "C":  ("FECHA DE EMISIÓN",            "GENERAL",       "date"),
+    "D":  ("NOMBRE",                      "GENERAL",       "text"),
+    "E":  ("RFC",                         "GENERAL",       "text"),
+    "F":  ("IMPORTE",                     "U",             "money"),
+    "G":  ("IVA (16%)",                   "U",             "money"),
+    "H":  ("IMPORTE",                     "ACCESORIOS",    "money"),
+    "I":  ("IVA (16%)",                   "ACCESORIOS",    "money"),
+    "J":  ("IMPORTE (sin IVA)",           "MEDICAMENTOS",  "money"),
+    "K":  ("SIN IVA",                     "MEDICAMENTOS",  "money"),
+    "L":  ("IVA (16%)",                   "MEDICAMENTOS",  "money"),
+    "M":  ("IMPORTE (sin IVA)",           "HIGIENE",       "money"),
+    "N":  ("SIN IVA",                     "HIGIENE",       "money"),
+    "O":  ("IVA (16%)",                   "HIGIENE",       "money"),
+    "P":  ("SIN IEPS 6%",                 "HIGIENE",       "money"),
+    "Q":  ("IEPS (6%)",                   "HIGIENE",       "money"),
+    "R":  ("SIN IEPS 7%",                 "HIGIENE",       "money"),
+    "S":  ("IEPS (7%)",                   "HIGIENE",       "money"),
+    "T":  ("IMPORTE",                     "ESTETICA",      "money"),
+    "U":  ("IVA (16%)",                   "ESTETICA",      "money"),
+    "V":  ("IMPORTE",                     "TRANSPORTE",    "money"),
+    "W":  ("IVA (16%)",                   "TRANSPORTE",    "money"),
+    "X":  ("IMPORTE",                     "PENSION",       "money"),
+    "Y":  ("IVA (16%)",                   "PENSION",       "money"),
+    "Z":  ("IMPORTE",                     "VACUNA",        "money"),
+    "AA": ("IMPORTE",                     "CLINICA",       "money"),
+    "AB": ("TOTAL",                       "TOTAL",         "money"),
+    "AC": ("EFECTIVO",                    "TIPO DE PAGO",  "money"),
+    "AD": ("TARJETA",                     "TIPO DE PAGO",  "money"),
+    "AE": ("CHEQUE",                      "TIPO DE PAGO",  "money"),
+    "AF": ("TRANSF.",                     "TIPO DE PAGO",  "money"),
+    "AG": ("VALE",                        "TIPO DE PAGO",  "money"),
+    "AH": ("FECHA DE TIMBRADO",           "CONTROL",       "date"),
+    "AI": ("FECHA FICHA DE DEPÓSITO",     "CONTROL",       "date"),
+    "AJ": ("MONTO DE FICHA DE DEPOSITO",  "CONTROL",       "money"),
+    "AK": ("FECHA SANTANDER TARJETA",     "CONTROL",       "date"),
+    "AL": ("EDO. CUENTA SANTANDER DEBITO","CONTROL",       "money"),
+    "AM": ("EDO. CUENTA SANTANDER CREDITO","CONTROL",      "money"),
+    "AN": ("FECHA SANTANDER TRANSFERENCIA","CONTROL",      "date"),
+    "AO": ("TRANSFERENCIA SANTANDER",     "CONTROL",       "money"),
+    "AP": ("FOLIO FISCAL",                "CONTROL",       "text"),
+}
+
+MAPA_CLAVES_EXCEL = {
+    "A": "no_factura", "B": "qvet", "C": "fecha",
+    "D": "nombre", "E": "rfc",
+    "F": "u_importe", "G": "u_iva",
+    "H": "ac_importe", "I": "ac_iva",
+    "J": "med_importe", "K": "med_sin_iva", "L": "med_iva",
+    "M": "hig_importe", "N": "hig_sin_iva", "O": "hig_iva",
+    "P": "hig_sin_ieps_6", "Q": "hig_ieps_6",
+    "R": "hig_sin_ieps_7", "S": "hig_ieps_7",
+    "T": "est_importe", "U": "est_iva",
+    "V": "tra_importe", "W": "tra_iva",
+    "X": "pen_importe", "Y": "pen_iva",
+    "Z": "vac_importe",
+    "AA": "cli_importe",
+    "AB": "total",
+    "AC": "efectivo",
+    "AD": "__tarjeta__",
+    "AE": "cheque",
+    "AF": "transfer",
+    "AG": "vale",
+    "AH": "fecha_impresion",
+    "AI": "",
+    "AJ": "__efectivo_dup__",
+    "AK": "",
+    "AL": "td",
+    "AM": "tc",
+    "AN": "",
+    "AO": "__transfer_dup__",
+    "AP": "folio_fiscal",
+}
+
+FORMULAS_AUTO_EXCEL = {
+    "G":  "=F{r}*0.16",
+    "I":  "=H{r}*0.16",
+    "L":  "=K{r}*0.16",
+    "O":  "=N{r}*0.16",
+    "Q":  "=P{r}*0.06",
+    "S":  "=R{r}*0.07",
+    "U":  "=T{r}*0.16",
+    "W":  "=V{r}*0.16",
+    "Y":  "=X{r}*0.16",
+    "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}",
+}
+
+# (columna_inicio, columna_fin, texto_del_grupo)
+GRUPOS_EXCEL = [
+    (6,  7,  "U"),
+    (8,  9,  "ACCESORIOS"),
+    (10, 12, "MEDICAMENTOS"),
+    (13, 19, "HIGIENE"),
+    (20, 21, "ESTETICA"),
+    (22, 23, "TRANSPORTE"),
+    (24, 25, "PENSION"),
+    (26, 26, "VACUNA"),
+    (27, 27, "CLINICA"),
+    (28, 28, "TOTAL"),
+    (29, 33, "TIPO DE PAGO"),
+    (34, 42, "CONTROL"),
+]
+
+# ============================================================
 # MAPEO DE SERIES A CENTROS
 # ============================================================
 # Cada serie del XML corresponde a un centro específico.
@@ -3388,11 +3513,6 @@ class AppIngresos(ttk.Window):
                 return
             self._abrir_archivo(adjuntos[sel_lb[0]])
 
-        def abrir_carpeta():
-            carpeta = carpeta_de_registro(reg)
-            if carpeta and carpeta.exists():
-                self._abrir_carpeta(carpeta)
-
         lb.bind("<Double-Button-1>", lambda e: abrir_archivo())
         fr = ttk.Frame(ventana)
         fr.pack(pady=8)
@@ -3427,6 +3547,33 @@ class AppIngresos(ttk.Window):
             os.system(f'open "{ruta}"')
         else:
             os.system(f'xdg-open "{ruta}"')
+
+    @staticmethod
+    def _archivo_esta_bloqueado(ruta):
+        """
+        Devuelve True si el archivo existe y está bloqueado por otro programa.
+        En Windows usa os.rename (test de bloqueo), en otros sistemas
+        intenta abrirlo en modo lectura/escritura.
+        """
+        import os
+        ruta = Path(ruta)
+        if not ruta.exists():
+            return False
+
+        if sys.platform.startswith("win"):
+            try:
+                # Intentar renombrar a sí mismo: falla si está bloqueado
+                os.rename(str(ruta), str(ruta))
+                return False
+            except OSError:
+                return True
+        else:
+            try:
+                with open(ruta, "r+b"):
+                    pass
+                return False
+            except (OSError, IOError):
+                return True
 
     def _toggle_tabla(self):
         if self.frame_tabla.winfo_ismapped():
@@ -3631,330 +3778,214 @@ class AppIngresos(ttk.Window):
         self._validar_qvet_visual()
         self.update_idletasks()
 
-    # ---------------- EXCEL ----------------
-    def _generar_excel(self):
-        if not self.registros:
-            messagebox.showwarning("Sin datos", "No hay registros.")
-            return
-        anio = int(self.var_anio.get())
-        mes_idx = MESES_ES.index(self.var_mes.get()) + 1
-        mes_nombre = self.var_mes.get()
-        filtrados = [r for r in self.registros
-                     if r.get("anio") == anio and r.get("mes") == mes_nombre
-                     and r.get("centro") == self.var_centro.get()]
-        if not filtrados:
-            messagebox.showwarning("Sin datos",
-                                   f"No hay registros para {self.var_centro.get()} - {mes_nombre} {anio}.")
-            return
-        carpeta = ruta_deposito(anio, mes_idx)
-        carpeta.mkdir(parents=True, exist_ok=True)
-        nombre = f"Resumen {mes_nombre} {anio}.xlsx"
-        ruta_xlsx = carpeta / nombre
-        try:
-            self._escribir_excel(ruta_xlsx, filtrados)
-        except Exception as e:
-            messagebox.showerror("Error al crear Excel", str(e))
-            return
-        messagebox.showinfo("Excel generado",
-                            f"Archivo:\n{ruta_xlsx}\n\nRegistros: {len(filtrados)}")
-        self._abrir_carpeta(carpeta)
-
-    def _escribir_excel(self, ruta, regs):
-        # ---- Obtener mes y año para el nombre de la hoja ----
-        if regs:
-            # Tomar el primero registro como referencia
-            mes_actual = regs[0].get("mes", "")
-            anio_actual = regs[0].get("anio", "")
-        else:
-            mes_actual = MESES_ES[datetime.now().month - 1]
-            anio_actual = datetime.now().year
-
-        # Si por alguna razón el registro no tiene mes/año, usar los del form
-        if not mes_actual:
-            try:
-                mes_actual = self.var_mes.get()
-            except Exception:
-                mes_actual = MESES_ES[datetime.now().month - 1]
-        if not anio_actual:
-            try:
-                anio_actual = int(self.var_anio.get())
-            except Exception:
-                anio_actual = datetime.now().year
-
-        # Capitalizar el mes
-        nombre_hoja = f"{str(mes_actual).capitalize()} {anio_actual}"
-
-        wb = Workbook()
-        ws = wb.active
-        ws.title = nombre_hoja[:31]   # por seguridad (máximo 31 caracteres)
+    # ------------------------------------------------------------
+    # HELPERS DEL EXCEL
+    # ------------------------------------------------------------
+    def _escribir_encabezados(self, ws):
+        """Escribe fila 1 (grupos) y fila 2 (columnas) con estilos."""
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
         thin = Side(border_style="thin", color="808080")
         border = Border(left=thin, right=thin, top=thin, bottom=thin)
         centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
         bold_white = Font(bold=True, color="FFFFFF", size=11)
         bold_dark = Font(bold=True, color="000000", size=10)
-        formato_moneda = '"$"#,##0.00'
-        formato_fecha = "DD/MM/YYYY"
 
-        COLORES_SECCION = {
-            "GENERAL": "1F4E3D",
-            "U": "2E5A88",
-            "ACCESORIOS": "7B3F00",
-            "MEDICAMENTOS": "8B1A1A",
-            "HIGIENE": "4B6B00",
-            "ESTETICA": "6A1B9A",
-            "TRANSPORTE": "0D47A1",
-            "PENSION": "B85C00",
-            "VACUNA": "00695C",
-            "CLINICA": "37474F",
-            "TOTAL": "000000",
-            "TIPO DE PAGO": "4A148C",
-            "CONTROL": "455A64",
-        }
-        fill_total = PatternFill("solid", fgColor="FFD966")
-
-        columnas = {
-            "A":  ("No. DE FACTURA",              "GENERAL",       "text"),
-            "B":  ("QVET",                        "GENERAL",       "text"),
-            "C":  ("FECHA DE EMISIÓN",            "GENERAL",       "date"),
-            "D":  ("NOMBRE",                      "GENERAL",       "text"),
-            "E":  ("RFC",                         "GENERAL",       "text"),
-            "F":  ("IMPORTE",                     "U",             "money"),
-            "G":  ("IVA (16%)",                   "U",             "money"),
-            "H":  ("IMPORTE",                     "ACCESORIOS",    "money"),
-            "I":  ("IVA (16%)",                   "ACCESORIOS",    "money"),
-            "J":  ("IMPORTE (sin IVA)",           "MEDICAMENTOS",  "money"),
-            "K":  ("SIN IVA",                     "MEDICAMENTOS",  "money"),
-            "L":  ("IVA (16%)",                   "MEDICAMENTOS",  "money"),
-            "M":  ("IMPORTE (sin IVA)",           "HIGIENE",       "money"),
-            "N":  ("SIN IVA",                     "HIGIENE",       "money"),
-            "O":  ("IVA (16%)",                   "HIGIENE",       "money"),
-            "P":  ("SIN IEPS 6%",                 "HIGIENE",       "money"),
-            "Q":  ("IEPS (6%)",                   "HIGIENE",       "money"),
-            "R":  ("SIN IEPS 7%",                 "HIGIENE",       "money"),
-            "S":  ("IEPS (7%)",                   "HIGIENE",       "money"),
-            "T":  ("IMPORTE",                     "ESTETICA",      "money"),
-            "U":  ("IVA (16%)",                   "ESTETICA",      "money"),
-            "V":  ("IMPORTE",                     "TRANSPORTE",    "money"),
-            "W":  ("IVA (16%)",                   "TRANSPORTE",    "money"),
-            "X":  ("IMPORTE",                     "PENSION",       "money"),
-            "Y":  ("IVA (16%)",                   "PENSION",       "money"),
-            "Z":  ("IMPORTE",                     "VACUNA",        "money"),
-            "AA": ("IMPORTE",                     "CLINICA",       "money"),
-            "AB": ("TOTAL",                       "TOTAL",         "money"),
-            # TIPO DE PAGO (5 columnas: efectivo, tarjeta, cheque, transf, vale)
-            "AC": ("EFECTIVO",                    "TIPO DE PAGO",  "money"),
-            "AD": ("TARJETA",                     "TIPO DE PAGO",  "money"),        # suma TC + TD
-            "AE": ("CHEQUE",                      "TIPO DE PAGO",  "money"),
-            "AF": ("TRANSF.",                     "TIPO DE PAGO",  "money"),
-            "AG": ("VALE",                        "TIPO DE PAGO",  "money"),
-            # CONTROL (7 columnas, todas mantienen encabezado pero algunas sin datos)
-            "AH": ("FECHA DE TIMBRADO",                "CONTROL",       "date"),
-            "AI": ("FECHA FICHA DE DEPÓSITO",           "CONTROL",       "date"),   # sin dato
-            "AJ": ("MONTO DE FICHA DE DEPOSITO",        "CONTROL",       "money"),  # mismo que EFECTIVO
-            "AK": ("FECHA SANTANDER TARJETA",           "CONTROL",       "date"),   # sin dato
-            "AL": ("EDO. CUENTA SANTANDER DEBITO",      "CONTROL",       "money"),  # TD
-            "AM": ("EDO. CUENTA SANTANDER CREDITO",     "CONTROL",       "money"),  # TC
-            "AN": ("FECHA SANTANDER TRANSFERENCIA",     "CONTROL",       "date"),   # sin dato
-            "AO": ("TRANSFERENCIA SANTANDER",           "CONTROL",       "money"),  # mismo que TRANSFER
-            "AP": ("FOLIO FISCAL",                      "CONTROL",       "text"),
-        }
-
-        mapa_claves = {
-            "A": "no_factura", "B": "qvet", "C": "fecha",
-            "D": "nombre", "E": "rfc",
-            "F": "u_importe", "G": "u_iva",
-            "H": "ac_importe", "I": "ac_iva",
-            "J": "med_importe", "K": "med_sin_iva", "L": "med_iva",
-            "M": "hig_importe", "N": "hig_sin_iva", "O": "hig_iva",
-            "P": "hig_sin_ieps_6", "Q": "hig_ieps_6",
-            "R": "hig_sin_ieps_7", "S": "hig_ieps_7",
-            "T": "est_importe", "U": "est_iva",
-            "V": "tra_importe", "W": "tra_iva",
-            "X": "pen_importe", "Y": "pen_iva",
-            "Z": "vac_importe",
-            "AA": "cli_importe",
-            "AB": "total",
-            "AC": "efectivo",
-            "AD": "__tarjeta__",         # marcador especial (suma TC + TD)
-            "AE": "cheque",
-            "AF": "transfer",
-            "AG": "vale",
-            "AH": "fecha_impresion",
-            "AI": "",                    # FECHA FICHA DE DEPÓSITO (sin dato)
-            "AJ": "__efectivo_dup__",    # MONTO FICHA = EFECTIVO
-            "AK": "",                    # FECHA SANTANDER TARJETA (sin dato)
-            "AL": "td",                  # EDO SANTANDER DEBITO = TD
-            "AM": "tc",                  # EDO SANTANDER CREDITO = TC
-            "AN": "",                    # FECHA SANTANDER TRANSFERENCIA (sin dato)
-            "AO": "__transfer_dup__",    # TRANSFERENCIA SANTANDER = TRANSFER
-            "AP": "folio_fiscal",
-        }
-
-        FORMULAS_AUTO = {
-            "G":  "=F{r}*0.16",
-            "I":  "=H{r}*0.16",
-            "L":  "=K{r}*0.16",
-            "O":  "=N{r}*0.16",
-            "Q":  "=P{r}*0.06",
-            "S":  "=R{r}*0.07",
-            "U":  "=T{r}*0.16",
-            "W":  "=V{r}*0.16",
-            "Y":  "=X{r}*0.16",
-            "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}",
-        }
-
-        grupos = [
-            (6,  7,  "U"),
-            (8,  9,  "ACCESORIOS"),
-            (10, 12, "MEDICAMENTOS"),
-            (13, 19, "HIGIENE"),
-            (20, 21, "ESTETICA"),
-            (22, 23, "TRANSPORTE"),
-            (24, 25, "PENSION"),
-            (26, 26, "VACUNA"),
-            (27, 27, "CLINICA"),
-            (28, 28, "TOTAL"),
-            (29, 33, "TIPO DE PAGO"),   # 5 columnas (AC..AG)
-            (34, 42, "CONTROL"),        # 9 columnas (AH..AP)
-        ]
-        
-        for ini, fin, texto in grupos:
-            if ini != fin:
-                ws.merge_cells(start_row=1, start_column=ini,
-                               end_row=1, end_column=fin)
+        # --- Fila 1: grupos ---
+        for ini, fin, texto in GRUPOS_EXCEL:
+            # 1. Escribir el valor en la celda superior izquierda
             c = ws.cell(row=1, column=ini, value=texto)
             c.font = bold_dark
             c.alignment = centro
-            for col in range(ini, fin + 1):
-                ws.cell(row=1, column=col).border = border
-                ws.cell(row=1, column=col).alignment = centro
 
-        for letra, (titulo, seccion, tipo) in columnas.items():
+            # 2. Aplicar estilos a TODAS las celdas ANTES de combinar
+            for col in range(ini, fin + 1):
+                celda = ws.cell(row=1, column=col)
+                celda.border = border
+                celda.alignment = centro
+
+            # 3. Combinar al final
+            if ini != fin:
+                ws.merge_cells(
+                    start_row=1, start_column=ini,
+                    end_row=1, end_column=fin
+                )
+
+        # --- Fila 2: columnas ---
+        for letra, (titulo, seccion, tipo) in COLUMNAS_EXCEL.items():
             c = ws[f"{letra}2"]
             c.value = titulo
             c.font = bold_white
-            c.fill = PatternFill("solid", fgColor=COLORES_SECCION[seccion])
+            c.fill = PatternFill("solid", fgColor=COLORES_SECCION_EXCEL[seccion])
             c.alignment = centro
             c.border = border
 
-        fila = 3
-        for r in regs:
-            # Calcular valores especiales primero
-            valor_tc = float(r.get("tc", 0) or 0)
-            valor_td = float(r.get("td", 0) or 0)
-            valor_tarjeta = valor_tc + valor_td
-            valor_efectivo = float(r.get("efectivo", 0) or 0)
-            valor_transfer = float(r.get("transfer", 0) or 0)
 
-            for letra, (titulo, seccion, tipo) in columnas.items():
-                clave = mapa_claves[letra]
-                c = ws[f"{letra}{fila}"]
-                c.border = border
+    def _escribir_fila(self, ws, r, fila):
+        """Escribe UNA fila de registro con estilos, fórmulas y casos especiales."""
+        from openpyxl.styles import Alignment, Border, Side, Font, PatternFill
 
-                # ---- Casos especiales ----
-                # Buscar letras de columnas auxiliares (se hace una vez por celda)
-                def _buscar_letra(clave_buscada):
-                    for letra_temp, clave_temp in mapa_claves.items():
-                        if clave_temp == clave_buscada:
-                            return letra_temp
-                    return None
+        thin = Side(border_style="thin", color="808080")
+        border = Border(left=thin, right=thin, top=thin, bottom=thin)
+        formato_moneda = '"$"#,##0.00'
+        formato_fecha = "DD/MM/YYYY"
 
-                if clave == "__tarjeta__":
-                    # TARJETA = TC + TD (fórmula)
-                    letra_tc = _buscar_letra("tc")
-                    letra_td = _buscar_letra("td")
-                    if letra_tc and letra_td:
-                        c.value = f"={letra_tc}{fila}+{letra_td}{fila}"
-                        c.number_format = formato_moneda
-                    elif valor_tarjeta > 0:
-                        c.value = valor_tarjeta
-                        c.number_format = formato_moneda
-                    c.alignment = Alignment(horizontal="right", vertical="center")
-                    continue
+        # ✅ Estilos base para resetear cualquier herencia (p. ej. de la fila TOTALES)
+        fuente_normal = Font()
+        sin_relleno = PatternFill()
 
-                if clave == "__efectivo_dup__":
-                    # MONTO DE FICHA = EFECTIVO (fórmula)
-                    letra_efectivo = _buscar_letra("efectivo")
-                    if letra_efectivo:
-                        c.value = f"={letra_efectivo}{fila}"
-                        c.number_format = formato_moneda
-                    elif valor_efectivo > 0:
-                        c.value = valor_efectivo
-                        c.number_format = formato_moneda
-                    c.alignment = Alignment(horizontal="right", vertical="center")
-                    continue
+        # Valores auxiliares
+        valor_tc = float(r.get("tc", 0) or 0)
+        valor_td = float(r.get("td", 0) or 0)
+        valor_tarjeta = valor_tc + valor_td
+        valor_efectivo = float(r.get("efectivo", 0) or 0)
+        valor_transfer = float(r.get("transfer", 0) or 0)
 
-                if clave == "__transfer_dup__":
-                    # TRANSFERENCIA SANTANDER = TRANSF. (fórmula)
-                    letra_transfer = _buscar_letra("transfer")
-                    if letra_transfer:
-                        c.value = f"={letra_transfer}{fila}"
-                        c.number_format = formato_moneda
-                    elif valor_transfer > 0:
-                        c.value = valor_transfer
-                        c.number_format = formato_moneda
-                    c.alignment = Alignment(horizontal="right", vertical="center")
-                    continue
+        def _buscar_letra(clave_buscada):
+            for letra_temp, clave_temp in MAPA_CLAVES_EXCEL.items():
+                if clave_temp == clave_buscada:
+                    return letra_temp
+            return None
 
-                if clave == "":
-                    # Campo sin dato (solo encabezado)
-                    c.alignment = Alignment(horizontal="center", vertical="center")
-                    continue
+        for letra, (titulo, seccion, tipo) in COLUMNAS_EXCEL.items():
+            clave = MAPA_CLAVES_EXCEL[letra]
+            c = ws[f"{letra}{fila}"]
 
-                # ---- Casos normales ----
-                valor = r.get(clave, 0 if tipo == "money" else "")
-                expresion = r.get(f"{clave}__expr", "")
+            # ✅ Resetear estilos base ANTES de cualquier otra cosa
+            c.font = fuente_normal
+            c.fill = sin_relleno
+            c.border = border
 
-                if tipo == "money":
-                    if expresion:
-                        c.value = f"={expresion}"
-                    elif letra in FORMULAS_AUTO:
-                        c.value = FORMULAS_AUTO[letra].format(r=fila)
-                    else:
-                        c.value = float(valor or 0)
+            # --- Casos especiales ---
+            if clave == "__tarjeta__":
+                letra_tc = _buscar_letra("tc")
+                letra_td = _buscar_letra("td")
+                if letra_tc and letra_td:
+                    c.value = f"={letra_tc}{fila}+{letra_td}{fila}"
                     c.number_format = formato_moneda
-                    c.alignment = Alignment(horizontal="right", vertical="center")
+                elif valor_tarjeta > 0:
+                    c.value = valor_tarjeta
+                    c.number_format = formato_moneda
+                c.alignment = Alignment(horizontal="right", vertical="center")
+                continue
 
-                elif tipo == "date":
-                    if valor:
-                        try:
-                            fecha_dt = datetime.strptime(str(valor).strip(), "%d/%m/%Y")
-                            c.value = fecha_dt
-                            c.number_format = formato_fecha
-                        except (ValueError, TypeError):
-                            c.value = valor
-                    c.alignment = Alignment(horizontal="center", vertical="center")
+            if clave == "__efectivo_dup__":
+                letra_efectivo = _buscar_letra("efectivo")
+                if letra_efectivo:
+                    c.value = f"={letra_efectivo}{fila}"
+                    c.number_format = formato_moneda
+                elif valor_efectivo > 0:
+                    c.value = valor_efectivo
+                    c.number_format = formato_moneda
+                c.alignment = Alignment(horizontal="right", vertical="center")
+                continue
 
+            if clave == "__transfer_dup__":
+                letra_transfer = _buscar_letra("transfer")
+                if letra_transfer:
+                    c.value = f"={letra_transfer}{fila}"
+                    c.number_format = formato_moneda
+                elif valor_transfer > 0:
+                    c.value = valor_transfer
+                    c.number_format = formato_moneda
+                c.alignment = Alignment(horizontal="right", vertical="center")
+                continue
+
+            if clave == "":
+                c.alignment = Alignment(horizontal="center", vertical="center")
+                continue
+
+            # --- Casos normales ---
+            valor = r.get(clave, 0 if tipo == "money" else "")
+            expresion = r.get(f"{clave}__expr", "")
+
+            if tipo == "money":
+                if expresion:
+                    c.value = f"={expresion}"
+                elif letra in FORMULAS_AUTO_EXCEL:
+                    c.value = FORMULAS_AUTO_EXCEL[letra].format(r=fila)
                 else:
-                    c.value = valor
-                    c.alignment = Alignment(horizontal="left", vertical="center")
+                    c.value = float(valor or 0)
+                c.number_format = formato_moneda
+                c.alignment = Alignment(horizontal="right", vertical="center")
 
-            fila += 1
+            elif tipo == "date":
+                if valor:
+                    try:
+                        fecha_dt = datetime.strptime(str(valor).strip(), "%d/%m/%Y")
+                        c.value = fecha_dt
+                        c.number_format = formato_fecha
+                    except (ValueError, TypeError):
+                        c.value = valor
+                c.alignment = Alignment(horizontal="center", vertical="center")
 
-        fila_total = fila
-        c_tot = ws.cell(row=fila_total, column=1, value="TOTALES")
+            else:
+                c.value = valor
+                c.alignment = Alignment(horizontal="left", vertical="center")
+
+
+    def _escribir_fila_totales(self, ws, fila):
+        """Escribe la fila TOTALES con fórmulas =SUM(...)."""
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+        thin = Side(border_style="thin", color="808080")
+        border = Border(left=thin, right=thin, top=thin, bottom=thin)
+        centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        bold_dark = Font(bold=True, color="000000", size=10)
+        formato_moneda = '"$"#,##0.00'
+        fill_total = PatternFill("solid", fgColor="FFD966")
+
+        # Rango del merge de la etiqueta "TOTALES"
+        MERGE_INI = 1
+        MERGE_FIN = 5
+
+        # --- 1. Etiqueta "TOTALES" (solo la celda superior izquierda del merge) ---
+        c_tot = ws.cell(row=fila, column=MERGE_INI, value="TOTALES")
         c_tot.font = bold_dark
         c_tot.fill = fill_total
         c_tot.alignment = centro
         c_tot.border = border
-        ws.merge_cells(start_row=fila_total, start_column=1,
-                       end_row=fila_total, end_column=5)
 
-        for letra, (titulo, seccion, tipo) in columnas.items():
+        # --- 2. Estilos del rango combinado (sin tocar .value) ---
+        for col in range(MERGE_INI, MERGE_FIN + 1):
+            celda = ws.cell(row=fila, column=col)
+            try:
+                celda.fill = fill_total
+                celda.border = border
+                celda.alignment = centro
+            except Exception:
+                pass
+
+        # --- 3. Combinar (después de escribir el valor) ---
+        ws.merge_cells(
+            start_row=fila, start_column=MERGE_INI,
+            end_row=fila, end_column=MERGE_FIN
+        )
+
+        # --- 4. Fórmulas SUM en el resto de columnas ---
+        for letra, (titulo, seccion, tipo) in COLUMNAS_EXCEL.items():
             col_idx = ws[f"{letra}1"].column
-            c = ws.cell(row=fila_total, column=col_idx)
+
+            # ⛔ Saltar las columnas que ya están dentro del merge
+            if MERGE_INI <= col_idx <= MERGE_FIN:
+                continue
+
+            c = ws.cell(row=fila, column=col_idx)
             if tipo == "money":
-                c.value = f"=SUM({letra}3:{letra}{fila-1})"
+                c.value = f"=SUM({letra}3:{letra}{fila - 1})"
                 c.number_format = formato_moneda
                 c.alignment = Alignment(horizontal="right", vertical="center")
             c.font = bold_dark
             c.fill = fill_total
             c.border = border
 
-        for letra in columnas.keys():
-            largo_max = len(str(columnas[letra][0]))
-            for ini, fin, texto in grupos:
+    def _ajustar_anchos(self, ws, fila_total):
+        """Ajusta el ancho de las columnas según el contenido."""
+        from openpyxl.utils import get_column_letter
+
+        for letra in COLUMNAS_EXCEL.keys():
+            largo_max = len(str(COLUMNAS_EXCEL[letra][0]))
+            for ini, fin, texto in GRUPOS_EXCEL:
                 col_ini = get_column_letter(ini)
                 col_fin = get_column_letter(fin)
                 if col_ini <= letra <= col_fin:
@@ -3978,9 +4009,251 @@ class AppIngresos(ttk.Window):
         ws.column_dimensions["AP"].width = max(ws.column_dimensions["AP"].width, 38)
         ws.column_dimensions["D"].width = max(ws.column_dimensions["D"].width, 22)
 
+    # ---------------- EXCEL ----------------
+    def _anexar_al_excel(self, ruta, regs):
+        """
+        Abre un Excel existente y anexa solo los registros nuevos.
+        Detecta duplicados por:
+        1. Folio fiscal (UUID) — columna AP
+        2. No. de factura      — columna A
+        Respeta cualquier edición manual de las filas ya existentes.
+        Devuelve (nuevos_agregados, omitidos).
+        """
+        from openpyxl import load_workbook
+        from copy import copy
+
+        wb = load_workbook(ruta)
+        ws = wb.active
+
+        COL_FOLIO_FISCAL = 42  # AP
+        COL_NO_FACTURA = 1     # A
+
+        # --- 1. Leer lo que ya está en el archivo ---
+        folios_existentes = set()
+        no_facturas_existentes = set()
+        fila_totales_original = None
+
+        fila = 3
+        max_fila = ws.max_row + 10
+        while fila <= max_fila:
+            val_no_fac = ws.cell(row=fila, column=COL_NO_FACTURA).value
+            val_folio = ws.cell(row=fila, column=COL_FOLIO_FISCAL).value
+
+            # ¿Es la fila TOTALES?
+            if val_no_fac is not None and str(val_no_fac).strip().upper() == "TOTALES":
+                fila_totales_original = fila
+                break
+
+            if val_folio:
+                folios_existentes.add(str(val_folio).strip().upper())
+            if val_no_fac:
+                no_facturas_existentes.add(str(val_no_fac).strip().upper())
+
+            fila += 1
+
+        if fila_totales_original is None:
+            fila_totales_original = fila
+
+        # --- 2. Filtrar registros nuevos ---
+        nuevos = []
+        omitidos = 0
+        for r in regs:
+            uuid = str(r.get("folio_fiscal", "")).strip().upper()
+            no_fac = str(r.get("no_factura", "")).strip().upper()
+
+            es_duplicado = False
+            if uuid and uuid in folios_existentes:
+                es_duplicado = True
+            elif no_fac and no_fac in no_facturas_existentes:
+                es_duplicado = True
+
+            if es_duplicado:
+                omitidos += 1
+                continue
+            nuevos.append(r)
+
+        if not nuevos:
+            return 0, omitidos
+
+        # --- 3. DESHACER merges de la fila TOTALES (si los hay) ---
+        # Buscamos cualquier merge que esté en la fila de TOTALES y lo quitamos.
+        merges_a_quitar = []
+        for rango in list(ws.merged_cells.ranges):
+            if rango.min_row == fila_totales_original:
+                merges_a_quitar.append(str(rango))
+
+        for rango_str in merges_a_quitar:
+            try:
+                ws.unmerge_cells(rango_str)
+            except Exception:
+                pass
+
+        # --- 4. Respaldar la fila TOTALES existente ---
+        totales_guardados = {}
+        if fila_totales_original is not None:
+            for col in range(1, ws.max_column + 1):
+                celda = ws.cell(row=fila_totales_original, column=col)
+                totales_guardados[col] = {
+                    "value": celda.value,
+                    "font": copy(celda.font),
+                    "fill": copy(celda.fill),
+                    "border": copy(celda.border),
+                    "alignment": copy(celda.alignment),
+                    "number_format": celda.number_format,
+                }
+            # ✅ Limpiar valores (ahora sí, ya no hay merges en esa fila)
+            for col in range(1, ws.max_column + 1):
+                ws.cell(row=fila_totales_original, column=col).value = None
+
+        # --- 5. Escribir las filas nuevas a partir de donde estaba TOTALES ---
+        fila_insercion = fila_totales_original
+        for r in nuevos:
+            self._escribir_fila(ws, r, fila_insercion)
+            fila_insercion += 1
+
+        # --- 6. Reescribir la fila TOTALES al final ---
+        fila_totales_nueva = fila_insercion
+        self._escribir_fila_totales(ws, fila_totales_nueva)
+
+        # --- 7. Ajustar anchos ---
+        self._ajustar_anchos(ws, fila_totales_nueva)
+
+        wb.save(ruta)
+        return len(nuevos), omitidos
+
+    def _generar_excel(self):
+        if not self.registros:
+            messagebox.showwarning("Sin datos", "No hay registros.")
+            return
+
+        anio = int(self.var_anio.get())
+        mes_idx = MESES_ES.index(self.var_mes.get()) + 1
+        mes_nombre = self.var_mes.get()
+        centro = self.var_centro.get()
+
+        filtrados = [
+            r for r in self.registros
+            if r.get("anio") == anio
+            and r.get("mes") == mes_nombre
+            and r.get("centro") == centro
+        ]
+
+        if not filtrados:
+            messagebox.showwarning(
+                "Sin datos",
+                f"No hay registros para {centro} - {mes_nombre} {anio}.")
+            return
+
+        carpeta = ruta_deposito(anio, mes_idx)
+        carpeta.mkdir(parents=True, exist_ok=True)
+
+        # ✅ Nombre con centro para no pisar Central vs Prado
+        nombre = f"Resumen {centro} - {mes_nombre} {anio}.xlsx"
+        ruta_xlsx = carpeta / nombre
+        existe = ruta_xlsx.exists()
+
+        # ✅ Verificación previa: ¿está abierto en Excel?
+        if self._archivo_esta_bloqueado(ruta_xlsx):
+            messagebox.showerror(
+                "Archivo en uso",
+                f"El archivo Excel ya existe y está abierto en otro programa.\n\n"
+                f"Archivo:\n{ruta_xlsx}\n\n"
+                f"👉 Ciérralo y vuelve a intentarlo para poder anexar los datos nuevos."
+            )
+            return
+
+        try:
+            if existe:
+                nuevos, omitidos = self._anexar_al_excel(ruta_xlsx, filtrados)
+                if nuevos == 0:
+                    messagebox.showinfo(
+                        "Sin novedades",
+                        f"El archivo ya contiene todos los registros.\n\n"
+                        f"Archivo:\n{ruta_xlsx}\n\n"
+                        f"Ya presentes: {omitidos}"
+                    )
+                    self._abrir_carpeta(carpeta)
+                    return
+                msg = (
+                    f"Archivo ACTUALIZADO (no sobrescrito):\n{ruta_xlsx}\n\n"
+                    f"➕ Nuevos agregados: {nuevos}\n"
+                    f"⏭️ Ya existían:      {omitidos}"
+                )
+            else:
+                self._escribir_excel(ruta_xlsx, filtrados)
+                msg = (
+                    f"Archivo creado:\n{ruta_xlsx}\n\n"
+                    f"Registros: {len(filtrados)}"
+                )
+        except PermissionError:
+            messagebox.showerror(
+                "Archivo en uso",
+                f"No se pudo guardar el Excel porque el archivo está "
+                f"abierto en otro programa (probablemente Excel).\n\n"
+                f"Archivo:\n{ruta_xlsx}\n\n"
+                f"👉 Cierra el archivo y vuelve a intentarlo."
+            )
+            return
+        except OSError as e:
+            # En algunos sistemas, el bloqueo llega como OSError genérico
+            if getattr(e, "errno", None) in (13, 11):  # EACCES, EAGAIN
+                messagebox.showerror(
+                    "Archivo bloqueado",
+                    f"No se pudo acceder al archivo.\n\n"
+                    f"Archivo:\n{ruta_xlsx}\n\n"
+                    f"👉 Verifica que no esté abierto en Excel ni en otro "
+                    f"programa, y que tengas permisos de escritura.\n\n"
+                    f"Detalle: {e}"
+                )
+            else:
+                messagebox.showerror("Error al crear Excel", str(e))
+            return
+        except Exception as e:
+            messagebox.showerror("Error al crear Excel", str(e))
+            return
+
+        messagebox.showinfo("Excel generado", msg)
+        self._abrir_carpeta(carpeta)
+
+    def _escribir_excel(self, ruta, regs):
+        """Crea un Excel nuevo (sobrescribe si existe)."""
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+
+        # Nombre de la hoja
+        if regs:
+            mes_actual = regs[0].get("mes", "") or self.var_mes.get()
+            anio_actual = regs[0].get("anio", "") or int(self.var_anio.get())
+        else:
+            mes_actual = MESES_ES[datetime.now().month - 1]
+            anio_actual = datetime.now().year
+        nombre_hoja = f"{str(mes_actual).capitalize()} {anio_actual}"[:31]
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = nombre_hoja
+
+        # Encabezados
+        self._escribir_encabezados(ws)
+
+        # Filas de datos
+        fila = 3
+        for r in regs:
+            self._escribir_fila(ws, r, fila)
+            fila += 1
+
+        # Totales
+        self._escribir_fila_totales(ws, fila)
+
+        # Anchos de columna
+        self._ajustar_anchos(ws, fila)
+
+        # Freeze panes y alturas
         ws.row_dimensions[1].height = 22
         ws.row_dimensions[2].height = 32
         ws.freeze_panes = "F3"
+
         wb.save(ruta)
 
     # ---------------- RECLASIFICADOR ----------------
