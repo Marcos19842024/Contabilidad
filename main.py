@@ -46,6 +46,7 @@ from config.temas import (
 from core.rutas import (
     BASE_DIR,
     HISTORIAL_FILE,
+    _CARPETA_DATOS,
     ruta_registros,
     ruta_ingreso,
     ruta_deposito,
@@ -77,134 +78,14 @@ from core.adjuntos import (
     adjuntar_archivos,
 )
 from lector_facturas import procesar_factura, agrupar_por_categoria
-from core.rutas import _CARPETA_DATOS
 from core.correo_utils import agrupar_facturas_descargadas
 from ui.widgets import EntryMoneda, EntryAutoComplete
+from excel.generador import (
+    archivo_esta_bloqueado,
+    escribir_excel,
+    anexar_al_excel,
+)
 
-# ============================================================
-# CONSTANTES PARA EL EXCEL
-# ============================================================
-COLORES_SECCION_EXCEL = {
-    "GENERAL":      "1F4E3D",
-    "U":            "2E5A88",
-    "ACCESORIOS":   "7B3F00",
-    "MEDICAMENTOS": "8B1A1A",
-    "HIGIENE":      "4B6B00",
-    "ESTETICA":     "6A1B9A",
-    "TRANSPORTE":   "0D47A1",
-    "PENSION":      "B85C00",
-    "VACUNA":       "00695C",
-    "CLINICA":      "37474F",
-    "TOTAL":        "000000",
-    "TIPO DE PAGO": "4A148C",
-    "CONTROL":      "455A64",
-}
-
-# letra → (título, sección, tipo)
-COLUMNAS_EXCEL = {
-    "A":  ("No. DE FACTURA",              "GENERAL",       "text"),
-    "B":  ("QVET",                        "GENERAL",       "text"),
-    "C":  ("FECHA DE EMISIÓN",            "GENERAL",       "date"),
-    "D":  ("NOMBRE",                      "GENERAL",       "text"),
-    "E":  ("RFC",                         "GENERAL",       "text"),
-    "F":  ("IMPORTE",                     "U",             "money"),
-    "G":  ("IVA (16%)",                   "U",             "money"),
-    "H":  ("IMPORTE",                     "ACCESORIOS",    "money"),
-    "I":  ("IVA (16%)",                   "ACCESORIOS",    "money"),
-    "J":  ("IMPORTE (sin IVA)",           "MEDICAMENTOS",  "money"),
-    "K":  ("SIN IVA",                     "MEDICAMENTOS",  "money"),
-    "L":  ("IVA (16%)",                   "MEDICAMENTOS",  "money"),
-    "M":  ("IMPORTE (sin IVA)",           "HIGIENE",       "money"),
-    "N":  ("SIN IVA",                     "HIGIENE",       "money"),
-    "O":  ("IVA (16%)",                   "HIGIENE",       "money"),
-    "P":  ("SIN IEPS 6%",                 "HIGIENE",       "money"),
-    "Q":  ("IEPS (6%)",                   "HIGIENE",       "money"),
-    "R":  ("SIN IEPS 7%",                 "HIGIENE",       "money"),
-    "S":  ("IEPS (7%)",                   "HIGIENE",       "money"),
-    "T":  ("IMPORTE",                     "ESTETICA",      "money"),
-    "U":  ("IVA (16%)",                   "ESTETICA",      "money"),
-    "V":  ("IMPORTE",                     "TRANSPORTE",    "money"),
-    "W":  ("IVA (16%)",                   "TRANSPORTE",    "money"),
-    "X":  ("IMPORTE",                     "PENSION",       "money"),
-    "Y":  ("IVA (16%)",                   "PENSION",       "money"),
-    "Z":  ("IMPORTE",                     "VACUNA",        "money"),
-    "AA": ("IMPORTE",                     "CLINICA",       "money"),
-    "AB": ("TOTAL",                       "TOTAL",         "money"),
-    "AC": ("EFECTIVO",                    "TIPO DE PAGO",  "money"),
-    "AD": ("TARJETA",                     "TIPO DE PAGO",  "money"),
-    "AE": ("CHEQUE",                      "TIPO DE PAGO",  "money"),
-    "AF": ("TRANSF.",                     "TIPO DE PAGO",  "money"),
-    "AG": ("VALE",                        "TIPO DE PAGO",  "money"),
-    "AH": ("FECHA DE TIMBRADO",           "CONTROL",       "date"),
-    "AI": ("FECHA FICHA DE DEPÓSITO",     "CONTROL",       "date"),
-    "AJ": ("MONTO DE FICHA DE DEPOSITO",  "CONTROL",       "money"),
-    "AK": ("FECHA SANTANDER TARJETA",     "CONTROL",       "date"),
-    "AL": ("EDO. CUENTA SANTANDER DEBITO","CONTROL",       "money"),
-    "AM": ("EDO. CUENTA SANTANDER CREDITO","CONTROL",      "money"),
-    "AN": ("FECHA SANTANDER TRANSFERENCIA","CONTROL",      "date"),
-    "AO": ("TRANSFERENCIA SANTANDER",     "CONTROL",       "money"),
-    "AP": ("FOLIO FISCAL",                "CONTROL",       "text"),
-}
-
-MAPA_CLAVES_EXCEL = {
-    "A": "no_factura", "B": "qvet", "C": "fecha",
-    "D": "nombre", "E": "rfc",
-    "F": "u_importe", "G": "u_iva",
-    "H": "ac_importe", "I": "ac_iva",
-    "J": "med_importe", "K": "med_sin_iva", "L": "med_iva",
-    "M": "hig_importe", "N": "hig_sin_iva", "O": "hig_iva",
-    "P": "hig_sin_ieps_6", "Q": "hig_ieps_6",
-    "R": "hig_sin_ieps_7", "S": "hig_ieps_7",
-    "T": "est_importe", "U": "est_iva",
-    "V": "tra_importe", "W": "tra_iva",
-    "X": "pen_importe", "Y": "pen_iva",
-    "Z": "vac_importe",
-    "AA": "cli_importe",
-    "AB": "total",
-    "AC": "efectivo",
-    "AD": "__tarjeta__",
-    "AE": "cheque",
-    "AF": "transfer",
-    "AG": "vale",
-    "AH": "fecha_impresion",
-    "AI": "",
-    "AJ": "__efectivo_dup__",
-    "AK": "",
-    "AL": "td",
-    "AM": "tc",
-    "AN": "",
-    "AO": "__transfer_dup__",
-    "AP": "folio_fiscal",
-}
-
-FORMULAS_AUTO_EXCEL = {
-    "G":  "=F{r}*0.16",
-    "I":  "=H{r}*0.16",
-    "L":  "=K{r}*0.16",
-    "O":  "=N{r}*0.16",
-    "Q":  "=P{r}*0.06",
-    "S":  "=R{r}*0.07",
-    "U":  "=T{r}*0.16",
-    "W":  "=V{r}*0.16",
-    "Y":  "=X{r}*0.16",
-    "AB": "=AC{r}+AD{r}+AE{r}+AF{r}+AG{r}",
-}
-
-# (columna_inicio, columna_fin, texto_del_grupo)
-GRUPOS_EXCEL = [
-    (6,  7,  "U"),
-    (8,  9,  "ACCESORIOS"),
-    (10, 12, "MEDICAMENTOS"),
-    (13, 19, "HIGIENE"),
-    (20, 21, "ESTETICA"),
-    (22, 23, "TRANSPORTE"),
-    (24, 25, "PENSION"),
-    (26, 26, "VACUNA"),
-    (27, 27, "CLINICA"),
-    (28, 28, "TOTAL"),
-    (29, 33, "TIPO DE PAGO"),
-    (34, 42, "CONTROL"),
-]
 
 # ============================================================
 # MAPEO DE SERIES A CENTROS
@@ -228,6 +109,7 @@ def centro_desde_serie(serie):
         "PRADO": "Prado",
     }
     return mapeo.get(s)
+    
 
 
 # ============================================================
@@ -2708,32 +2590,6 @@ class AppIngresos(ttk.Window):
         else:
             os.system(f'xdg-open "{ruta}"')
 
-    @staticmethod
-    def _archivo_esta_bloqueado(ruta):
-        """
-        Devuelve True si el archivo existe y está bloqueado por otro programa.
-        En Windows usa os.rename (test de bloqueo), en otros sistemas
-        intenta abrirlo en modo lectura/escritura.
-        """
-        import os
-        ruta = Path(ruta)
-        if not ruta.exists():
-            return False
-
-        if sys.platform.startswith("win"):
-            try:
-                # Intentar renombrar a sí mismo: falla si está bloqueado
-                os.rename(str(ruta), str(ruta))
-                return False
-            except OSError:
-                return True
-        else:
-            try:
-                with open(ruta, "r+b"):
-                    pass
-                return False
-            except (OSError, IOError):
-                return True
 
     def _toggle_tabla(self):
         if self.frame_tabla.winfo_ismapped():
@@ -2941,66 +2797,7 @@ class AppIngresos(ttk.Window):
     # ------------------------------------------------------------
     # HELPERS DEL EXCEL
     # ------------------------------------------------------------
-    def _escribir_encabezados(self, ws):
-        """Escribe fila 1 (grupos) y fila 2 (columnas) con estilos."""
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-        thin = Side(border_style="thin", color="808080")
-        border = Border(left=thin, right=thin, top=thin, bottom=thin)
-        centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        bold_white = Font(bold=True, color="FFFFFF", size=11)
-        bold_dark = Font(bold=True, color="000000", size=10)
-
-        # --- Fila 1: grupos ---
-        for ini, fin, texto in GRUPOS_EXCEL:
-            # 1. Escribir el valor en la celda superior izquierda
-            c = ws.cell(row=1, column=ini, value=texto)
-            c.font = bold_dark
-            c.alignment = centro
-
-            # 2. Aplicar estilos a TODAS las celdas ANTES de combinar
-            for col in range(ini, fin + 1):
-                celda = ws.cell(row=1, column=col)
-                celda.border = border
-                celda.alignment = centro
-
-            # 3. Combinar al final
-            if ini != fin:
-                ws.merge_cells(
-                    start_row=1, start_column=ini,
-                    end_row=1, end_column=fin
-                )
-
-        # --- Fila 2: columnas ---
-        for letra, (titulo, seccion, tipo) in COLUMNAS_EXCEL.items():
-            c = ws[f"{letra}2"]
-            c.value = titulo
-            c.font = bold_white
-            c.fill = PatternFill("solid", fgColor=COLORES_SECCION_EXCEL[seccion])
-            c.alignment = centro
-            c.border = border
-
-
-    def _escribir_fila(self, ws, r, fila):
-        """Escribe UNA fila de registro con estilos, fórmulas y casos especiales."""
-        from openpyxl.styles import Alignment, Border, Side, Font, PatternFill
-
-        thin = Side(border_style="thin", color="808080")
-        border = Border(left=thin, right=thin, top=thin, bottom=thin)
-        formato_moneda = '"$"#,##0.00'
-        formato_fecha = "DD/MM/YYYY"
-
-        # ✅ Estilos base para resetear cualquier herencia (p. ej. de la fila TOTALES)
-        fuente_normal = Font()
-        sin_relleno = PatternFill()
-
-        # Valores auxiliares
-        valor_tc = float(r.get("tc", 0) or 0)
-        valor_td = float(r.get("td", 0) or 0)
-        valor_tarjeta = valor_tc + valor_td
-        valor_efectivo = float(r.get("efectivo", 0) or 0)
-        valor_transfer = float(r.get("transfer", 0) or 0)
-
+    
         def _buscar_letra(clave_buscada):
             for letra_temp, clave_temp in MAPA_CLAVES_EXCEL.items():
                 if clave_temp == clave_buscada:
@@ -3083,205 +2880,11 @@ class AppIngresos(ttk.Window):
                 c.value = valor
                 c.alignment = Alignment(horizontal="left", vertical="center")
 
-
-    def _escribir_fila_totales(self, ws, fila):
-        """Escribe la fila TOTALES con fórmulas =SUM(...)."""
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-        thin = Side(border_style="thin", color="808080")
-        border = Border(left=thin, right=thin, top=thin, bottom=thin)
-        centro = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        bold_dark = Font(bold=True, color="000000", size=10)
-        formato_moneda = '"$"#,##0.00'
-        fill_total = PatternFill("solid", fgColor="FFD966")
-
-        # Rango del merge de la etiqueta "TOTALES"
-        MERGE_INI = 1
-        MERGE_FIN = 5
-
-        # --- 1. Etiqueta "TOTALES" (solo la celda superior izquierda del merge) ---
-        c_tot = ws.cell(row=fila, column=MERGE_INI, value="TOTALES")
-        c_tot.font = bold_dark
-        c_tot.fill = fill_total
-        c_tot.alignment = centro
-        c_tot.border = border
-
-        # --- 2. Estilos del rango combinado (sin tocar .value) ---
-        for col in range(MERGE_INI, MERGE_FIN + 1):
-            celda = ws.cell(row=fila, column=col)
-            try:
-                celda.fill = fill_total
-                celda.border = border
-                celda.alignment = centro
-            except Exception:
-                pass
-
-        # --- 3. Combinar (después de escribir el valor) ---
-        ws.merge_cells(
-            start_row=fila, start_column=MERGE_INI,
-            end_row=fila, end_column=MERGE_FIN
-        )
-
-        # --- 4. Fórmulas SUM en el resto de columnas ---
-        for letra, (titulo, seccion, tipo) in COLUMNAS_EXCEL.items():
-            col_idx = ws[f"{letra}1"].column
-
-            # ⛔ Saltar las columnas que ya están dentro del merge
-            if MERGE_INI <= col_idx <= MERGE_FIN:
-                continue
-
-            c = ws.cell(row=fila, column=col_idx)
-            if tipo == "money":
-                c.value = f"=SUM({letra}3:{letra}{fila - 1})"
-                c.number_format = formato_moneda
-                c.alignment = Alignment(horizontal="right", vertical="center")
-            c.font = bold_dark
-            c.fill = fill_total
-            c.border = border
-
-    def _ajustar_anchos(self, ws, fila_total):
-        """Ajusta el ancho de las columnas según el contenido."""
-        from openpyxl.utils import get_column_letter
-
-        for letra in COLUMNAS_EXCEL.keys():
-            largo_max = len(str(COLUMNAS_EXCEL[letra][0]))
-            for ini, fin, texto in GRUPOS_EXCEL:
-                col_ini = get_column_letter(ini)
-                col_fin = get_column_letter(fin)
-                if col_ini <= letra <= col_fin:
-                    n = fin - ini + 1
-                    largo_max = max(largo_max, len(texto) / n if n else 0)
-                    break
-            for f in range(3, fila_total):
-                celda = ws[f"{letra}{f}"]
-                if celda.value is None:
-                    continue
-                if isinstance(celda.value, datetime):
-                    txt = celda.value.strftime("%d/%m/%Y")
-                elif isinstance(celda.value, (int, float)):
-                    txt = f"${celda.value:,.2f}"
-                else:
-                    txt = str(celda.value)
-                largo_max = max(largo_max, len(txt))
-            ancho = min(max(largo_max + 2, 8), 40)
-            ws.column_dimensions[letra].width = ancho
-
-        ws.column_dimensions["AP"].width = max(ws.column_dimensions["AP"].width, 38)
-        ws.column_dimensions["D"].width = max(ws.column_dimensions["D"].width, 22)
-
-    # ---------------- EXCEL ----------------
-    def _anexar_al_excel(self, ruta, regs):
-        """
-        Abre un Excel existente y anexa solo los registros nuevos.
-        Detecta duplicados por:
-        1. Folio fiscal (UUID) — columna AP
-        2. No. de factura      — columna A
-        Respeta cualquier edición manual de las filas ya existentes.
-        Devuelve (nuevos_agregados, omitidos).
-        """
-        from openpyxl import load_workbook
-        from copy import copy
-
-        wb = load_workbook(ruta)
-        ws = wb.active
-
-        COL_FOLIO_FISCAL = 42  # AP
-        COL_NO_FACTURA = 1     # A
-
-        # --- 1. Leer lo que ya está en el archivo ---
-        folios_existentes = set()
-        no_facturas_existentes = set()
-        fila_totales_original = None
-
-        fila = 3
-        max_fila = ws.max_row + 10
-        while fila <= max_fila:
-            val_no_fac = ws.cell(row=fila, column=COL_NO_FACTURA).value
-            val_folio = ws.cell(row=fila, column=COL_FOLIO_FISCAL).value
-
-            # ¿Es la fila TOTALES?
-            if val_no_fac is not None and str(val_no_fac).strip().upper() == "TOTALES":
-                fila_totales_original = fila
-                break
-
-            if val_folio:
-                folios_existentes.add(str(val_folio).strip().upper())
-            if val_no_fac:
-                no_facturas_existentes.add(str(val_no_fac).strip().upper())
-
-            fila += 1
-
-        if fila_totales_original is None:
-            fila_totales_original = fila
-
-        # --- 2. Filtrar registros nuevos ---
-        nuevos = []
-        omitidos = 0
-        for r in regs:
-            uuid = str(r.get("folio_fiscal", "")).strip().upper()
-            no_fac = str(r.get("no_factura", "")).strip().upper()
-
-            es_duplicado = False
-            if uuid and uuid in folios_existentes:
-                es_duplicado = True
-            elif no_fac and no_fac in no_facturas_existentes:
-                es_duplicado = True
-
-            if es_duplicado:
-                omitidos += 1
-                continue
-            nuevos.append(r)
-
-        if not nuevos:
-            return 0, omitidos
-
-        # --- 3. DESHACER merges de la fila TOTALES (si los hay) ---
-        # Buscamos cualquier merge que esté en la fila de TOTALES y lo quitamos.
-        merges_a_quitar = []
-        for rango in list(ws.merged_cells.ranges):
-            if rango.min_row == fila_totales_original:
-                merges_a_quitar.append(str(rango))
-
-        for rango_str in merges_a_quitar:
-            try:
-                ws.unmerge_cells(rango_str)
-            except Exception:
-                pass
-
-        # --- 4. Respaldar la fila TOTALES existente ---
-        totales_guardados = {}
-        if fila_totales_original is not None:
-            for col in range(1, ws.max_column + 1):
-                celda = ws.cell(row=fila_totales_original, column=col)
-                totales_guardados[col] = {
-                    "value": celda.value,
-                    "font": copy(celda.font),
-                    "fill": copy(celda.fill),
-                    "border": copy(celda.border),
-                    "alignment": copy(celda.alignment),
-                    "number_format": celda.number_format,
-                }
-            # ✅ Limpiar valores (ahora sí, ya no hay merges en esa fila)
-            for col in range(1, ws.max_column + 1):
-                ws.cell(row=fila_totales_original, column=col).value = None
-
-        # --- 5. Escribir las filas nuevas a partir de donde estaba TOTALES ---
-        fila_insercion = fila_totales_original
-        for r in nuevos:
-            self._escribir_fila(ws, r, fila_insercion)
-            fila_insercion += 1
-
-        # --- 6. Reescribir la fila TOTALES al final ---
-        fila_totales_nueva = fila_insercion
-        self._escribir_fila_totales(ws, fila_totales_nueva)
-
-        # --- 7. Ajustar anchos ---
-        self._ajustar_anchos(ws, fila_totales_nueva)
-
-        wb.save(ruta)
-        return len(nuevos), omitidos
-
+    
     def _generar_excel(self):
+        """Genera (o anexa a) el Excel de resumen del centro/mes/año activo."""
+        from tkinter import messagebox
+
         if not self.registros:
             messagebox.showwarning("Sin datos", "No hay registros.")
             return
@@ -3307,13 +2910,11 @@ class AppIngresos(ttk.Window):
         carpeta = ruta_deposito(anio, mes_idx)
         carpeta.mkdir(parents=True, exist_ok=True)
 
-        # ✅ Nombre con centro para no pisar Central vs Prado
         nombre = f"Resumen {centro} - {mes_nombre} {anio}.xlsx"
         ruta_xlsx = carpeta / nombre
         existe = ruta_xlsx.exists()
 
-        # ✅ Verificación previa: ¿está abierto en Excel?
-        if self._archivo_esta_bloqueado(ruta_xlsx):
+        if archivo_esta_bloqueado(ruta_xlsx):
             messagebox.showerror(
                 "Archivo en uso",
                 f"El archivo Excel ya existe y está abierto en otro programa.\n\n"
@@ -3324,7 +2925,7 @@ class AppIngresos(ttk.Window):
 
         try:
             if existe:
-                nuevos, omitidos = self._anexar_al_excel(ruta_xlsx, filtrados)
+                nuevos, omitidos = anexar_al_excel(ruta_xlsx, filtrados)
                 if nuevos == 0:
                     messagebox.showinfo(
                         "Sin novedades",
@@ -3340,7 +2941,10 @@ class AppIngresos(ttk.Window):
                     f"⏭️ Ya existían:      {omitidos}"
                 )
             else:
-                self._escribir_excel(ruta_xlsx, filtrados)
+                escribir_excel(
+                    ruta_xlsx, filtrados,
+                    var_mes=mes_nombre, var_anio=anio
+                )
                 msg = (
                     f"Archivo creado:\n{ruta_xlsx}\n\n"
                     f"Registros: {len(filtrados)}"
@@ -3355,8 +2959,7 @@ class AppIngresos(ttk.Window):
             )
             return
         except OSError as e:
-            # En algunos sistemas, el bloqueo llega como OSError genérico
-            if getattr(e, "errno", None) in (13, 11):  # EACCES, EAGAIN
+            if getattr(e, "errno", None) in (13, 11):
                 messagebox.showerror(
                     "Archivo bloqueado",
                     f"No se pudo acceder al archivo.\n\n"
@@ -3375,46 +2978,6 @@ class AppIngresos(ttk.Window):
         messagebox.showinfo("Excel generado", msg)
         self._abrir_carpeta(carpeta)
 
-    def _escribir_excel(self, ruta, regs):
-        """Crea un Excel nuevo (sobrescribe si existe)."""
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-        from openpyxl.utils import get_column_letter
-
-        # Nombre de la hoja
-        if regs:
-            mes_actual = regs[0].get("mes", "") or self.var_mes.get()
-            anio_actual = regs[0].get("anio", "") or int(self.var_anio.get())
-        else:
-            mes_actual = MESES_ES[datetime.now().month - 1]
-            anio_actual = datetime.now().year
-        nombre_hoja = f"{str(mes_actual).capitalize()} {anio_actual}"[:31]
-
-        wb = Workbook()
-        ws = wb.active
-        ws.title = nombre_hoja
-
-        # Encabezados
-        self._escribir_encabezados(ws)
-
-        # Filas de datos
-        fila = 3
-        for r in regs:
-            self._escribir_fila(ws, r, fila)
-            fila += 1
-
-        # Totales
-        self._escribir_fila_totales(ws, fila)
-
-        # Anchos de columna
-        self._ajustar_anchos(ws, fila)
-
-        # Freeze panes y alturas
-        ws.row_dimensions[1].height = 22
-        ws.row_dimensions[2].height = 32
-        ws.freeze_panes = "F3"
-
-        wb.save(ruta)
 
     # ---------------- RECLASIFICADOR ----------------
     def _abrir_reclasificador(self):
