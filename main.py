@@ -26,11 +26,29 @@ from lector_facturas import procesar_factura, agrupar_por_categoria
 
 
 # ============================================================
+# IMPORTS INTERNOS
+# ============================================================
+from config.ajustes import CONFIG, TEMA, cargar_config, guardar_config
+from config.campos import (
+    MESES_ES,
+    CAMPOS,
+    CAMPOS_DICT,
+    REGLAS_AUTO,
+    CATEGORIAS_PARA_TOTAL,
+    CAMPOS_TIPO_PAGO,
+)
+from config.temas import (
+    TEMAS_OSCUROS,
+    tema_es_oscuro,
+    COLORES,
+    refrescar_colores,
+    obtener_colores_sidebar,
+)
+
+
+# ============================================================
 # CONFIGURACIÓN DE RUTAS
 # ============================================================
-MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
-            "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
-
 BASE_DIR = Path.home() / "Documents"
 
 
@@ -48,6 +66,7 @@ def _carpeta_datos():
 
 
 _CARPETA_DATOS = _carpeta_datos()
+
 
 # Archivos compartidos entre años
 HISTORIAL_FILE = _CARPETA_DATOS / "historial_autocompletado.json"
@@ -77,165 +96,6 @@ def guardar_db(regs, anio):
     with open(ruta, "w", encoding="utf-8") as f:
         json.dump(regs, f, ensure_ascii=False, indent=2)
 
-
-# ============================================================
-# CONFIGURACIÓN DE TEMA
-# ============================================================
-CONFIG_DEFAULT = {"tema": "darkly"}
-
-
-def cargar_config():
-    if CONFIG_FILE.exists():
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-            for k, v in CONFIG_DEFAULT.items():
-                cfg.setdefault(k, v)
-            return cfg
-        except Exception:
-            pass
-    return dict(CONFIG_DEFAULT)
-
-
-def guardar_config(cfg):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, ensure_ascii=False, indent=2)
-
-
-CONFIG = cargar_config()
-TEMA = CONFIG.get("tema", CONFIG_DEFAULT["tema"])
-
-TEMAS_OSCUROS = {
-  "bootstrap-dark",
-  "pydata-dark",
-  "nord-dark",
-  "solarized-dark",
-  "catppuccin-dark",
-  "gruvbox-dark",
-  "dracula-dark",
-  "tokyo-night-dark",
-  "one-dark"
-  "everforest-dark",
-  "vapor-dark",
-  "minty-dark",
-  "pulse-dark",
-  "united-dark",
-  "sandstone-dark"}
-
-
-def tema_es_oscuro(tema=None):
-    t = tema or TEMA
-    return t.lower() in TEMAS_OSCUROS
-
-
-def _colores_adaptados():
-    oscuro = tema_es_oscuro()
-    if oscuro:
-        return {
-            "texto_normal": "#ffffff",
-            "texto_operacion": "#00ff00",
-            "fondo_entry": "#2b2b2b",
-            "campo_ok": "#1b5e20",
-            "campo_error": "#7f1d1d",
-            "campo_normal": "#2b2b2b",
-        }
-    else:
-        return {
-            "texto_normal": "#000000",
-            "texto_operacion": "#007700",
-            "fondo_entry": "#ffffff",
-            "campo_ok": "#c8e6c9",
-            "campo_error": "#ffcdd2",
-            "campo_normal": "#ffffff",
-        }
-
-
-COLORES = _colores_adaptados()
-
-
-def refrescar_colores():
-    global COLORES
-    COLORES = _colores_adaptados()
-
-
-# ============================================================
-# DEFINICIÓN DE CAMPOS
-# ============================================================
-CAMPOS = [
-    # GENERAL
-    ("no_factura",       "No. DE FACTURA",           "GENERAL",        "text"),
-    ("qvet",             "QVET",                     "GENERAL",        "text"),
-    ("fecha",            "FECHA DE EMISIÓN",         "GENERAL",        "date"),
-    ("nombre",           "NOMBRE",                   "GENERAL",        "text"),
-    ("rfc",              "RFC",                      "GENERAL",        "text"),
-    ("fecha_impresion",  "FECHA DE TIMBRADO",        "GENERAL",        "date"),
-    ("folio_fiscal",     "FOLIO FISCAL",             "GENERAL",        "text"),
-    # U
-    ("u_importe",        "IMPORTE",                  "U",              "number"),
-    ("u_iva",            "IVA (16%)",                "U",              "number"),
-    # ACCESORIOS
-    ("ac_importe",       "IMPORTE",                  "ACCESORIOS",     "number"),
-    ("ac_iva",           "IVA (16%)",                "ACCESORIOS",     "number"),
-    # MEDICAMENTOS
-    ("med_importe",      "IMPORTE (sin IVA)",        "MEDICAMENTOS",   "number"),
-    ("med_sin_iva",      "SIN IVA",                  "MEDICAMENTOS",   "number"),
-    ("med_iva",          "IVA (16%)",                "MEDICAMENTOS",   "number"),
-    # HIGIENE
-    ("hig_importe",      "IMPORTE (sin IVA)",        "HIGIENE",        "number"),
-    ("hig_sin_iva",      "SIN IVA",                  "HIGIENE",        "number"),
-    ("hig_iva",          "IVA 16%",                  "HIGIENE",        "number"),
-    ("hig_sin_ieps_6",   "SIN IEPS 6%",              "HIGIENE",        "number"),
-    ("hig_ieps_6",       "IEPS 6%",                  "HIGIENE",        "number"),
-    ("hig_sin_ieps_7",   "SIN IEPS 7%",              "HIGIENE",        "number"),
-    ("hig_ieps_7",       "IEPS 7%",                  "HIGIENE",        "number"),
-    # ESTETICA
-    ("est_importe",      "IMPORTE",                  "ESTETICA",       "number"),
-    ("est_iva",          "IVA (16%)",                "ESTETICA",       "number"),
-    # TRANSPORTE
-    ("tra_importe",      "IMPORTE",                  "TRANSPORTE",     "number"),
-    ("tra_iva",          "IVA (16%)",                "TRANSPORTE",     "number"),
-    # PENSION
-    ("pen_importe",      "IMPORTE",                  "PENSION",        "number"),
-    ("pen_iva",          "IVA (16%)",                "PENSION",        "number"),
-    # VACUNA
-    ("vac_importe",      "IMPORTE",                  "VACUNA",         "number"),
-    # CLINICA
-    ("cli_importe",      "IMPORTE",                  "CLINICA",        "number"),
-    # TOTAL
-    ("total",            "TOTAL (auto)",             "TOTAL",          "number"),
-    # TIPO DE PAGO
-    ("efectivo",         "EFECTIVO",                 "TIPO DE PAGO",   "number"),
-    ("tc",               "TARJETA CRÉDITO",          "TIPO DE PAGO",   "number"),
-    ("td",               "TARJETA DÉBITO",           "TIPO DE PAGO",   "number"),
-    ("cheque",           "CHEQUE",                   "TIPO DE PAGO",   "number"),
-    ("transfer",         "TRANSFERENCIA",            "TIPO DE PAGO",   "number"),
-    ("vale",             "VALE",                     "TIPO DE PAGO",   "number"),
-]
-
-CAMPOS_DICT = {c[0]: c for c in CAMPOS}
-
-REGLAS_AUTO = {
-    "med_iva": ("med_sin_iva", 0.16),
-    "hig_iva": ("hig_sin_iva", 0.16),
-    "hig_ieps_6": ("hig_sin_ieps_6", 0.06),
-    "hig_ieps_7": ("hig_sin_ieps_7", 0.07),
-    "u_iva": ("u_importe", 0.16),
-    "ac_iva": ("ac_importe", 0.16),
-    "est_iva": ("est_importe", 0.16),
-    "tra_iva": ("tra_importe", 0.16),
-    "pen_iva": ("pen_importe", 0.16),
-}
-
-CATEGORIAS_PARA_TOTAL = [
-    "u_importe", "ac_importe", "med_importe", "hig_importe",
-    "est_importe", "tra_importe", "pen_importe", "vac_importe", "cli_importe",
-    "med_sin_iva", "hig_sin_iva",
-    "hig_sin_ieps_6", "hig_sin_ieps_7",
-    "u_iva", "ac_iva", "med_iva", "hig_iva", "hig_ieps_6", "hig_ieps_7",
-    "est_iva", "tra_iva", "pen_iva",
-]
-
-CAMPOS_TIPO_PAGO = ["efectivo", "tc", "td", "cheque", "transfer", "vale"]
 
 # ============================================================
 # CONSTANTES PARA EL EXCEL
@@ -849,33 +709,6 @@ def agrupar_facturas_descargadas(carpeta, archivos_por_correo=None):
     return grupos
 
 
-def obtener_colores_sidebar():
-    """
-    Devuelve un diccionario con los colores del sidebar según el tema actual.
-    Si el tema es oscuro → colores oscuros.
-    Si el tema es claro → colores claros.
-    """
-    oscuro = tema_es_oscuro()
-    if oscuro:
-        return {
-            "bg":       "#1e2a38",   # azul oscuro profundo
-            "hover":    "#2c3e50",   # hover más claro
-            "active":   "#3498db",   # activo (azul brillante)
-            "fg":       "#ffffff",   # texto principal
-            "fg_suave": "#cfd8dc",   # texto secundario
-            "separador": "#34495e",  # línea separadora
-            "version":  "#607d8b",   # texto versión
-        }
-    else:
-        return {
-            "bg":       "#ffffff",   # blanco
-            "hover":    "#e3f2fd",   # azul muy claro al hover
-            "active":   "#1976d2",   # azul medio
-            "fg":       "#000000",   # texto negro
-            "fg_suave": "#546e7a",   # texto gris
-            "separador": "#e0e0e0",  # gris claro
-            "version":  "#90a4ae",   # gris
-        }
 # ============================================================
 # WIDGETS PERSONALIZADOS
 # ============================================================
