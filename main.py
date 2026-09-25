@@ -4,7 +4,6 @@ Sistema de Ingresos - Contabilidad
 Interfaz moderna con ttkbootstrap.
 Registros por año (un archivo JSON por año).
 """
-
 import os
 import sys
 import re
@@ -14,15 +13,12 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 from tkinter import messagebox, filedialog
-
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from ttkbootstrap.widgets import DateEntry
-
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-
 
 # ============================================================
 # IMPORTS INTERNOS
@@ -86,7 +82,6 @@ from excel.generador import (
     anexar_al_excel,
 )
 
-
 # ============================================================
 # MAPEO DE SERIES A CENTROS
 # ============================================================
@@ -109,8 +104,6 @@ def centro_desde_serie(serie):
         "PRADO": "Prado",
     }
     return mapeo.get(s)
-    
-
 
 # ============================================================
 # INTERFAZ PRINCIPAL
@@ -2161,7 +2154,6 @@ class AppIngresos(ttk.Window):
         except Exception:
             pass
 
-
     # ---------------- TABLA ----------------
     def _ver_reportes(self):
         """
@@ -2516,6 +2508,9 @@ class AppIngresos(ttk.Window):
         self._refrescar_tabla()
 
     def _ver_adjuntos(self):
+        """Abre el diálogo para ver los adjuntos de un registro."""
+        from dialogos.adjuntos import abrir_dialogo_adjuntos
+
         reg = None
         if self.id_actual is not None:
             reg = next((r for r in self.registros if r["id"] == self.id_actual), None)
@@ -2526,41 +2521,8 @@ class AppIngresos(ttk.Window):
         if reg is None:
             messagebox.showinfo("Ver adjuntos", "Selecciona un registro.")
             return
-        adjuntos = archivos_del_registro(reg)
-        if not adjuntos:
-            if messagebox.askyesno("Sin adjuntos",
-                                   "No tiene adjuntos. ¿Adjuntar ahora?"):
-                self._adjuntar_factura()
-            return
-        ventana = ttk.Toplevel(self)
-        ventana.title(f"Adjuntos de {reg.get('no_factura', '')}")
-        ventana.geometry("250x250")
-        ventana.resizable(False, False)
-        ventana.transient(self)
-        ttk.Label(ventana, text=f"Adjuntos de {reg.get('no_factura', '')}:",
-                  font=("Segoe UI", 11, "bold")).pack(pady=8)
-        frame = ttk.Frame(ventana)
-        frame.pack(fill="both", expand=True, padx=10, pady=5)
-        lb = tk.Listbox(frame, font=("Consolas", 10))
-        lb.pack(side="left", fill="both", expand=True)
-        sb = ttk.Scrollbar(frame, orient="vertical", command=lb.yview)
-        sb.pack(side="right", fill="y")
-        lb.configure(yscrollcommand=sb.set)
-        for a in adjuntos:
-            lb.insert(tk.END, a.name)
 
-        def abrir_archivo():
-            sel_lb = lb.curselection()
-            if not sel_lb:
-                return
-            self._abrir_archivo(adjuntos[sel_lb[0]])
-
-        lb.bind("<Double-Button-1>", lambda e: abrir_archivo())
-        fr = ttk.Frame(ventana)
-        fr.pack(pady=8)
-        ttk.Button(fr, text="📎 Adjuntar más",
-                   command=lambda: (ventana.destroy(), self._adjuntar_factura()),
-                   bootstyle="info-outline").pack(side="left", padx=4)
+        abrir_dialogo_adjuntos(self, reg)
 
     @staticmethod
     def _abrir_archivo(ruta):
@@ -2589,7 +2551,6 @@ class AppIngresos(ttk.Window):
             os.system(f'open "{ruta}"')
         else:
             os.system(f'xdg-open "{ruta}"')
-
 
     def _toggle_tabla(self):
         if self.frame_tabla.winfo_ismapped():
@@ -2620,139 +2581,30 @@ class AppIngresos(ttk.Window):
             print(f"[_configurar_estilos] Error: {e}")
 
     def _elegir_tema(self):
-        """Abre una ventana para elegir el tema visual de la aplicación."""
-        import ttkbootstrap as _ttk
+        """Abre el diálogo para elegir el tema visual."""
+        from dialogos.temas import abrir_dialogo_temas
+        abrir_dialogo_temas(self)
 
-        try:
-            temas = sorted(_ttk.Style().theme_names())
-        except Exception:
-            temas = ["superhero", "darkly", "cyborg", "flatly", "litera", "minty"]
-
-        ventana = ttk.Toplevel(self)
-        ventana.title("🎨 Elegir tema")
-        ventana.geometry("300x400")
+    def _configurar_ventana(self, ventana, ancho=500, alto=400,
+        min_ancho=400, min_alto=320,
+        centrar_en_padre=True):
+        """
+        Configura tamaño, minsize y centrado de un Toplevel.
+        - En vez de bloquear el resize, permite agrandar.
+        - Centra la ventana respecto a la principal.
+        """
+        ventana.geometry(f"{ancho}x{alto}")
+        ventana.minsize(min_ancho, min_alto)
         ventana.transient(self)
         ventana.grab_set()
-        ventana.resizable(False, False)
-        ventana.minsize(300, 400)
+        ventana.update_idletasks()
 
-        # ---- Encabezado ----
-        ttk.Label(ventana, text="Selecciona un tema:",
-                  font=("Segoe UI", 13, "bold")).pack(pady=(15, 5))
-
-        ttk.Label(ventana,
-                  text="Haz clic en un tema para previsualizarlo.\n"
-                       "Presiona 'Aplicar y guardar' para conservarlo.",
-                  font=("Segoe UI", 9),
-                  foreground="gray",
-                  justify="center").pack(pady=(0, 10))
-
-        # ---- Contenedor con scroll ----
-        cont = ttk.Frame(ventana)
-        cont.pack(fill="both", expand=True, padx=15, pady=5)
-
-        # Treeview (tabla) como lista de temas
-        tree = ttk.Treeview(cont, columns=("tema",), show="headings",
-                            height=12, selectmode="browse")
-        tree.heading("tema", text="TEMA")
-        tree.column("tema", width=200, anchor="w")
-
-        # Scrollbar
-        sb = ttk.Scrollbar(cont, orient="vertical", command=tree.yview)
-        tree.configure(yscrollcommand=sb.set)
-        tree.pack(side="left", fill="both", expand=True)
-        sb.pack(side="right", fill="y")
-
-        # Llenar la lista
-        for tema in temas:
-            tree.insert("", "end", iid=tema, values=(tema,))
-
-        # Seleccionar el tema actual
-        if TEMA in temas:
-            tree.selection_set(TEMA)
-            tree.see(TEMA)
-
-        # ---- Scroll con la rueda del mouse ----
-        def _on_mousewheel(event):
-            if sys.platform == "darwin":
-                delta = -1 * event.delta
-            elif sys.platform.startswith("win"):
-                delta = -1 * (event.delta // 120)
-            else:
-                delta = -1 if event.num == 5 else 1
-            tree.yview_scroll(int(delta), "units")
-
-        def _bind_wheel(widget):
-            widget.bind("<MouseWheel>", _on_mousewheel, add="+")
-            widget.bind("<Button-4>", _on_mousewheel, add="+")
-            widget.bind("<Button-5>", _on_mousewheel, add="+")
-            for h in widget.winfo_children():
-                _bind_wheel(h)
-
-        _bind_wheel(ventana)
-
-        # ---- Variable para el tema seleccionado ----
-        var_tema = tk.StringVar(value=TEMA)
-
-        def _preview(tema):
-            try:
-                _ttk.Style().theme_use(tema)
-                global TEMA
-                TEMA = tema
-                refrescar_colores()
-                self._configurar_estilos()
-                self._repintar_todo()
-                self._repintar_sidebar()
-            except Exception as e:
-                print(f"[_preview] Error: {e}")
-
-        def _al_seleccionar(event=None):
-            """Se ejecuta al hacer clic en un tema de la lista."""
-            sel = tree.selection()
-            if not sel:
-                return
-            tema = sel[0]
-            var_tema.set(tema)
-            _preview(tema)
-            lbl_actual.configure(text=f"Tema actual: {tema}")
-
-        tree.bind("<<TreeviewSelect>>", _al_seleccionar)
-
-        # ---- Etiqueta con el tema actual ----
-        lbl_actual = ttk.Label(ventana, text=f"Tema actual: {TEMA}",
-                                font=("Segoe UI", 10, "bold"),
-                                bootstyle="info")
-        lbl_actual.pack(pady=8)
-
-        # ---- Botones ----
-        def _confirmar():
-            nuevo_tema = var_tema.get()
-            CONFIG["tema"] = nuevo_tema
-            guardar_config(CONFIG)
-            messagebox.showinfo(
-                "Tema guardado",
-                f"Tema cambiado a: {nuevo_tema}\n\n"
-                "El cambio ya está aplicado."
-            )
-            ventana.destroy()
-
-        def _restaurar():
-            tema_defecto = "superhero"
-            var_tema.set(tema_defecto)
-            if tema_defecto in temas:
-                tree.selection_set(tema_defecto)
-                tree.see(tema_defecto)
-            _preview(tema_defecto)
-            lbl_actual.configure(text=f"Tema actual: {tema_defecto}")
-
-        fr_btn = ttk.Frame(ventana)
-        fr_btn.pack(pady=12)
-        ttk.Button(fr_btn, text="✅ Aplicar y guardar",
-                   command=_confirmar,
-                   bootstyle="info-outline").pack(side="left", padx=5)
-        ttk.Button(fr_btn, text="↺ Restaurar",
-                   command=_restaurar,
-                   bootstyle="info-outline").pack(side="left", padx=5)
+        if centrar_en_padre:
+            x = self.winfo_rootx() + (self.winfo_width() - ancho) // 2
+            y = self.winfo_rooty() + (self.winfo_height() - alto) // 2
+            x = max(0, x)
+            y = max(0, y)
+            ventana.geometry(f"+{x}+{y}")
 
     def _repintar_sidebar(self):
         """Aplica los colores del tema actual a todos los widgets del sidebar."""
@@ -2794,93 +2646,7 @@ class AppIngresos(ttk.Window):
         self._validar_qvet_visual()
         self.update_idletasks()
 
-    # ------------------------------------------------------------
-    # HELPERS DEL EXCEL
-    # ------------------------------------------------------------
-    
-        def _buscar_letra(clave_buscada):
-            for letra_temp, clave_temp in MAPA_CLAVES_EXCEL.items():
-                if clave_temp == clave_buscada:
-                    return letra_temp
-            return None
-
-        for letra, (titulo, seccion, tipo) in COLUMNAS_EXCEL.items():
-            clave = MAPA_CLAVES_EXCEL[letra]
-            c = ws[f"{letra}{fila}"]
-
-            # ✅ Resetear estilos base ANTES de cualquier otra cosa
-            c.font = fuente_normal
-            c.fill = sin_relleno
-            c.border = border
-
-            # --- Casos especiales ---
-            if clave == "__tarjeta__":
-                letra_tc = _buscar_letra("tc")
-                letra_td = _buscar_letra("td")
-                if letra_tc and letra_td:
-                    c.value = f"={letra_tc}{fila}+{letra_td}{fila}"
-                    c.number_format = formato_moneda
-                elif valor_tarjeta > 0:
-                    c.value = valor_tarjeta
-                    c.number_format = formato_moneda
-                c.alignment = Alignment(horizontal="right", vertical="center")
-                continue
-
-            if clave == "__efectivo_dup__":
-                letra_efectivo = _buscar_letra("efectivo")
-                if letra_efectivo:
-                    c.value = f"={letra_efectivo}{fila}"
-                    c.number_format = formato_moneda
-                elif valor_efectivo > 0:
-                    c.value = valor_efectivo
-                    c.number_format = formato_moneda
-                c.alignment = Alignment(horizontal="right", vertical="center")
-                continue
-
-            if clave == "__transfer_dup__":
-                letra_transfer = _buscar_letra("transfer")
-                if letra_transfer:
-                    c.value = f"={letra_transfer}{fila}"
-                    c.number_format = formato_moneda
-                elif valor_transfer > 0:
-                    c.value = valor_transfer
-                    c.number_format = formato_moneda
-                c.alignment = Alignment(horizontal="right", vertical="center")
-                continue
-
-            if clave == "":
-                c.alignment = Alignment(horizontal="center", vertical="center")
-                continue
-
-            # --- Casos normales ---
-            valor = r.get(clave, 0 if tipo == "money" else "")
-            expresion = r.get(f"{clave}__expr", "")
-
-            if tipo == "money":
-                if expresion:
-                    c.value = f"={expresion}"
-                elif letra in FORMULAS_AUTO_EXCEL:
-                    c.value = FORMULAS_AUTO_EXCEL[letra].format(r=fila)
-                else:
-                    c.value = float(valor or 0)
-                c.number_format = formato_moneda
-                c.alignment = Alignment(horizontal="right", vertical="center")
-
-            elif tipo == "date":
-                if valor:
-                    try:
-                        fecha_dt = datetime.strptime(str(valor).strip(), "%d/%m/%Y")
-                        c.value = fecha_dt
-                        c.number_format = formato_fecha
-                    except (ValueError, TypeError):
-                        c.value = valor
-                c.alignment = Alignment(horizontal="center", vertical="center")
-
-            else:
-                c.value = valor
-                c.alignment = Alignment(horizontal="left", vertical="center")
-
-    
+    # -----------------EXCEL--------------------------
     def _generar_excel(self):
         """Genera (o anexa a) el Excel de resumen del centro/mes/año activo."""
         from tkinter import messagebox
@@ -2977,7 +2743,6 @@ class AppIngresos(ttk.Window):
 
         messagebox.showinfo("Excel generado", msg)
         self._abrir_carpeta(carpeta)
-
 
     # ---------------- RECLASIFICADOR ----------------
     def _abrir_reclasificador(self):
