@@ -1145,171 +1145,21 @@ class AppIngresos(ttk.Window):
                 "y añade la serie al diccionario 'SERIES_A_CENTRO'."
             )
 
-    def _pedir_credenciales_correo(self):
-        """
-        Pide las credenciales de Gmail y opciones de filtrado.
-        Devuelve (usuario, password, etiqueta) o (None, None, None).
-        """
-        ventana = ttk.Toplevel(self)
-        ventana.title("Configuración de Gmail")
-        ventana.geometry("550x450")
-        ventana.resizable(False, False)
-        ventana.minsize(550, 450)
-        ventana.transient(self)
-        ventana.grab_set()
-
-        # ---- Contenedor con padding ----
-        contenedor = ttk.Frame(ventana, padding=20)
-        contenedor.pack(fill="both", expand=True)
-
-        # ---- Encabezado ----
-        ttk.Label(contenedor,
-                  text="Configuración de Gmail",
-                  font=("Segoe UI", 14, "bold")).pack(pady=(0, 5))
-
-        ttk.Label(contenedor,
-                  text="Necesitas una 'Contraseña de aplicación' de Google.\n"
-                       "Genérala en: myaccount.google.com/apppasswords",
-                  justify="center", foreground="gray",
-                  font=("Segoe UI", 9)).pack(pady=(0, 20))
-
-        # ---- Formulario (una fila por campo) ----
-        form = ttk.Frame(contenedor)
-        form.pack(fill="x", expand=False)
-
-        # Columna 0: etiquetas | Columna 1: campos
-        form.columnconfigure(0, weight=0)
-        form.columnconfigure(1, weight=1)
-
-        cfg_actual = CONFIG.get("correo", {})
-
-        fila = 0
-
-        # ---------- Correo de Gmail ----------
-        ttk.Label(form, text="Correo de Gmail:").grid(
-            row=fila, column=0, sticky="w", padx=(0, 10), pady=8)
-        var_usuario = tk.StringVar(value=cfg_actual.get("usuario", ""))
-        ttk.Entry(form, textvariable=var_usuario).grid(
-            row=fila, column=1, sticky="ew", pady=8)
-        fila += 1
-
-        # ---------- Contraseña de app ----------
-        ttk.Label(form, text="Contraseña de app:").grid(
-            row=fila, column=0, sticky="w", padx=(0, 10), pady=8)
-        var_password = tk.StringVar(value=cfg_actual.get("password_app", ""))
-        ttk.Entry(form, textvariable=var_password, show="•").grid(
-            row=fila, column=1, sticky="ew", pady=8)
-        fila += 1
-
-        # ---------- Etiqueta ----------
-        ttk.Label(form, text="Etiqueta de Gmail:").grid(
-            row=fila, column=0, sticky="w", padx=(0, 10), pady=8)
-        var_etiqueta = tk.StringVar(
-            value=cfg_actual.get("etiqueta", "FACTURAS BAALAK"))
-        ttk.Entry(form, textvariable=var_etiqueta).grid(
-            row=fila, column=1, sticky="ew", pady=8)
-        fila += 1
-
-        # Texto de ayuda de la etiqueta
-        ttk.Label(form,
-                  text="Ejemplo: 'Facturas QVET' o 'Facturas/QVET' (con subcarpeta)",
-                  foreground="gray", font=("Segoe UI", 8)).grid(
-            row=fila, column=1, sticky="w", pady=(0, 5))
-        fila += 1
-
-        # ---------- Filtro de remitente ----------
-        ttk.Label(form, text="Filtrar por remitente:").grid(
-            row=fila, column=0, sticky="w", padx=(0, 10), pady=8)
-        var_remitente = tk.StringVar(
-            value=cfg_actual.get("filtro_remitente", ""))
-        ttk.Entry(form, textvariable=var_remitente).grid(
-            row=fila, column=1, sticky="ew", pady=8)
-        fila += 1
-
-        ttk.Label(form,
-                  text="Opcional. Ejemplo: 'qvet' o 'facturacion'. Déjalo vacío para descargar todos.",
-                  foreground="gray", font=("Segoe UI", 8), wraplength=400).grid(
-            row=fila, column=1, sticky="w", pady=(0, 5))
-        fila += 1
-
-        # ---------- Días atrás ----------
-        ttk.Label(form, text="Correos de los últimos (días):").grid(
-            row=fila, column=0, sticky="w", padx=(0, 10), pady=8)
-        var_dias = tk.StringVar(value=str(cfg_actual.get("dias_atras", 30)))
-        ttk.Entry(form, textvariable=var_dias, width=10).grid(
-            row=fila, column=1, sticky="w", pady=8)
-        fila += 1
-
-        ttk.Label(form,
-                  text="Escribe 0 para descargar todos los correos sin límite de fecha.",
-                  foreground="gray", font=("Segoe UI", 8)).grid(
-            row=fila, column=1, sticky="w", pady=(0, 5))
-        fila += 1
-
-        # ---- Espacio flexible para centrar botones abajo ----
-        ttk.Frame(contenedor).pack(fill="y", expand=True)
-
-        resultado = {"ok": False}
-
-        def _guardar():
-            u = var_usuario.get().strip()
-            p = var_password.get().strip().replace(" ", "")
-            e = var_etiqueta.get().strip() or "Facturas QVET"
-            r = var_remitente.get().strip()
-            try:
-                d = int(var_dias.get().strip() or "0")
-            except ValueError:
-                d = 0
-
-            if not u or not p:
-                messagebox.showwarning(
-                    "Faltan datos",
-                    "Correo y contraseña son obligatorios.",
-                    parent=ventana
-                )
-                return
-
-            CONFIG["correo"] = {
-                "usuario": u,
-                "password_app": p,
-                "etiqueta": e,
-                "filtro_remitente": r,
-                "dias_atras": d,
-            }
-            guardar_config(CONFIG)
-            resultado["ok"] = True
-            ventana.destroy()
-
-        # ---- Botones ----
-        fr = ttk.Frame(contenedor)
-        fr.pack(fill="x", pady=(15, 0))
-
-        ttk.Button(fr, text="💾 Guardar",
-                   command=_guardar,
-                   bootstyle="info-outline").pack(side="right", padx=5)
-
-        ventana.wait_window()
-
-        if resultado["ok"]:
-            return (CONFIG["correo"]["usuario"],
-                    CONFIG["correo"]["password_app"],
-                    CONFIG["correo"]["etiqueta"])
-        return None, None, None
-
     def _editar_config_correo(self):
         """
         Abre el diálogo de configuración de Gmail para editar los datos
         ya guardados (correo, contraseña, etiqueta, filtros).
         """
-        # Abrir el diálogo (ya carga los valores actuales desde CONFIG)
-        usuario, password, etiqueta = self._pedir_credenciales_correo()
+        from dialogos.gmail_config import pedir_credenciales_correo
+
+        usuario, password, etiqueta = pedir_credenciales_correo(self)
         if usuario:
             messagebox.showinfo(
                 "Configuración actualizada",
-                f"Datos guardados correctamente.\n\n"
-                f"Correo: {usuario}\n"
-                f"Etiqueta: {etiqueta}\n\n"
-                "Ahora puedes sincronizar con ⚡ Sincronizar."
+                f"✅ Datos guardados correctamente\n\n"
+                f"📧 Correo: {usuario or '(vacío)'}\n"
+                f"🏷️ Etiqueta: {etiqueta or '(vacía)'}\n\n"
+                f"Ya puedes sincronizar con el botón ⚡ Sincronizar."
             )
 
     def _sincronizar(self):
@@ -1332,7 +1182,8 @@ class AppIngresos(ttk.Window):
 
             # Si no hay configuración, pedirla
             if not usuario or not password:
-                usuario, password, etiqueta = self._pedir_credenciales_correo()
+                from dialogos.gmail_config import pedir_credenciales_correo
+                usuario, password, etiqueta = pedir_credenciales_correo(self)
                 if not usuario:
                     return
                 cfg_correo = CONFIG.get("correo", {})
@@ -1340,20 +1191,22 @@ class AppIngresos(ttk.Window):
                 dias_atras = cfg_correo.get("dias_atras", 30)
 
             # ---- 2. Preguntar modo con opción de editar ----
-            modo = self._preguntar_modo_descarga(dias_atras)
+            from dialogos.sincronizar_preguntas import preguntar_modo_descarga
+            modo = preguntar_modo_descarga(self, dias_atras)
+
             if modo == "cancelar":
                 return
             elif modo == "editar":
-                # Abrir el diálogo de configuración
-                u, p, e = self._pedir_credenciales_correo()
+                from dialogos.gmail_config import pedir_credenciales_correo
+                u, p, e = pedir_credenciales_correo(self)
                 if u:
                     messagebox.showinfo(
                         "Configuración actualizada",
-                        f"Datos guardados correctamente.\n\n"
-                        f"Correo: {u}\n"
-                        f"Etiqueta: {e}"
-                    )
-                # Volver al inicio del bucle para preguntar de nuevo
+                        f"✅ Datos guardados correctamente\n\n"
+                        f"📧 Correo: {u or '(vacío)'}\n"
+                        f"🏷️ Etiqueta: {e or '(vacía)'}\n\n"
+                        f"Continuando con la sincronización..."
+                        )
                 continue
             else:
                 solo_no_leidos = (modo == "no_leidos")
@@ -1511,7 +1364,8 @@ class AppIngresos(ttk.Window):
                 "¿Quieres editar la configuración ahora?"
             )
             if editar:
-                u, p, e = self._pedir_credenciales_correo()
+                from dialogos.gmail_config import pedir_credenciales_correo
+                u, p, e = pedir_credenciales_correo(self)
                 if u:
                     messagebox.showinfo(
                         "Configuración actualizada",
@@ -1565,8 +1419,9 @@ class AppIngresos(ttk.Window):
 
         # ---- 7. Preguntar qué hacer ----
         ventana_prog.grab_release()
-        respuesta_procesar = self._preguntar_accion_facturas(
-            len(descargados), len(grupos), carpeta_descargas
+        from dialogos.sincronizar_preguntas import preguntar_accion_facturas
+        respuesta_procesar = preguntar_accion_facturas(
+            self, len(descargados), len(grupos), carpeta_descargas
         )
         ventana_prog.grab_set()
 
@@ -1756,192 +1611,6 @@ class AppIngresos(ttk.Window):
             ventana_prog.protocol("WM_DELETE_WINDOW", ventana_prog.destroy)
         except Exception:
             pass
-
-    def _preguntar_accion_facturas(self, num_archivos, num_facturas, carpeta):
-        """
-        Muestra un diálogo personalizado preguntando qué hacer con las
-        facturas descargadas.
-        
-        Devuelve:
-          - "procesar_todas" → procesar automáticamente
-          - "solo_guardar"   → solo guardar en disco
-        """
-        ventana = ttk.Toplevel(self)
-        ventana.title("Facturas descargadas")
-        ventana.transient(self)
-        ventana.grab_set()
-        ventana.resizable(False, False)
-
-        # ---- Centrar la ventana ----
-        ventana.update_idletasks()
-        ancho = 450
-        alto = 300
-        x = (ventana.winfo_screenwidth() - ancho) // 2
-        y = (ventana.winfo_screenheight() - alto) // 2
-        ventana.geometry(f"{ancho}x{alto}+{x}+{y}")
-
-        # ---- Contenedor con padding ----
-        contenedor = ttk.Frame(ventana, padding=25)
-        contenedor.pack(fill="both", expand=True)
-
-        # ---- Encabezado ----
-        ttk.Label(
-            contenedor,
-            text="📬 Facturas descargadas",
-            font=("Segoe UI", 15, "bold"),
-        ).pack(pady=(0, 10))
-
-        # ---- Resumen ----
-        resumen = (
-            f"Se descargaron {num_archivos} archivo(s),\n"
-            f"correspondientes a {num_facturas} factura(s) única(s)."
-        )
-        ttk.Label(
-            contenedor,
-            text=resumen,
-            font=("Segoe UI", 11),
-            justify="center",
-        ).pack(pady=(0, 5))
-
-        # ---- Ruta de la carpeta ----
-        ttk.Label(
-            contenedor,
-            text=f"📁 {carpeta}",
-            font=("Segoe UI", 9),
-            foreground="gray",
-            wraplength=460,
-            justify="center",
-        ).pack(pady=(0, 20))
-
-        # ---- Pregunta ----
-        ttk.Label(
-            contenedor,
-            text="¿Qué quieres hacer?",
-            font=("Segoe UI", 11, "bold"),
-        ).pack(pady=(0, 15))
-
-        # ---- Resultado ----
-        resultado = {"accion": "cancelar"}
-
-        def _elegir(accion):
-            resultado["accion"] = accion
-            ventana.destroy()
-
-        # ---- Botón: Procesar todas ----
-        ttk.Button(
-            contenedor,
-            text="✅  Procesar TODAS automáticamente",
-            command=lambda: _elegir("procesar_todas"),
-            bootstyle="info-outline",
-            width=35,
-        ).pack(pady=5)
-
-        # Descripción del botón
-        ttk.Label(
-            contenedor,
-            text="Llena el formulario, guarda y adjunta XML+PDF automáticamente",
-            font=("Segoe UI", 8),
-            foreground="gray",
-        ).pack(pady=(0, 10))
-
-        # ---- Botón: Solo guardar ----
-        ttk.Button(
-            contenedor,
-            text="📁  Solo guardar los archivos",
-            command=lambda: _elegir("solo_guardar"),
-            bootstyle="info-outline",
-            width=35,
-        ).pack(pady=5)
-
-        # Descripción del botón
-        ttk.Label(
-            contenedor,
-            text="Los archivos quedan en disco para procesarlos después con '📥 Leer factura'",
-            font=("Segoe UI", 8),
-            foreground="gray",
-        ).pack(pady=(0, 10))
-
-        # ---- Cerrar con X = Cancelar ----
-        ventana.protocol("WM_DELETE_WINDOW", lambda: _elegir("cancelar"))
-
-        # ---- Atajos de teclado ----
-        ventana.bind("<Escape>", lambda e: _elegir("cancelar"))
-
-        ventana.wait_window()
-        return resultado["accion"]
-
-    def _preguntar_modo_descarga(self, dias_atras):
-        """
-        Muestra un diálogo personalizado para elegir cómo descargar.
-        Devuelve:
-          - "no_leidos" → solo correos no leídos
-          - "todos"     → todos los correos
-          - "editar"    → abrir configuración
-        """
-        ventana = ttk.Toplevel(self)
-        ventana.title("Sincronizar facturas")
-        ventana.geometry("450x250")
-        ventana.resizable(False, False)
-        ventana.transient(self)
-        ventana.grab_set()
-
-        # Centrar la ventana
-        ventana.update_idletasks()
-        x = (ventana.winfo_screenwidth() - 450) // 2
-        y = (ventana.winfo_screenheight() - 250) // 2
-        ventana.geometry(f"450x250+{x}+{y}")
-
-        # ---- Encabezado ----
-        ttk.Label(ventana, text="⚡ Sincronizar facturas",
-                  font=("Segoe UI", 14, "bold")).pack(pady=(20, 5))
-
-        ttk.Label(ventana, text="¿Cómo quieres descargar?",
-                  font=("Segoe UI", 10), foreground="gray").pack(pady=(0, 20))
-
-        # ---- Botones de opción ----
-        resultado = {"modo": "cancelar"}
-
-        def _elegir(modo):
-            resultado["modo"] = modo
-            ventana.destroy()
-
-        # Botón: Solo no leídos
-        ttk.Button(
-            ventana,
-            text="📥  Solo correos NO leídos  (más rápido)",
-            command=lambda: _elegir("no_leidos"),
-            bootstyle="info-outline",
-            width=35,
-        ).pack(pady=5)
-
-        # Botón: Todos los correos
-        texto_todos = "📨  Todos los correos"
-        if dias_atras:
-            texto_todos += f"  (últimos {dias_atras} días)"
-        else:
-            texto_todos += "  (sin límite de fecha)"
-        ttk.Button(
-            ventana,
-            text=texto_todos,
-            command=lambda: _elegir("todos"),
-            bootstyle="info-outline",
-            width=35,
-        ).pack(pady=5)
-
-        # Separador
-        ttk.Separator(ventana).pack(fill="x", padx=20, pady=10)
-
-        # Botón: Editar configuración
-        ttk.Button(
-            ventana,
-            text="⚙️  Editar configuración del correo",
-            command=lambda: _elegir("editar"),
-            bootstyle="info-outline",
-            width=35,
-        ).pack(pady=5)
-
-        ventana.wait_window()
-        return resultado["modo"]
 
     def _guardar_silencioso(self, datos):
         """
@@ -2338,11 +2007,13 @@ class AppIngresos(ttk.Window):
     def _configurar_ventana(self, ventana, ancho=500, alto=400,
         min_ancho=400, min_alto=320,
         centrar_en_padre=True):
-        """
-        Configura tamaño, minsize y centrado de un Toplevel.
-        - En vez de bloquear el resize, permite agrandar.
-        - Centra la ventana respecto a la principal.
-        """
+        """..."""
+        # Liberar cualquier grab previo (por si otra ventana lo tenía)
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+
         ventana.geometry(f"{ancho}x{alto}")
         ventana.minsize(min_ancho, min_alto)
         ventana.transient(self)
