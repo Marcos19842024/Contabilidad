@@ -18,22 +18,17 @@ def pedir_credenciales_correo(app):
     Pide las credenciales de Gmail y opciones de filtrado.
     Devuelve (usuario, password, etiqueta) o (None, None, None).
     """
-    print("[DEBUG gmail] inicio")
     ventana = ttk.Toplevel(app)
-    print(f"[DEBUG gmail] Toplevel creado: {ventana}")
 
     try:
         ventana.title("Configuración de Gmail")
-        print("[DEBUG gmail] title ok")
     except Exception as e:
         print(f"[DEBUG gmail] error en title: {e}")
 
     try:
         app._configurar_ventana(ventana, ancho=620, alto=580,
-                                min_ancho=520, min_alto=460)
-        print("[DEBUG gmail] _configurar_ventana ok")
+            min_ancho=520, min_alto=460)
     except Exception as e:
-        print(f"[DEBUG gmail] error en _configurar_ventana: {e}")
         import traceback
         traceback.print_exc()
 

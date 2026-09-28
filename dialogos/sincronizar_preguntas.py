@@ -18,13 +18,9 @@ def preguntar_modo_descarga(app, dias_atras):
       - "editar"    → abrir configuración
       - "cancelar"  → cerrar sin hacer nada
     """
-
-    print("[DEBUG modo] inicio")
     ventana = ttk.Toplevel(app)
-    print(f"[DEBUG modo] Toplevel creado: {ventana}")
     app._configurar_ventana(ventana, ancho=520, alto=340,
-                            min_ancho=480, min_alto=320)
-    print("[DEBUG modo] configurada")
+        min_ancho=480, min_alto=320)
     ventana.title("Sincronizar facturas")
 
     # Encabezado
@@ -37,7 +33,6 @@ def preguntar_modo_descarga(app, dias_atras):
     resultado = {"modo": "cancelar"}
 
     def _elegir(modo):
-        print(f"[DEBUG modo] eligiendo: {modo}")
         try:
             ventana.grab_release()
             print("[DEBUG modo] grab_release ok")

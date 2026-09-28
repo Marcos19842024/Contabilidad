@@ -203,6 +203,7 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
     descargados = []
     errores = []
     qvet_por_archivo = {}
+    no_factura_por_archivo = {}
     archivos_por_correo = {}
     info = {
         "total_correos": 0,
@@ -319,45 +320,53 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
                 log(f"          Fecha: {fecha}")
 
                 # ---- Extraer el QVET del asunto del correo ----
-                qvet_detectado = ""
-                
-                # Formato 1: "S1/8407" o "PRADOS/197" (con slash)
-                m_qvet = re.search(
-                    r"\b(S1|PRADOS|PRADO)\s*/\s*(\d+)\b",
+                # ============================================================
+                # Extraer QVET y No. factura del asunto del correo
+                # Formato esperado: "Factura de venta SERIE/FOLIO-FOLIO"
+                # Ejemplo: "Factura de venta S1/1234-2346"
+                #          "Factura de venta Prados/265-266"
+                # ============================================================
+                qvet_detectado = ""       # ej. "S1/1234" o "Prados/265"
+                no_factura_detectado = "" # ej. "2346" o "266"
+
+                # Patrón: cualquier cosa antes de "-", y luego el número
+                # Captura "S1/1234" y "2346" de "S1/1234-2346"
+                m_asunto = re.search(
+                    r"([A-Za-z0-9]+(?:/[A-Za-z0-9]+)?)\s*-\s*(\d+)",
                     asunto,
                     re.IGNORECASE
                 )
-                if m_qvet:
-                    qvet_detectado = normalizar_qvet(
-                        m_qvet.group(1), m_qvet.group(2)
-                    )
-                    log(f"          🔖 QVET detectado (formato 1): {qvet_detectado}")
-                else:
-                    # Formato 2: "S1 8407" o "PRADOS 197" (con espacio)
-                    m_qvet2 = re.search(
-                        r"\b(S1|PRADOS|PRADO)\s+(\d+)\b",
-                        asunto,
-                        re.IGNORECASE
-                    )
-                    if m_qvet2:
-                        qvet_detectado = normalizar_qvet(
-                            m_qvet2.group(1), m_qvet2.group(2)
-                        )
-                        log(f"          🔖 QVET detectado (formato 2): {qvet_detectado}")
+
+                if m_asunto:
+                    serie_completa = m_asunto.group(1).strip()   # "S1/1234" o "Prados/265"
+                    folio_str = m_asunto.group(2).strip()        # "2346" o "266"
+
+                    # Limpiar ceros a la izquierda del folio
+                    if folio_str.isdigit():
+                        no_factura_detectado = str(int(folio_str))
                     else:
-                        # Formato 3: "S18407" o "Prados197" (pegado)
-                        m_qvet3 = re.search(
-                            r"\b(S1|PRADOS|PRADO)(\d+)\b",
-                            asunto,
-                            re.IGNORECASE
-                        )
-                        if m_qvet3:
-                            qvet_detectado = normalizar_qvet(
-                                m_qvet3.group(1), m_qvet3.group(2)
-                            )
-                            log(f"          🔖 QVET detectado (formato 3): {qvet_detectado}")
-                        else:
-                            log(f"          ⚠️ No se pudo extraer el QVET del asunto")
+                        no_factura_detectado = folio_str
+
+                    # Normalizar el QVET
+                    # - "S1/1234" → "S1/1234"
+                    # - "Prados/265" → "PRADOS/265"
+                    # - "prados/0265" → "PRADOS/265"
+                    if "/" in serie_completa:
+                        serie_parte, num_parte = serie_completa.split("/", 1)
+                        serie_norm = serie_parte.strip().upper()
+                        if serie_norm == "PRADO":
+                            serie_norm = "PRADOS"
+                        num_parte = num_parte.strip()
+                        if num_parte.isdigit():
+                            num_parte = str(int(num_parte))
+                        qvet_detectado = f"{serie_norm}/{num_parte}"
+                    else:
+                        qvet_detectado = serie_completa.upper()
+
+                    log(f"          🔖 QVET detectado: {qvet_detectado}")
+                    log(f"          🔖 No. factura detectado: {no_factura_detectado}")
+                else:
+                    log(f"          ⚠️ No se pudo extraer SERIE-FOLIO del asunto")
 
                 # ---- Verificar filtro de remitente (doble check) ----
                 if filtro_remitente:
@@ -402,9 +411,11 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
                     descargados.append(destino)
                     log(f"          📎 {destino.name}")
 
-                    # Guardar QVET
+                    # Guardar QVET y No. factura detectados del asunto
                     if qvet_detectado:
                         qvet_por_archivo[destino.name] = qvet_detectado
+                    if no_factura_detectado:
+                        no_factura_por_archivo[destino.name] = no_factura_detectado
 
                     # Guardar en archivos_por_correo
                     if message_id:
@@ -460,5 +471,6 @@ def descargar_adjuntos_gmail(usuario, password_app, etiqueta,
             pass
 
     info["qvet_por_archivo"] = qvet_por_archivo
+    info["no_factura_por_archivo"] = no_factura_por_archivo
     info["archivos_por_correo"] = archivos_por_correo
     return descargados, errores, info

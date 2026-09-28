@@ -370,19 +370,16 @@ class AppIngresos(ttk.Window):
                 row=fila, column=columnas, padx=5, pady=3, sticky="e")
 
             if tipo == "date":
-                w = DateEntry(frame_grupo, width=15, dateformat="%d/%m/%Y",
-                              bootstyle="primary")
+                w = DateEntry(frame_grupo, width=15, dateformat="%d/%m/%Y",bootstyle="primary")
             elif tipo == "number":
                 if clave == "total":
-                    w = EntryMoneda(frame_grupo, callback=None, width=20,
-                                    style="Custom.TEntry")
+                    w = EntryMoneda(frame_grupo, callback=None, width=20,style="Custom.TEntry")
                     w.configure(state="readonly")
                 elif clave in REGLAS_AUTO:
-                    w = EntryMoneda(frame_grupo, callback=None, width=20,
-                                    style="Custom.TEntry")
+                    w = EntryMoneda(frame_grupo, callback=None, width=20,style="Custom.TEntry")
+                    w.configure(state="readonly")
                 else:
-                    w = EntryMoneda(frame_grupo, callback=self._recalcular_total,
-                                    width=20, style="Custom.TEntry")
+                    w = EntryMoneda(frame_grupo, callback=self._recalcular_total,width=20, style="Custom.TEntry")
             else:
                 if clave in ("nombre", "rfc"):
                     w = EntryAutoComplete(frame_grupo,
@@ -658,10 +655,10 @@ class AppIngresos(ttk.Window):
             w_total.configure(state="normal")
             w_total.set_valor(round(total_pago, 2))
             w_total.configure(state="readonly")
-
+            
         if total_pago > 0 and total_categorias > 0:
             dif = abs(total_pago - total_categorias)
-            if dif > 0.01:
+            if dif > 0.02:
                 try:
                     w_total.configure(foreground="red")
                     self.lbl_alerta_total.configure(
@@ -790,6 +787,7 @@ class AppIngresos(ttk.Window):
             else:
                 w.delete(0, tk.END)
                 w.insert(0, str(valor))
+        self._recalcular_total()
 
     def _nuevo(self):
         self.id_actual = None
@@ -1034,6 +1032,7 @@ class AppIngresos(ttk.Window):
                 self.var_mes.set(r.get("mes", MESES_ES[datetime.now().month-1]))
                 self._validar_no_factura_visual()
                 self._validar_qvet_visual()
+                self._recalcular_total()
                 break
 
     def _eliminar(self):
@@ -1109,7 +1108,10 @@ class AppIngresos(ttk.Window):
                                  f"No se pudo procesar la factura:\n{e}")
             return
 
-        resumen, _ = self._llenar_desde_factura(datos)
+        resumen, _, avisos_reclasificacion = self._llenar_desde_factura(datos)
+
+        if avisos_reclasificacion:
+            self._avisar_reclasificacion(avisos_reclasificacion)
 
         self._ultima_factura_xml = ruta_xml
         self._ultima_factura_pdf = ruta_pdf or None
@@ -1167,8 +1169,16 @@ class AppIngresos(ttk.Window):
         Flujo unificado: descarga facturas del correo y pregunta al usuario
         qué hacer con ellas.
         Ofrece la opción de editar la configuración si hay errores.
+
+        Nota: este método se moverá a dialogos/sincronizar.py en la Fase 5.6.
         """
         from correo_facturas import descargar_adjuntos_gmail
+        from dialogos.gmail_config import pedir_credenciales_correo
+        from dialogos.sincronizar_preguntas import (
+            preguntar_modo_descarga,
+            preguntar_accion_facturas,
+        )
+        from core.correo_utils import agrupar_facturas_descargadas
 
         # ---- Bucle: permite reintentar tras editar credenciales ----
         while True:
@@ -1182,7 +1192,6 @@ class AppIngresos(ttk.Window):
 
             # Si no hay configuración, pedirla
             if not usuario or not password:
-                from dialogos.gmail_config import pedir_credenciales_correo
                 usuario, password, etiqueta = pedir_credenciales_correo(self)
                 if not usuario:
                     return
@@ -1190,14 +1199,11 @@ class AppIngresos(ttk.Window):
                 filtro_remitente = cfg_correo.get("filtro_remitente", "")
                 dias_atras = cfg_correo.get("dias_atras", 30)
 
-            # ---- 2. Preguntar modo con opción de editar ----
-            from dialogos.sincronizar_preguntas import preguntar_modo_descarga
+            # ---- 2. Preguntar modo ----
             modo = preguntar_modo_descarga(self, dias_atras)
-
             if modo == "cancelar":
                 return
             elif modo == "editar":
-                from dialogos.gmail_config import pedir_credenciales_correo
                 u, p, e = pedir_credenciales_correo(self)
                 if u:
                     messagebox.showinfo(
@@ -1206,7 +1212,8 @@ class AppIngresos(ttk.Window):
                         f"📧 Correo: {u or '(vacío)'}\n"
                         f"🏷️ Etiqueta: {e or '(vacía)'}\n\n"
                         f"Continuando con la sincronización..."
-                        )
+                    )
+                # Volver al inicio del bucle para preguntar de nuevo
                 continue
             else:
                 solo_no_leidos = (modo == "no_leidos")
@@ -1216,8 +1223,9 @@ class AppIngresos(ttk.Window):
         ventana_prog = ttk.Toplevel(self)
         ventana_prog.title("⚡ Sincronizando facturas...")
         ventana_prog.geometry("900x700")
+        ventana_prog.minsize(700, 500)
         ventana_prog.transient(self)
-        # Flag para saber si el usuario quiere cancelar la descarga
+
         # ---- Estado de cancelación ----
         estado = {"cancelar": False}
 
@@ -1256,8 +1264,8 @@ class AppIngresos(ttk.Window):
 
         # ---- Título ----
         ttk.Label(ventana_prog,
-                  text="⚡ Sincronizando facturas del correo",
-                  font=("Segoe UI", 12, "bold")).pack(pady=(10, 5))
+                text="⚡ Sincronizando facturas del correo",
+                font=("Segoe UI", 12, "bold")).pack(pady=(10, 5))
 
         # ---- Contador grande de progreso ----
         self.lbl_progreso = ttk.Label(
@@ -1268,7 +1276,7 @@ class AppIngresos(ttk.Window):
         )
         self.lbl_progreso.pack(pady=5)
 
-        # ---- Barra de progreso indeterminada (para la fase de descarga) ----
+        # ---- Barra de progreso indeterminada ----
         self.barra_progreso = ttk.Progressbar(
             ventana_prog,
             mode="indeterminate",
@@ -1276,14 +1284,14 @@ class AppIngresos(ttk.Window):
             length=600
         )
         self.barra_progreso.pack(pady=5, padx=20, fill="x")
-        self.barra_progreso.start(15)  # animación continua
+        self.barra_progreso.start(15)
 
         # ---- Log ----
         frame_log = ttk.LabelFrame(ventana_prog, text="Detalle", padding=5)
         frame_log.pack(fill="both", expand=True, padx=10, pady=5)
 
         txt_log = tk.Text(frame_log, height=22, width=100,
-                          font=("Consolas", 9), wrap="word")
+                        font=("Consolas", 9), wrap="word")
         txt_log.pack(fill="both", expand=True, side="left")
 
         sb = ttk.Scrollbar(frame_log, orient="vertical", command=txt_log.yview)
@@ -1320,7 +1328,6 @@ class AppIngresos(ttk.Window):
                     except Exception:
                         pass
 
-        # ---- Detener la animación de la barra ----
         try:
             self.barra_progreso.stop()
             self.barra_progreso.configure(mode="determinate")
@@ -1342,12 +1349,12 @@ class AppIngresos(ttk.Window):
             callback_cancelado=debe_cancelar,
         )
 
-        # ---- 5. Verificar si hubo errores de autenticación ----
+        # ---- 5. Verificar errores de autenticación ----
         if errores and any("AUTHENTICATIONFAILED" in str(e).upper() or
-                            "LOGIN" in str(e).upper() or
-                            "IMAP" in str(e).upper() or
-                            "authentication" in str(e).lower()
-                            for e in errores):
+            "LOGIN" in str(e).upper() or
+            "IMAP" in str(e).upper() or
+            "authentication" in str(e).lower()
+            for e in errores):
             log("\n" + "=" * 80)
             log("❌ ERROR DE AUTENTICACIÓN")
             log("=" * 80)
@@ -1364,12 +1371,11 @@ class AppIngresos(ttk.Window):
                 "¿Quieres editar la configuración ahora?"
             )
             if editar:
-                from dialogos.gmail_config import pedir_credenciales_correo
                 u, p, e = pedir_credenciales_correo(self)
                 if u:
                     messagebox.showinfo(
                         "Configuración actualizada",
-                        f"Datos guardados correctamente.\n\n"
+                        "Datos guardados correctamente.\n\n"
                         "Vuelve a intentar con ⚡ Sincronizar."
                     )
             return
@@ -1419,7 +1425,6 @@ class AppIngresos(ttk.Window):
 
         # ---- 7. Preguntar qué hacer ----
         ventana_prog.grab_release()
-        from dialogos.sincronizar_preguntas import preguntar_accion_facturas
         respuesta_procesar = preguntar_accion_facturas(
             self, len(descargados), len(grupos), carpeta_descargas
         )
@@ -1495,7 +1500,7 @@ class AppIngresos(ttk.Window):
                 )
 
                 if existe_valor_unico(self.registros, "no_factura",
-                                       datos["no_factura"]):
+                                    datos["no_factura"]):
                     log(f"  ⏭️ Ya existe No. de Factura {datos['no_factura']}. Se omite.")
                     facturas_duplicadas.append(datos["no_factura"])
                     continue
@@ -1521,17 +1526,51 @@ class AppIngresos(ttk.Window):
                     facturas_duplicadas.append(datos["no_factura"])
                     continue
 
-                _, datos_completos = self._llenar_desde_factura(datos)
+                _, datos_completos, avisos_reclasificacion = self._llenar_desde_factura(datos)
+                if avisos_reclasificacion:
+                    # En sincronización, guardar el aviso en el log (no mostrar ventana)
+                    for a in avisos_reclasificacion:
+                        log(f"  ⚠️ Reclasificar: [{a['categoria_actual']}] {a['producto']}")
 
-                # Aplicar QVET desde el asunto del correo (si está disponible)
+                # ============================================================
+                # QVET y No. factura: leerlos del asunto del correo
+                # Formato del asunto: "Factura de venta SERIE/FOLIO-FOLIO"
+                # ============================================================
                 qvet_por_archivo = info.get("qvet_por_archivo", {})
+                no_factura_por_archivo = info.get("no_factura_por_archivo", {})
                 nombre_xml = Path(files["xml"]).name
-                qvet_email = qvet_por_archivo.get(nombre_xml, "")
-                if qvet_email:
+
+                qvet_final = qvet_por_archivo.get(nombre_xml, "")
+                no_factura_final = no_factura_por_archivo.get(nombre_xml, "")
+
+                if qvet_final:
+                    log(f"  🔖 QVET del asunto: {qvet_final}")
+                else:
+                    # Fallback: usar el del XML
+                    serie_xml = (datos.get("serie") or "").strip()
+                    folio_xml = (datos.get("folio") or "").strip()
+                    if serie_xml and folio_xml:
+                        qvet_final = f"{serie_xml}/{folio_xml}".upper()
+                    log(f"  ⚠️ QVET no encontrado en asunto, usando XML: {qvet_final}")
+
+                if no_factura_final:
+                    log(f"  🔖 No. factura del asunto: {no_factura_final}")
+                else:
+                    # Fallback: usar el del XML
+                    no_factura_final = datos.get("no_factura", "")
+                    log(f"  ⚠️ No. factura no encontrado en asunto, usando XML: {no_factura_final}")
+
+                # Asignar al formulario
+                if qvet_final:
                     self.entradas["qvet"].delete(0, tk.END)
-                    self.entradas["qvet"].insert(0, qvet_email.upper())
-                    datos_completos["qvet"] = qvet_email.upper()
-                    log(f"  🔖 QVET asignado desde el correo: {qvet_email}")
+                    self.entradas["qvet"].insert(0, qvet_final)
+                    datos_completos["qvet"] = qvet_final
+
+                if no_factura_final:
+                    self.entradas["no_factura"].delete(0, tk.END)
+                    self.entradas["no_factura"].insert(0, no_factura_final)
+                    datos_completos["no_factura"] = no_factura_final
+
                 self._ultima_factura_xml = str(files["xml"])
                 self._ultima_factura_pdf = str(files["pdf"]) if files["pdf"] else None
 
@@ -1541,6 +1580,7 @@ class AppIngresos(ttk.Window):
                     uuids_existentes.add(ff)
 
                 log(f"  ✅ Guardado: No. {datos['no_factura']} | "
+                    f"QVET {qvet_final or '(vacío)'} | "
                     f"{datos.get('centro', '?')} | "
                     f"{datos.get('mes', '?')} {datos.get('anio', '?')} | "
                     f"Total: ${datos['total']:,.2f}")
@@ -1567,8 +1607,8 @@ class AppIngresos(ttk.Window):
             resumen = defaultdict(lambda: {"n": 0, "total": 0.0})
             for f in facturas_procesadas:
                 key = (f.get("centro", "?"),
-                       f.get("mes", "?"),
-                       f.get("anio", "?"))
+                    f.get("mes", "?"),
+                    f.get("anio", "?"))
                 resumen[key]["n"] += 1
                 resumen[key]["total"] += f.get("total", 0)
 
@@ -1749,7 +1789,7 @@ class AppIngresos(ttk.Window):
                 pass
 
         # 3. Agrupar conceptos
-        agrupado, detalle = agrupar_por_categoria(datos)
+        agrupado, detalle, avisos_reclasificacion = agrupar_por_categoria(datos)
 
         mapa_campos = {
             "U": {"importe": "u_importe", "iva": "u_iva"},
@@ -1758,6 +1798,7 @@ class AppIngresos(ttk.Window):
             "TRANSPORTE": {"importe": "tra_importe", "iva": "tra_iva"},
             "VACUNA": {"importe": "vac_importe"},
             "CLINICA": {"importe": "cli_importe"},
+            "PENSION": {"importe": "pen_importe", "iva": "pen_iva"},
             "MEDICAMENTOS": {
                 "importe": "med_importe",
                 "sin_iva": "med_sin_iva",
@@ -1784,14 +1825,21 @@ class AppIngresos(ttk.Window):
                     continue
                 w = self.entradas.get(campo)
                 if isinstance(w, EntryMoneda):
-                    clave_det = f"{cat}__{subclave}"
-                    terminos = detalle.get(clave_det, [])
-                    if terminos:
-                        expresion = "+".join(terminos)
+                    # Para IMPORTE: usar la expresión con operaciones
+                    # Para IVA: usar solo el VALOR (evitar expresiones largas que fallen)
+                    if subclave == "iva":
+                        # El IVA se calcula automáticamente por _auto_iva
+                        # Solo asignamos el valor, sin expresión
+                        w.set_valor(round(valor, 2))
                     else:
-                        expresion = f"{valor:.2f}"
-                    w.set_valor(round(valor, 2), expresion=expresion)
-                    resumen.append(f"  {cat} → {campo}: ${valor:,.2f}")
+                        # Importe y otros: usar la expresión
+                        clave_det = f"{cat}__{subclave}"
+                        terminos = detalle.get(clave_det, [])
+                        if terminos:
+                            expresion = "+".join(terminos)
+                        else:
+                            expresion = f"{valor:.2f}"
+                        w.set_valor(round(valor, 2), expresion=expresion)
 
         # 4. Tipo de pago
         pagos = datos.get("pagos", {})
@@ -1806,13 +1854,66 @@ class AppIngresos(ttk.Window):
 
         # 5. Recalcular
         self._recalcular_total()
+        self.after(100, self._recalcular_total)
 
         # 6. Leer TODOS los campos del formulario para tener el dict completo
         datos_completos = self._leer_form()
+
         # Preservar los pagos del XML
         datos_completos["pagos"] = pagos
 
-        return resumen, datos_completos
+        return resumen, datos_completos, avisos_reclasificacion
+
+    def _avisar_reclasificacion(self, avisos):
+        """
+        Muestra un aviso con los productos que tienen IVA pero están en
+        categorías que no lo manejan (VACUNA, CLINICA).
+        """
+        if not avisos:
+            return
+
+        # Encabezado con datos de la factura
+        primer_aviso = avisos[0]
+        no_factura = primer_aviso.get("no_factura", "?")
+        nombre_cliente = primer_aviso.get("nombre", "?")
+        fecha = primer_aviso.get("fecha", "?")
+        folio_fiscal = primer_aviso.get("folio_fiscal", "")
+
+        lineas = [
+            "⚠️ Se detectaron productos con IVA en categorías que no lo manejan.",
+            "",
+            f"📄 Factura: {no_factura}",
+            f"👤 Cliente: {nombre_cliente}",
+            f"📅 Fecha:   {fecha}",
+        ]
+        if folio_fiscal:
+            lineas.append(f"🔑 UUID:    {folio_fiscal[:8]}…")
+        lineas.append("")
+        lineas.append("Reclasifícalos con el botón 🏷️ Reclasificar:")
+        lineas.append("")
+
+        # Agrupar por categoría
+        por_categoria = {}
+        for a in avisos:
+            cat = a["categoria_actual"]
+            por_categoria.setdefault(cat, []).append(a)
+
+        for cat, items in sorted(por_categoria.items()):
+            lineas.append(f"📂 {cat}:")
+            for a in items:
+                lineas.append(
+                    f"   • {a['producto']} "
+                    f"(remisión {a['remision']}) — ${a['importe']:,.2f}"
+                )
+            lineas.append("")
+
+        lineas.append("Estos productos se guardaron con su valor completo.")
+        lineas.append("Reclasifícalos para que la próxima vez se manejen bien.")
+
+        messagebox.showwarning(
+            "Reclasificación sugerida",
+            "\n".join(lineas)
+        )
 
     def _actualizar_titulo(self):
         try:

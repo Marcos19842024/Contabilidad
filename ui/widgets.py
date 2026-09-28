@@ -18,17 +18,22 @@ from core.utilidades import evaluar_expresion, limpiar_moneda, formatear_moneda
 # ============================================================
 class EntryMoneda(ttk.Entry):
     """Entry con formato moneda, evaluación de expresiones y colores."""
-
     def __init__(self, master=None, callback=None, **kw):
         super().__init__(master, justify="right", **kw)
         self.callback = callback
         self._ultimo_valor = 0.0
         self._ultima_expresion = ""
+        self._ancho_original = None  # Se guarda al final del __init__
         self.insert(0, "0.00")
         self.bind("<FocusIn>", self._on_focus_in)
         self.bind("<FocusOut>", self._on_focus_out)
         self.bind("<KeyRelease>", self._on_key_release)
         self._pintar()
+        # Guardar el ancho con el que se creó el widget
+        try:
+            self._ancho_original = int(self.cget("width"))
+        except Exception:
+            self._ancho_original = 20  # fallback
 
     def _tiene_operacion(self, texto):
         if any(op in texto for op in "+*/()"):
@@ -56,10 +61,23 @@ class EntryMoneda(ttk.Entry):
         except Exception:
             pass
 
+    def _ajustar_ancho(self, texto=None):
+        """Ajusta el ancho del widget al contenido (con límites)."""
+        if texto is None:
+            texto = self.get()
+        n_chars = max(len(str(texto)), 5)
+        n_chars = min(n_chars, 80)  # máximo 80 caracteres
+        try:
+            self.configure(width=n_chars)
+        except Exception:
+            pass
+
     def _on_focus_in(self, e):
         self.delete(0, tk.END)
         if self._ultima_expresion:
             self.insert(0, self._ultima_expresion)
+            # Ajustar el ancho al contenido de la expresión
+            self._ajustar_ancho(self._ultima_expresion)
         elif self._ultimo_valor:
             self.insert(0, f"{self._ultimo_valor:.2f}")
         self._pintar()
@@ -81,14 +99,24 @@ class EntryMoneda(ttk.Entry):
             else:
                 self._ultima_expresion = ""
                 self._ultimo_valor = limpiar_moneda(texto)
+        
         self.delete(0, tk.END)
         self.insert(0, formatear_moneda(self._ultimo_valor))
+        # Volver al ancho "normal" (el que tenía al crearse)
+        if self._ancho_original is not None:
+            try:
+                self.configure(width=self._ancho_original)
+            except Exception:
+                pass
         self._pintar()
         if self.callback:
-            self.callback()
+            self.after(10, self.callback)
 
     def get_valor(self):
         texto = self.get().strip()
+        if not texto or texto == "0.00":
+            # Fallback: usar el valor guardado
+            return self._ultimo_valor
         if self._tiene_operacion(texto):
             return evaluar_expresion(texto)
         return limpiar_moneda(texto)
@@ -96,8 +124,34 @@ class EntryMoneda(ttk.Entry):
     def set_valor(self, v, expresion=None):
         self._ultimo_valor = float(v or 0)
         self._ultima_expresion = expresion or ""
+
+        # Guardar el estado actual
+        try:
+            estado_actual = str(self.cget("state"))
+        except Exception:
+            estado_actual = "normal"
+
+        # Cambiar temporalmente a normal si es readonly
+        if estado_actual == "readonly":
+            try:
+                self.configure(state="normal")
+            except Exception:
+                pass
+
+        # Ahora sí, modificar el texto
         self.delete(0, tk.END)
         self.insert(0, formatear_moneda(self._ultimo_valor))
+
+        # Forzar la actualización visual inmediata
+        self.update_idletasks()
+
+        # Restaurar el estado
+        if estado_actual == "readonly":
+            try:
+                self.configure(state="readonly")
+            except Exception:
+                pass
+
         self._pintar()
 
 
