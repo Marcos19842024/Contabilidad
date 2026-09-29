@@ -22,7 +22,7 @@ jobs:
           - os: macos-latest
             nombre_artefacto: SistemaIngresos-macOS
             comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json:." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
-            ruta_dist: dist/Sistema Ingresos.app
+            ruta_dist: dist/Sistema Ingresos.zip
 
     steps:
       # 1. Descargar código
@@ -69,8 +69,12 @@ jobs:
           plutil -lint "dist/Sistema Ingresos.app/Contents/Info.plist" || true
 
           echo ""
-          echo "=== Firma ==="
-          codesign -dv "dist/Sistema Ingresos.app" 2>&1 | head -5 || true
+          echo "=== Zip creado ==="
+          ls -lh "dist/Sistema Ingresos.zip"
+
+          echo ""
+          echo "=== Contenido del zip ==="
+          unzip -l "dist/Sistema Ingresos.zip" | head -10
         shell: bash
 
       # 8. Subir artefacto

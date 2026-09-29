@@ -1,7 +1,7 @@
 #!/bin/bash
 # crear_app_mac.sh
 # Convierte el build de PyInstaller en una .app de macOS.
-# NO comprime. Solo crea la .app.
+# Comprime la .app en un .zip que preserva symlinks.
 
 set -e
 
@@ -95,5 +95,12 @@ codesign --force --deep --sign - "${APP_PATH}" 2>/dev/null || true
 echo "→ Verificando firma..."
 codesign -dv "${APP_PATH}" 2>&1 | head -5 || true
 
+# 10. Comprimir la .app en un .zip preservando symlinks
+echo "→ Comprimiendo .app en .zip..."
+cd dist
+zip -r -y "Sistema Ingresos.zip" "${APP_NAME}.app" > /dev/null
+cd ..
+
 echo ""
-echo "✅ ${APP_NAME}.app creada"
+echo "✅ ${APP_NAME}.app creada y comprimida"
+echo "   Archivo: dist/Sistema Ingresos.zip"
