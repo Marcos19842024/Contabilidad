@@ -3,13 +3,17 @@ name: Compilar y publicar Release
 on:
   push:
     tags:
-      - 'v*'   # Solo corre cuando haces push de un tag que empieza con 'v'
-  workflow_dispatch:   # Permite ejecutarlo manualmente
+      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
     name: Compilar en ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+
+    # ✅ Permisos para crear Releases
+    permissions:
+      contents: write
 
     strategy:
       fail-fast: false
@@ -17,50 +21,42 @@ jobs:
         include:
           - os: windows-latest
             nombre_artefacto: SistemaIngresos-Windows
-            nombre_zip: "Sistema Ingresos ${{ github.ref_name }} - Windows.zip"
             comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json;." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
             ruta_dist: dist/SistemaIngresos
 
           - os: macos-latest
             nombre_artefacto: SistemaIngresos-macOS
-            nombre_zip: "Sistema Ingresos ${{ github.ref_name }} - macOS.zip"
             comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json:." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
             ruta_dist: dist/SistemaIngresos.app
 
     steps:
-      # 1. Descargar código
       - name: 📥 Descargar código
         uses: actions/checkout@v4
 
-      # 2. Instalar Python
       - name: 🐍 Instalar Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
 
-      # 3. Instalar dependencias
       - name: 📦 Instalar dependencias
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4. Compilar con PyInstaller
       - name: 🔨 Compilar con PyInstaller
         run: ${{ matrix.comando_compilar }}
 
-      # 5. Generar ícono (solo macOS)
       - name: 🎨 Generar ícono
         if: matrix.os == 'macos-latest'
         run: python generar_icono.py
 
-      # 6. Crear .app (solo macOS)
       - name: 📱 Crear .app
         if: matrix.os == 'macos-latest'
         run: |
           chmod +x crear_app_mac.sh
           ./crear_app_mac.sh
 
-      # 7. Comprimir con ditto (solo macOS)
+      # Comprimir con ditto (macOS)
       - name: 🗜️ Comprimir con ditto (macOS)
         if: matrix.os == 'macos-latest'
         run: |
@@ -68,7 +64,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "Sistema Ingresos.app" "Sistema Ingresos ${{ github.ref_name }} - macOS.zip"
           cd ..
 
-      # 8. Comprimir con zip (solo Windows)
+      # Comprimir con PowerShell (Windows)
       - name: 🗜️ Comprimir con zip (Windows)
         if: matrix.os == 'windows-latest'
         run: |
@@ -77,15 +73,15 @@ jobs:
           cd ..
         shell: pwsh
 
-      # 9. Verificar archivos generados
       - name: 🔍 Listar archivos
         run: |
           echo "Contenido de dist/:"
           ls -la dist/
         shell: bash
 
-      # 10. Publicar Release
+      # Publicar Release (solo en macOS para que no haya conflicto)
       - name: 🚀 Publicar Release
+        if: matrix.os == 'macos-latest'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -95,5 +91,3 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
