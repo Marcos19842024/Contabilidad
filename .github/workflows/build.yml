@@ -22,10 +22,10 @@ jobs:
           - os: macos-latest
             nombre_artefacto: SistemaIngresos-macOS
             comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json:." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
-            ruta_dist: dist/SistemaIngresos
+            ruta_dist: dist/SistemaIngresos.app
 
     steps:
-      # 1. Descargar el código
+      # 1. Descargar código
       - name: 📥 Descargar código
         uses: actions/checkout@v4
 
@@ -45,28 +45,31 @@ jobs:
       - name: 🔨 Compilar con PyInstaller
         run: ${{ matrix.comando_compilar }}
 
-      # 5. Re-firmar binarios (SOLO macOS)
-      - name: 🔏 Re-firmar binarios (solo macOS)
+      # 5. Generar ícono (solo macOS)
+      - name: 🎨 Generar ícono
+        if: matrix.os == 'macos-latest'
+        run: python generar_icono.py
+
+      # 6. Crear .app (solo macOS)
+      - name: 📱 Crear .app
         if: matrix.os == 'macos-latest'
         run: |
-          cd dist/SistemaIngresos
-          echo "Re-firmando archivos Python..."
-          find _internal -type f \( -name "*.so" -o -name "*.dylib" -o -name "Python" \) -exec codesign --force --sign - {} \; 2>/dev/null || true
-          echo "Re-firmando frameworks..."
-          find _internal -type d -name "*.framework" -exec codesign --force --deep --sign - {} \; 2>/dev/null || true
-          echo "Re-firmando ejecutable principal..."
-          codesign --force --sign - SistemaIngresos 2>/dev/null || true
-          echo "Verificando firmas..."
-          codesign -dv _internal/Python.framework 2>&1 | head -3 || true
+          chmod +x crear_app_mac.sh
+          ./crear_app_mac.sh
 
-      # 6. Listar archivos generados
-      - name: 🔍 Listar archivos generados
+      # 7. Listar archivos generados
+      - name: 🔍 Listar archivos
         run: |
           echo "Contenido de dist/:"
-          ls -la dist/ || dir dist\
+          ls -la dist/
+          if [ -d "dist/SistemaIngresos.app" ]; then
+            echo ""
+            echo "Contenido de SistemaIngresos.app:"
+            ls -la dist/SistemaIngresos.app/Contents/
+          fi
         shell: bash
 
-      # 7. Subir el artefacto
+      # 8. Subir artefacto
       - name: 📤 Subir artefacto
         uses: actions/upload-artifact@v4
         with:
