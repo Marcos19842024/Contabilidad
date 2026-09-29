@@ -59,6 +59,14 @@ jobs:
           ls -la dist/ || dir dist\
         shell: bash
 
+      - name: Re-firmar binarios (solo macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd dist/SistemaIngresos
+          find _internal -type f \( -name "*.so" -o -name "*.dylib" -o -name "Python" \) -exec codesign --force --sign - {} \;
+          find _internal -type d -name "*.framework" -exec codesign --force --deep --sign - {} \;
+          codesign --force --sign - SistemaIngresos
+
       # 6. Subir el resultado como artefacto descargable
       - name: 📤 Subir artefacto
         uses: actions/upload-artifact@v4
