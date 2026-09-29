@@ -22,7 +22,7 @@ jobs:
           - os: macos-latest
             nombre_artefacto: SistemaIngresos-macOS
             comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json:." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
-            ruta_dist: dist/SistemaIngresos.app
+            ruta_dist: dist/Sistema Ingresos.zip
 
     steps:
       # 1. Descargar código
@@ -62,11 +62,6 @@ jobs:
         run: |
           echo "Contenido de dist/:"
           ls -la dist/
-          if [ -d "dist/SistemaIngresos.app" ]; then
-            echo ""
-            echo "Contenido de SistemaIngresos.app:"
-            ls -la dist/SistemaIngresos.app/Contents/
-          fi
         shell: bash
 
       # 8. Subir artefacto
@@ -74,5 +69,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.nombre_artefacto }}
-          path: ${{ matrix.ruta_dist }}/
+          path: ${{ matrix.ruta_dist }}
           retention-days: 30
