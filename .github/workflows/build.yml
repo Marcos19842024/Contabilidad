@@ -1,16 +1,9 @@
-# ============================================================
-# .github/workflows/build.yml
-# Compila SistemaIngresos para Windows y macOS automáticamente
-# ============================================================
-
 name: Compilar SistemaIngresos
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:   # permite ejecutarlo manualmente desde GitHub
+  workflow_dispatch:
 
 jobs:
   build:
@@ -32,7 +25,7 @@ jobs:
             ruta_dist: dist/SistemaIngresos
 
     steps:
-      # 1. Descargar el código del repo
+      # 1. Descargar el código
       - name: 📥 Descargar código
         uses: actions/checkout@v4
 
@@ -52,22 +45,28 @@ jobs:
       - name: 🔨 Compilar con PyInstaller
         run: ${{ matrix.comando_compilar }}
 
-      # 5. Mostrar qué se generó (debug)
+      # 5. Re-firmar binarios (SOLO macOS)
+      - name: 🔏 Re-firmar binarios (solo macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd dist/SistemaIngresos
+          echo "Re-firmando archivos Python..."
+          find _internal -type f \( -name "*.so" -o -name "*.dylib" -o -name "Python" \) -exec codesign --force --sign - {} \; 2>/dev/null || true
+          echo "Re-firmando frameworks..."
+          find _internal -type d -name "*.framework" -exec codesign --force --deep --sign - {} \; 2>/dev/null || true
+          echo "Re-firmando ejecutable principal..."
+          codesign --force --sign - SistemaIngresos 2>/dev/null || true
+          echo "Verificando firmas..."
+          codesign -dv _internal/Python.framework 2>&1 | head -3 || true
+
+      # 6. Listar archivos generados
       - name: 🔍 Listar archivos generados
         run: |
           echo "Contenido de dist/:"
           ls -la dist/ || dir dist\
         shell: bash
 
-      - name: Re-firmar binarios (solo macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          cd dist/SistemaIngresos
-          find _internal -type f \( -name "*.so" -o -name "*.dylib" -o -name "Python" \) -exec codesign --force --sign - {} \;
-          find _internal -type d -name "*.framework" -exec codesign --force --deep --sign - {} \;
-          codesign --force --sign - SistemaIngresos
-
-      # 6. Subir el resultado como artefacto descargable
+      # 7. Subir el artefacto
       - name: 📤 Subir artefacto
         uses: actions/upload-artifact@v4
         with:
