@@ -1743,6 +1743,45 @@ class AppIngresos(ttk.Window):
         self._validar_qvet_visual()
         self.update_idletasks()
 
+    @staticmethod
+    def _backup_excel(ruta_xlsx):
+        """
+        Crea un backup del archivo Excel antes de borrarlo.
+        
+        El backup se guarda en la misma carpeta con el nombre:
+            <nombre_archivo>_backup_YYYY-MM-DD_HH-MM-SS.xlsx
+        
+        Devuelve la ruta del backup creado, o None si no se pudo crear.
+        """
+        if not ruta_xlsx.exists():
+            return None
+        
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            nombre_base = ruta_xlsx.stem
+            nombre_backup = f"{nombre_base}_backup_{timestamp}{ruta_xlsx.suffix}"
+            ruta_backup = ruta_xlsx.parent / nombre_backup
+            
+            shutil.copy2(ruta_xlsx, ruta_backup)
+            return ruta_backup
+        except Exception as e:
+            print(f"[_backup_excel] Error al crear backup: {e}")
+            return None
+
+    @staticmethod
+    def _contar_backups(ruta_xlsx):
+        """
+        Cuenta los backups que existen para un Excel dado.
+        Los backups tienen el nombre:
+            <nombre_base>_backup_YYYY-MM-DD_HH-MM-SS.xlsx
+        """
+        if not ruta_xlsx.parent.exists():
+            return 0
+
+        nombre_base = ruta_xlsx.stem
+        patron = f"{nombre_base}_backup_*.xlsx"
+        return len(list(ruta_xlsx.parent.glob(patron)))
+
     # -----------------EXCEL--------------------------
     def _generar_excel(self):
         """Genera (o anexa a) el Excel de resumen del centro/mes/año activo."""
@@ -1763,6 +1802,19 @@ class AppIngresos(ttk.Window):
             and r.get("mes") == mes_nombre
             and r.get("centro") == centro
         ]
+        # Ordenar por FECHA ascendente y luego por No. factura ascendente
+        from datetime import datetime
+
+        def _clave_orden(r):
+            fecha_str = r.get("fecha", "")
+            try:
+                fecha_dt = datetime.strptime(fecha_str, "%d/%m/%Y")
+            except Exception:
+                fecha_dt = datetime.min
+            no_factura = obtener_no_factura_numerico(r.get("no_factura", "")) or 0
+            return (fecha_dt, no_factura)
+
+        filtrados.sort(key=_clave_orden)
 
         if not filtrados:
             messagebox.showwarning(
@@ -1788,30 +1840,93 @@ class AppIngresos(ttk.Window):
 
         try:
             if existe:
-                nuevos, omitidos = anexar_al_excel(ruta_xlsx, filtrados)
-                if nuevos == 0:
-                    messagebox.showinfo(
-                        "Sin novedades",
-                        f"El archivo ya contiene todos los registros.\n\n"
-                        f"Archivo:\n{ruta_xlsx}\n\n"
-                        f"Ya presentes: {omitidos}"
-                    )
-                    self._abrir_carpeta(carpeta)
-                    return
-                msg = (
-                    f"Archivo ACTUALIZADO (no sobrescrito):\n{ruta_xlsx}\n\n"
-                    f"➕ Nuevos agregados: {nuevos}\n"
-                    f"⏭️ Ya existían:      {omitidos}"
+                # Preguntar al usuario qué hacer
+                respuesta = messagebox.askyesnocancel(
+                    "Archivo existente",
+                    f"El archivo Excel ya existe:\n{ruta_xlsx}\n\n"
+                    f"¿Qué quieres hacer?\n\n"
+                    f"• Sí → Anexar solo los registros NUEVOS (más rápido)\n"
+                    f"• No → Reordenar TODO (borra y regenera completo)\n"
+                    f"• Cancelar → No hacer nada",
+                    icon="question"
                 )
+                if respuesta is None:
+                    # Cancelar
+                    return
+                elif respuesta is True:
+                    # Anexar solo nuevos
+                    nuevos, omitidos = anexar_al_excel(ruta_xlsx, filtrados)
+                    n_backups = self._contar_backups(ruta_xlsx)
+                    if nuevos == 0:
+                        msg_sin = (
+                            f"El archivo ya contiene todos los registros.\n\n"
+                            f"Archivo:\n{ruta_xlsx}\n\n"
+                            f"Ya presentes: {omitidos}"
+                        )
+                        if n_backups > 0:
+                            msg_sin += f"\n\n💾 Backups existentes: {n_backups}"
+                        messagebox.showinfo("Sin novedades", msg_sin)
+                        self._abrir_carpeta(carpeta)
+                        return
+                    msg = (
+                        f"Archivo ACTUALIZADO (no sobrescrito):\n{ruta_xlsx}\n\n"
+                        f"➕ Nuevos agregados: {nuevos}\n"
+                        f"⏭️ Ya existían:      {omitidos}"
+                    )
+                    if n_backups > 0:
+                        msg += f"\n\n💾 Backups existentes: {n_backups}"
+                else:
+                    # Reordenar todo: backup, borrar y regenerar
+                    ruta_backup = self._backup_excel(ruta_xlsx)
+
+                    try:
+                        ruta_xlsx.unlink()
+                    except Exception as e:
+                        messagebox.showerror(
+                            "Error al borrar",
+                            f"No se pudo borrar el archivo original:\n{e}"
+                        )
+                        return
+
+                    escribir_excel(
+                        ruta_xlsx, filtrados,
+                        var_mes=mes_nombre, var_anio=anio
+                    )
+
+                    n_backups = self._contar_backups(ruta_xlsx)
+                    if ruta_backup:
+                        msg = (
+                            f"Archivo REORDENADO (borrado y regenerado):\n"
+                            f"{ruta_xlsx}\n\n"
+                            f"Registros: {len(filtrados)}\n\n"
+                            f"💾 Backup recién creado:\n"
+                            f"{ruta_backup.name}"
+                        )
+                    else:
+                        msg = (
+                            f"Archivo REORDENADO (borrado y regenerado):\n"
+                            f"{ruta_xlsx}\n\n"
+                            f"Registros: {len(filtrados)}\n\n"
+                            f"⚠️ No se pudo crear el backup."
+                        )
+
+                    if n_backups > 0:
+                        msg += (
+                            f"\n\n📦 Total de backups de este Excel: {n_backups}\n"
+                            f"(Guárdalos o elimínalos manualmente desde la carpeta)"
+                        )
             else:
                 escribir_excel(
                     ruta_xlsx, filtrados,
                     var_mes=mes_nombre, var_anio=anio
                 )
+                n_backups = self._contar_backups(ruta_xlsx)
                 msg = (
                     f"Archivo creado:\n{ruta_xlsx}\n\n"
                     f"Registros: {len(filtrados)}"
                 )
+                if n_backups > 0:
+                    msg += f"\n\n💾 Backups existentes: {n_backups}"
         except PermissionError:
             messagebox.showerror(
                 "Archivo en uso",
