@@ -1,34 +1,25 @@
 #!/bin/bash
 # crear_app_mac.sh
-# Convierte el build de PyInstaller en una .app de macOS.
-# Comprime la .app en un .zip que preserva symlinks.
+# Crea la .app SIN comprimir.
 
 set -e
-
-echo "=========================================="
-echo "Creando Sistema Ingresos.app"
-echo "=========================================="
 
 APP_NAME="Sistema Ingresos"
 APP_PATH="dist/${APP_NAME}.app"
 
-# 1. Verificar que existe el build
 if [ ! -d "dist/SistemaIngresos" ]; then
     echo "❌ No existe dist/SistemaIngresos"
     exit 1
 fi
 
-# 2. Crear estructura de la .app
 echo "→ Creando estructura..."
 mkdir -p "${APP_PATH}/Contents/MacOS"
 mkdir -p "${APP_PATH}/Contents/Resources"
 
-# 3. Mover el ejecutable y _internal a Resources
 echo "→ Moviendo archivos..."
 mv dist/SistemaIngresos/SistemaIngresos "${APP_PATH}/Contents/Resources/"
 mv dist/SistemaIngresos/_internal "${APP_PATH}/Contents/Resources/"
 
-# 4. Generar Info.plist
 echo "→ Creando Info.plist..."
 cat > "${APP_PATH}/Contents/Info.plist" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -63,13 +54,11 @@ cat > "${APP_PATH}/Contents/Info.plist" << 'EOF'
 </plist>
 EOF
 
-# 5. Copiar el ícono si existe
 if [ -f "icono.icns" ]; then
     echo "→ Copiando ícono..."
     cp icono.icns "${APP_PATH}/Contents/Resources/"
 fi
 
-# 6. Crear lanzador
 echo "→ Creando lanzador..."
 cat > "${APP_PATH}/Contents/MacOS/SistemaIngresos" << 'EOF'
 #!/bin/bash
@@ -78,29 +67,13 @@ exec "$DIR/../Resources/SistemaIngresos" "$@"
 EOF
 chmod +x "${APP_PATH}/Contents/MacOS/SistemaIngresos"
 
-# 7. Quitar atributos extendidos
 echo "→ Limpiando atributos extendidos..."
 xattr -cr "${APP_PATH}" 2>/dev/null || true
 
-# 8. Firmar todo con ad-hoc
 echo "→ Firmando binarios..."
 find "${APP_PATH}" -type f \( -name "*.so" -o -name "*.dylib" -o -name "Python" \) -exec codesign --force --sign - {} \; 2>/dev/null || true
-
 find "${APP_PATH}" -type d -name "*.framework" -exec codesign --force --deep --sign - {} \; 2>/dev/null || true
-
 codesign --force --sign - "${APP_PATH}/Contents/MacOS/SistemaIngresos" 2>/dev/null || true
 codesign --force --deep --sign - "${APP_PATH}" 2>/dev/null || true
 
-# 9. Verificar
-echo "→ Verificando firma..."
-codesign -dv "${APP_PATH}" 2>&1 | head -5 || true
-
-# 10. Comprimir la .app en un .zip preservando symlinks
-echo "→ Comprimiendo .app en .zip..."
-cd dist
-zip -r -y "Sistema Ingresos.zip" "${APP_NAME}.app" > /dev/null
-cd ..
-
-echo ""
-echo "✅ ${APP_NAME}.app creada y comprimida"
-echo "   Archivo: dist/Sistema Ingresos.zip"
+echo "✅ ${APP_NAME}.app creada"
