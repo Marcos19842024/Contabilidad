@@ -880,6 +880,43 @@ def agrupar_por_categoria(datos, ajustar_centavos=True):
     return agrupado, detalle, avisos_reclasificacion
 
 
+def agregar_producto_catalogo(nombre, categoria):
+    """
+    Agrega un producto a las excepciones manuales (categorias_manuales.json).
+    
+    Parámetros:
+      - nombre: nombre del producto (se normaliza a mayúsculas sin acentos)
+      - categoria: una de las 9 categorías válidas
+    
+    Devuelve:
+      - (True, mensaje) si todo bien
+      - (False, mensaje) si hay error
+    """
+    nombre_norm = normalizar(nombre)
+    if not nombre_norm:
+        return False, "El nombre está vacío"
+    
+    CATEGORIAS_VALIDAS = {"U", "ACCESORIOS", "MEDICAMENTOS", "HIGIENE",
+                          "ESTETICA", "TRANSPORTE", "PENSION", "VACUNA", "CLINICA"}
+    if categoria not in CATEGORIAS_VALIDAS:
+        return False, f"Categoría inválida: {categoria}"
+    
+    # Cargar excepciones actuales
+    exc = cargar_excepciones_manuales()
+    exc = dict(exc)
+    
+    # Agregar / sobreescribir
+    ya_existia = nombre_norm in exc
+    exc[nombre_norm] = categoria
+    
+    # Guardar
+    guardar_excepciones_manuales(exc)
+    
+    if ya_existia:
+        return True, f"Producto actualizado: {nombre} → {categoria}"
+    return True, f"Producto agregado: {nombre} → {categoria}"
+
+
 # ============================================================
 # PRUEBA RÁPIDA
 # ============================================================

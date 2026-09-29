@@ -1385,6 +1385,7 @@ class AppIngresos(ttk.Window):
         """
         Muestra un aviso con los productos que tienen IVA pero están en
         categorías que no lo manejan (VACUNA, CLINICA).
+        Ofrece un botón para registrarlos en el catálogo.
         """
         if not avisos:
             return
@@ -1406,7 +1407,7 @@ class AppIngresos(ttk.Window):
         if folio_fiscal:
             lineas.append(f"🔑 UUID:    {folio_fiscal[:8]}…")
         lineas.append("")
-        lineas.append("Reclasifícalos con el botón 🏷️ Reclasificar:")
+        lineas.append("Productos detectados:")
         lineas.append("")
 
         # Agrupar por categoría
@@ -1424,13 +1425,70 @@ class AppIngresos(ttk.Window):
                 )
             lineas.append("")
 
-        lineas.append("Estos productos se guardaron con su valor completo.")
-        lineas.append("Reclasifícalos para que la próxima vez se manejen bien.")
+        lineas.append("¿Qué quieres hacer?")
 
-        messagebox.showwarning(
-            "Reclasificación sugerida",
-            "\n".join(lineas)
-        )
+        # ---- Diálogo personalizado ----
+        ventana = ttk.Toplevel(self)
+        ventana.title("Reclasificación sugerida")
+        self._configurar_ventana(ventana, ancho=700, alto=500,
+                                 min_ancho=600, min_alto=400)
+
+        # Encabezado
+        ttk.Label(ventana,
+                  text="⚠️ Productos en categorías incorrectas",
+                  font=("Segoe UI", 14, "bold")).pack(pady=(15, 5))
+
+        ttk.Label(ventana,
+                  text=f"Factura {no_factura} — {nombre_cliente}",
+                  font=("Segoe UI", 10),
+                  foreground="gray").pack(pady=(0, 15))
+
+        # Frame de productos con scroll
+        frame_prod = ttk.LabelFrame(ventana, text="Productos detectados", padding=10)
+        frame_prod.pack(fill="both", expand=True, padx=15, pady=5)
+
+        txt = tk.Text(frame_prod, wrap="word", font=("Consolas", 10),
+                      height=12, borderwidth=0)
+        txt.pack(fill="both", expand=True, side="left")
+
+        sb = ttk.Scrollbar(frame_prod, orient="vertical", command=txt.yview)
+        sb.pack(side="right", fill="y")
+        txt.configure(yscrollcommand=sb.set)
+
+        for linea in lineas:
+            txt.insert(tk.END, linea + "\n")
+        txt.configure(state="disabled")
+
+        # ---- Botones ----
+        fr_btn = ttk.Frame(ventana)
+        fr_btn.pack(fill="x", padx=15, pady=15)
+
+        resultado = {"accion": "cerrar"}
+
+        def _registrar():
+            resultado["accion"] = "registrar"
+            ventana.destroy()
+
+        def _cerrar():
+            resultado["accion"] = "cerrar"
+            ventana.destroy()
+
+        ttk.Button(fr_btn, text="➕ Registrar en catálogo",
+                   command=_registrar,
+                   bootstyle="info-outline").pack(side="left", padx=5)
+        ttk.Button(fr_btn, text="Cerrar",
+                   command=_cerrar,
+                   bootstyle="secondary-outline").pack(side="right", padx=5)
+
+        ventana.protocol("WM_DELETE_WINDOW", _cerrar)
+        ventana.bind("<Escape>", lambda e: _cerrar())
+
+        ventana.wait_window()
+
+        # ---- Si el usuario decidió registrar ----
+        if resultado["accion"] == "registrar":
+            from dialogos.registrar_productos import abrir_dialogo_registrar_productos
+            abrir_dialogo_registrar_productos(self, avisos)
 
     def _actualizar_titulo(self):
         try:

@@ -325,6 +325,8 @@ def sincronizar_facturas(app):
     facturas_duplicadas = []
     facturas_sin_xml = []
     facturas_con_error = []
+    todos_avisos = []          # ← Acumular avisos de reclasificación
+    vistos_avisos = set()      # ← Para deduplicar mientras se procesan
 
     def _orden_grupo(item):
         clave = item[0]
@@ -333,6 +335,7 @@ def sincronizar_facturas(app):
         except Exception:
             return 0
 
+    todos_avisos = []
     for i, (_, files) in enumerate(sorted(grupos.items(), key=_orden_grupo), 1):
         no_factura = files.get("no_factura", "?")
         log(f"\n[{i}/{len(grupos)}] Procesando factura {no_factura}...")
@@ -386,6 +389,12 @@ def sincronizar_facturas(app):
             _, datos_completos, avisos_reclasificacion = app._llenar_desde_factura(datos)
             if avisos_reclasificacion:
                 for a in avisos_reclasificacion:
+                    # Deduplicar mientras se acumula
+                    clave = (a["categoria_actual"], a["producto"].strip().upper())
+                    if clave in vistos_avisos:
+                        continue
+                    vistos_avisos.add(clave)
+                    todos_avisos.append(a)
                     log(f"  ⚠️ Reclasificar: [{a['categoria_actual']}] {a['producto']}")
 
             # ============================================================
@@ -489,14 +498,47 @@ def sincronizar_facturas(app):
     app._refrescar_tabla()
     app._nuevo()
 
-    messagebox.showinfo(
-        "Sincronización completa",
-        f"✅ {len(facturas_procesadas)} facturas guardadas\n"
-        f"⏭️ {len(facturas_duplicadas)} duplicadas\n"
-        f"⚠️ {len(facturas_sin_xml)} sin XML\n"
-        f"❌ {len(facturas_con_error)} con error\n\n"
-        f"Log: {info.get('log', '')}"
-    )
+    # ---- Si hay productos a reclasificar, ofrecer registrarlos ----
+    if todos_avisos:
+        respuesta = messagebox.askyesno(
+            "Sincronización completa",
+            f"✅ {len(facturas_procesadas)} facturas guardadas\n"
+            f"⏭️ {len(facturas_duplicadas)} duplicadas\n"
+            f"⚠️ {len(facturas_sin_xml)} sin XML\n"
+            f"❌ {len(facturas_con_error)} con error\n\n"
+            f"⚠️ Se detectaron {len(todos_avisos)} producto(s) en "
+            f"categorías incorrectas.\n\n"
+            f"¿Quieres registrarlos en el catálogo ahora?\n"
+            f"(También puedes hacerlo después desde 🏷️ Reclasificar)"
+        )
+        if respuesta:
+            from dialogos.registrar_productos import abrir_dialogo_registrar_productos
+            abrir_dialogo_registrar_productos(app, todos_avisos)
+    else:
+        # ---- Si hay productos a reclasificar, ofrecer registrarlos ----
+        mensaje_base = (
+            f"✅ {len(facturas_procesadas)} facturas guardadas\n"
+            f"⏭️ {len(facturas_duplicadas)} duplicadas\n"
+            f"⚠️ {len(facturas_sin_xml)} sin XML\n"
+            f"❌ {len(facturas_con_error)} con error\n\n"
+            f"Log: {info.get('log', '')}"
+        )
+
+        if todos_avisos:
+            mensaje_avisos = (
+                f"\n\n⚠️ Se detectaron {len(todos_avisos)} producto(s) "
+                f"en categorías incorrectas.\n\n"
+                f"¿Quieres registrarlos en el catálogo ahora?"
+            )
+            respuesta = messagebox.askyesno(
+                "Sincronización completa",
+                mensaje_base + mensaje_avisos
+            )
+            if respuesta:
+                from dialogos.registrar_productos import abrir_dialogo_registrar_productos
+                abrir_dialogo_registrar_productos(app, todos_avisos)
+        else:
+            messagebox.showinfo("Sincronización completa", mensaje_base)
 
     try:
         ventana_prog.protocol("WM_DELETE_WINDOW", ventana_prog.destroy)
