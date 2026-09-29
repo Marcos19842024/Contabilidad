@@ -1,7 +1,7 @@
 #!/bin/bash
 # crear_app_mac.sh
 # Convierte el build de PyInstaller en una .app de macOS.
-# Se ejecuta durante el build en GitHub Actions.
+# NO comprime. Solo crea la .app.
 
 set -e
 
@@ -95,11 +95,5 @@ codesign --force --deep --sign - "${APP_PATH}" 2>/dev/null || true
 echo "→ Verificando firma..."
 codesign -dv "${APP_PATH}" 2>&1 | head -5 || true
 
-# 10. Comprimir en .zip para que GitHub lo suba bien
-echo "→ Comprimiendo en .zip..."
-cd dist
-zip -r -y "Sistema Ingresos.zip" "${APP_NAME}.app" > /dev/null
-cd ..
-
 echo ""
-echo "✅ ${APP_NAME}.app creada y comprimida en dist/Sistema Ingresos.zip"
+echo "✅ ${APP_NAME}.app creada"
