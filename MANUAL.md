@@ -1,15 +1,3 @@
-
-**El bloque ```bash``` interno rompe el bloque ```markdown``` externo.**
-
-## 🛠️ Solución
-
-Voy a **quitar los bloques de código internos** y dejar el comando como **texto normal** con formato de código inline (backticks simples).
-
-## 📖 Manual corregido — sin bloques anidados
-
-**Borra todo** el contenido de `MANUAL.md` y pega este:
-
-```markdown
 # 📖 Manual de Usuario — Sistema de Contabilidad QVET
 
 **Versión:** 1.0.0  
