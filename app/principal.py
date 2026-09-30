@@ -7,13 +7,20 @@ Permite elegir entre:
   - Reporte de Egresos (próximamente)
 """
 
+import sys
+from pathlib import Path
+
+# Agregar la raíz del proyecto al path
+_raiz = Path(__file__).parent.parent
+if str(_raiz) not in sys.path:
+    sys.path.insert(0, str(_raiz))
+
 import tkinter as tk
 import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
 from config.ajustes import TEMA
-from config.temas import obtener_colores_sidebar
 
 
 class AppPrincipal(ttk.Window):
@@ -25,18 +32,11 @@ class AppPrincipal(ttk.Window):
         self.geometry("800x600")
         self.minsize(700, 500)
 
-        # Colores
-        self.colores = obtener_colores_sidebar()
-
-        # Construir UI
         self._construir_ui()
-
-        # Centrar ventana
         self.after(50, self._centrar_ventana)
 
     def _construir_ui(self):
         """Construye la pantalla de inicio."""
-        # Contenedor principal
         frame = ttk.Frame(self, padding=40)
         frame.pack(fill="both", expand=True)
 
@@ -59,7 +59,9 @@ class AppPrincipal(ttk.Window):
         botones_frame = ttk.Frame(frame)
         botones_frame.pack(expand=True)
 
-        # Botón: Ingresos
+        botones_frame.columnconfigure(0, weight=1)
+        botones_frame.columnconfigure(1, weight=1)
+
         self._crear_boton_modulo(
             botones_frame,
             icono="💰",
@@ -70,7 +72,6 @@ class AppPrincipal(ttk.Window):
             columna=0
         )
 
-        # Botón: Egresos
         self._crear_boton_modulo(
             botones_frame,
             icono="💸",
@@ -116,25 +117,21 @@ class AppPrincipal(ttk.Window):
     def _crear_boton_modulo(self, parent, icono, titulo, descripcion,
                             comando, habilitado=True, columna=0):
         """Crea un botón grande para un módulo."""
-        # Frame del botón
         frame = ttk.LabelFrame(parent, text="", padding=20)
         frame.grid(row=0, column=columna, padx=20, pady=10, sticky="nsew")
 
-        # Icono
         ttk.Label(
             frame,
             text=icono,
             font=("Segoe UI Emoji", 48)
         ).pack(pady=(0, 10))
 
-        # Título
         ttk.Label(
             frame,
             text=titulo,
             font=("Segoe UI", 18, "bold")
         ).pack(pady=(0, 10))
 
-        # Descripción
         ttk.Label(
             frame,
             text=descripcion,
@@ -143,7 +140,6 @@ class AppPrincipal(ttk.Window):
             foreground="gray"
         ).pack(pady=(0, 20))
 
-        # Botón
         if habilitado:
             ttk.Button(
                 frame,
@@ -163,15 +159,12 @@ class AppPrincipal(ttk.Window):
 
     def _abrir_ingresos(self):
         """Abre el módulo de Ingresos."""
-        self.withdraw()  # Oculta la pantalla de inicio
         try:
             from modulos.ingresos import AppIngresos
-            app = AppIngresos()
+            app = AppIngresos(master=self)
             app.protocol("WM_DELETE_WINDOW", lambda: self._cerrar_modulo(app))
-            app.mainloop()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo abrir Ingresos:\n{e}")
-            self.deiconify()  # Vuelve a mostrar la pantalla de inicio
 
     def _abrir_egresos(self):
         """Abre el módulo de Egresos (próximamente)."""

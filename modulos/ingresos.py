@@ -115,9 +115,9 @@ def centro_desde_serie(serie):
 # ============================================================
 # INTERFAZ PRINCIPAL
 # ============================================================
-class AppIngresos(ttk.Window):
-    def __init__(self):
-        super().__init__(themename=TEMA)
+class AppIngresos(ttk.Toplevel):
+    def __init__(self, master=None):
+        super().__init__(master)
         self.title("Sistema de Ingresos - Contabilidad")
         self.geometry("1250x880")
         self.minsize(1000, 700)
@@ -1999,5 +1999,13 @@ class AppIngresos(ttk.Window):
                                  "No hay caché para eliminar.")
 # ============================================================
 if __name__ == "__main__":
-    app = AppIngresos()
-    app.mainloop()
+    import ttkbootstrap as ttk_local
+
+    # Para ejecutarlo directamente, hay que crear una raíz antes
+    raiz = ttk_local.Window(themename=TEMA)
+    raiz.withdraw()  # Ocultar la raíz vacía
+
+    app = AppIngresos(master=raiz)
+    app.protocol("WM_DELETE_WINDOW", raiz.destroy)
+
+    raiz.mainloop()
