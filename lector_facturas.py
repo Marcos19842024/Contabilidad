@@ -609,14 +609,20 @@ def procesar_factura(ruta_xml=None, ruta_pdf=None):
         productos_sin_iva = [p for p in productos if p.get("tasa_iva_pdf", 0) == 0]
         productos_con_iva = [p for p in productos if p.get("tasa_iva_pdf", 0) > 0]
 
-        # Asignar los productos a cada concepto del XML según su IVA
+        # ✅ FIX: cada grupo de productos se asigna SOLO UNA VEZ
+        # Marcamos qué grupos ya se usaron para no repetirlos.
+        con_iva_usado = False
+        sin_iva_usado = False
+
         for conc in conceptos_rem:
             tiene_iva_xml = conc["tiene_iva"]
 
-            if tiene_iva_xml and productos_con_iva:
+            if tiene_iva_xml and productos_con_iva and not con_iva_usado:
                 productos_asignados = productos_con_iva
-            elif not tiene_iva_xml and productos_sin_iva:
+                con_iva_usado = True
+            elif not tiene_iva_xml and productos_sin_iva and not sin_iva_usado:
                 productos_asignados = productos_sin_iva
+                sin_iva_usado = True
             else:
                 productos_asignados = []
 
@@ -631,12 +637,10 @@ def procesar_factura(ruta_xml=None, ruta_pdf=None):
 
                 conc["descripcion"] = " + ".join(nombres)
                 conc["nombres_pdf"] = nombres
-                # Agregar la remisión a cada producto
                 for p in productos_asignados:
                     p["remision"] = rem
                 conc["productos_pdf"] = productos_asignados
             else:
-                # Sin coincidencias: usar solo el importe del XML
                 conc["categoria"] = clasificar_por_descripcion(conc["descripcion"])
                 conc["nombres_pdf"] = []
                 conc["productos_pdf"] = []
