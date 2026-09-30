@@ -6,7 +6,7 @@ Escritura de filas, encabezados y totales en una hoja de Excel.
 
 from datetime import datetime
 
-from openpyxl.styles import PatternFill
+from openpyxl.styles import PatternFill, Font
 
 from excel.constantes import (
     COLORES_SECCION_EXCEL,
@@ -28,6 +28,10 @@ from excel.estilos import (
     FORMATO_MONEDA,
     FORMATO_FECHA,
 )
+
+
+# Fuente para hipervínculos
+FUENTE_LINK = Font(color="0563C1", underline="single")
 
 
 def escribir_encabezados(ws):
@@ -65,7 +69,45 @@ def _buscar_letra_por_clave(clave_buscada):
     return None
 
 
-def escribir_fila(ws, r, fila):
+def _obtener_ruta_pdf(reg):
+    """
+    Construye la ruta relativa al PDF de un registro.
+    La ruta es relativa al Excel (que está en .../Ingreso/Deposito/).
+    El PDF está en .../Ingreso/Facturas <Centro>/<Fecha>/<NoFactura>.PDF.
+    """
+    try:
+        from core.adjuntos import archivos_del_registro
+
+        adjuntos = archivos_del_registro(reg)
+        if not adjuntos:
+            return None
+
+        # Buscar el PDF
+        pdf = None
+        for a in adjuntos:
+            if a.suffix.lower() == ".pdf":
+                pdf = a
+                break
+
+        if not pdf:
+            return None
+
+        # Construir la ruta relativa desde el Excel (que está en Deposito)
+        # Excel:  .../Ingreso/Deposito/Resumen.xlsx
+        # PDF:    .../Ingreso/Facturas <Centro>/<Fecha>/<archivo>.PDF
+        # Ruta:   ../Facturas <Centro>/<Fecha>/<archivo>.PDF
+
+        centro = reg.get("centro", "Central")
+        fecha = reg.get("fecha", "").replace("/", "-")
+
+        # El "../" sube desde Deposito/ a Ingreso/
+        return f"../Facturas {centro}/{fecha}/{pdf.name}"
+
+    except Exception:
+        return None
+
+
+def escribir_fila(ws, r, fila, carpeta_adjuntos=None):
     """Escribe UNA fila de registro con estilos, fórmulas y casos especiales."""
     valor_tc = float(r.get("tc", 0) or 0)
     valor_td = float(r.get("td", 0) or 0)
@@ -82,7 +124,27 @@ def escribir_fila(ws, r, fila):
         c.fill = SIN_RELLENO
         c.border = BORDER
 
-        # --- Casos especiales ---
+        # ============================================================
+        # Caso especial: enlace al PDF en el No. de factura
+        # ============================================================
+        if clave == "__link_factura__":
+            no_factura = str(r.get("no_factura", "")).strip()
+            c.value = no_factura
+            c.alignment = IZQUIERDA
+
+            # Construir el enlace al PDF
+            ruta_pdf = _obtener_ruta_pdf(r)
+            if ruta_pdf:
+                try:
+                    c.hyperlink = ruta_pdf
+                    c.font = FUENTE_LINK
+                except Exception:
+                    pass
+            continue
+
+        # ============================================================
+        # Casos especiales varios
+        # ============================================================
         if clave == "__tarjeta__":
             letra_tc = _buscar_letra_por_clave("tc")
             letra_td = _buscar_letra_por_clave("td")
@@ -117,11 +179,45 @@ def escribir_fila(ws, r, fila):
             c.alignment = DERECHA
             continue
 
+        # ============================================================
+        # Total Remisiones (con rojo si no cuadra)
+        # ============================================================
+        if clave == "__total_remisiones__":
+            # Fórmula: suma de categorías + IVAs (F a AA)
+            formula = FORMULAS_AUTO_EXCEL["AB"].format(r=fila)
+            c.value = formula
+            c.number_format = FORMATO_MONEDA
+            c.alignment = DERECHA
+
+            # Verificar si cuadra con Total Factura
+            # Comparar los valores almacenados en el registro
+            total_remisiones = _calcular_total_remisiones(r)
+            total_factura = _calcular_total_factura(r)
+            if abs(total_remisiones - total_factura) > 0.01:
+                c.font = Font(color="FF0000", bold=True)
+            continue
+
+        # ============================================================
+        # Total Factura (suma de pagos)
+        # ============================================================
+        if clave == "__total_factura__":
+            formula = FORMULAS_AUTO_EXCEL["AC"].format(r=fila)
+            c.value = formula
+            c.number_format = FORMATO_MONEDA
+            c.alignment = DERECHA
+            c.font = Font(bold=True)
+            continue
+
+        # ============================================================
+        # Campos vacíos (solo encabezado)
+        # ============================================================
         if clave == "":
             c.alignment = CENTRO
             continue
 
-        # --- Casos normales ---
+        # ============================================================
+        # Casos normales
+        # ============================================================
         valor = r.get(clave, 0 if tipo == "money" else "")
         expresion = r.get(f"{clave}__expr", "")
 
@@ -150,19 +246,53 @@ def escribir_fila(ws, r, fila):
             c.alignment = IZQUIERDA
 
 
+def _calcular_total_remisiones(r):
+    """Suma las categorías + IVAs de un registro."""
+    claves = [
+        "u_importe", "u_iva",
+        "ac_importe", "ac_iva",
+        "med_importe", "med_sin_iva", "med_iva",
+        "hig_importe", "hig_sin_iva", "hig_iva",
+        "hig_sin_ieps_6", "hig_ieps_6",
+        "hig_sin_ieps_7", "hig_ieps_7",
+        "est_importe", "est_iva",
+        "tra_importe", "tra_iva",
+        "pen_importe", "pen_iva",
+        "vac_importe",
+        "cli_importe",
+    ]
+    total = 0.0
+    for k in claves:
+        try:
+            total += float(r.get(k, 0) or 0)
+        except (ValueError, TypeError):
+            pass
+    return round(total, 2)
+
+
+def _calcular_total_factura(r):
+    """Suma los tipos de pago de un registro."""
+    claves = ["efectivo", "tc", "td", "cheque", "transfer", "vale"]
+    total = 0.0
+    for k in claves:
+        try:
+            total += float(r.get(k, 0) or 0)
+        except (ValueError, TypeError):
+            pass
+    return round(total, 2)
+
+
 def escribir_fila_totales(ws, fila):
     """Escribe la fila TOTALES con fórmulas =SUM(...)."""
     MERGE_INI = 1
     MERGE_FIN = 5
 
-    # Etiqueta "TOTALES" en la primera celda
     c_tot = ws.cell(row=fila, column=MERGE_INI, value="TOTALES")
     c_tot.font = BOLD_DARK
     c_tot.fill = FILL_TOTAL
     c_tot.alignment = CENTRO
     c_tot.border = BORDER
 
-    # Estilos del rango combinado
     for col in range(MERGE_INI, MERGE_FIN + 1):
         celda = ws.cell(row=fila, column=col)
         try:
@@ -175,13 +305,12 @@ def escribir_fila_totales(ws, fila):
     ws.merge_cells(start_row=fila, start_column=MERGE_INI,
                    end_row=fila, end_column=MERGE_FIN)
 
-    # Fórmulas SUM en el resto
     for letra, (titulo, seccion, tipo) in COLUMNAS_EXCEL.items():
         col_idx = ws[f"{letra}1"].column
         if MERGE_INI <= col_idx <= MERGE_FIN:
             continue
         c = ws.cell(row=fila, column=col_idx)
-        if tipo == "money":
+        if tipo in ("money", "total_remisiones", "total_factura"):
             c.value = f"=SUM({letra}3:{letra}{fila - 1})"
             c.number_format = FORMATO_MONEDA
             c.alignment = DERECHA
@@ -217,5 +346,5 @@ def ajustar_anchos(ws, fila_total):
         ancho = min(max(largo_max + 2, 8), 40)
         ws.column_dimensions[letra].width = ancho
 
-    ws.column_dimensions["AP"].width = max(ws.column_dimensions["AP"].width, 38)
+    ws.column_dimensions["AQ"].width = max(ws.column_dimensions["AQ"].width, 38)
     ws.column_dimensions["D"].width = max(ws.column_dimensions["D"].width, 22)
