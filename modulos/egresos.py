@@ -2,17 +2,11 @@
 """
 modulos/egresos.py
 Módulo de Egresos.
-
-Permite:
-  - Descargar facturas de compra del SAT.
-  - Procesar los XML automáticamente.
-  - Generar el reporte de egresos en Excel (PUE y PPD).
 """
 
 import sys
 from pathlib import Path
 
-# Agregar la raíz del proyecto al path
 _raiz = Path(__file__).parent.parent
 if str(_raiz) not in sys.path:
     sys.path.insert(0, str(_raiz))
@@ -34,8 +28,68 @@ class AppEgresos(ttk.Toplevel):
 
         self._construir_ui()
 
+    def _configurar_ventana(self, ventana, ancho=500, alto=400,
+                            min_ancho=400, min_alto=320,
+                            centrar_en_padre=True):
+        """Configura tamaño, minsize y centrado de un Toplevel."""
+        try:
+            self.grab_release()
+        except Exception:
+            pass
+
+        ventana.geometry(f"{ancho}x{alto}")
+        ventana.minsize(min_ancho, min_alto)
+        ventana.transient(self)
+        ventana.grab_set()
+        ventana.update_idletasks()
+
+        if centrar_en_padre:
+            x = self.winfo_rootx() + (self.winfo_width() - ancho) // 2
+            y = self.winfo_rooty() + (self.winfo_height() - alto) // 2
+            x = max(0, x)
+            y = max(0, y)
+            ventana.geometry(f"+{x}+{y}")
+
     def _construir_ui(self):
         """Construye la UI básica."""
+        # Barra superior
+        top = ttk.LabelFrame(self, text="Configuración", padding=10)
+        top.pack(fill="x", padx=10, pady=5)
+
+        # Centro / Sucursal
+        ttk.Label(top, text="Sucursal:").grid(row=0, column=0, padx=5, sticky="e")
+        self.var_sucursal = ttk.StringVar(value="Baalak")
+        ttk.Combobox(
+            top, textvariable=self.var_sucursal,
+            values=["Baalak", "Animalia"],
+            width=12, state="readonly", bootstyle="primary"
+        ).grid(row=0, column=1, padx=5)
+
+        # Año
+        ttk.Label(top, text="Año:").grid(row=0, column=2, padx=5, sticky="e")
+        from datetime import datetime
+        self.var_anio = ttk.StringVar(value=str(datetime.now().year))
+        ttk.Entry(top, textvariable=self.var_anio, width=6,
+                  style="Custom.TEntry").grid(row=0, column=3, padx=5)
+
+        # Mes
+        from config.campos import MESES_ES
+        ttk.Label(top, text="Mes:").grid(row=0, column=4, padx=5, sticky="e")
+        self.var_mes = ttk.StringVar(value=MESES_ES[datetime.now().month - 1])
+        ttk.Combobox(top, textvariable=self.var_mes, values=MESES_ES,
+                     width=11, state="readonly", bootstyle="primary").grid(
+            row=0, column=5, padx=5)
+
+        # Botones
+        ttk.Button(top, text="⚙️ Configuración SAT",
+                   command=self._abrir_configuracion,
+                   bootstyle="info-outline").grid(row=0, column=7, padx=10)
+
+        ttk.Button(top, text="📥 Descargar del SAT",
+                   command=self._descargar_sat,
+                   bootstyle="info-outline").grid(row=0, column=8, padx=10)
+
+        # Contenido principal
         frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
 
@@ -65,6 +119,18 @@ class AppEgresos(ttk.Toplevel):
             font=("Segoe UI", 11),
             justify="left"
         ).pack(pady=20)
+
+    def _abrir_configuracion(self):
+        """Abre el diálogo de configuración de Egresos."""
+        from dialogos.egresos_config import abrir_dialogo_config_egresos
+        abrir_dialogo_config_egresos(self)
+
+    def _descargar_sat(self):
+        """Inicia el flujo de descarga del SAT (próximamente)."""
+        messagebox.showinfo(
+            "Próximamente",
+            "La descarga del SAT estará disponible en una futura versión."
+        )
 
 
 if __name__ == "__main__":
