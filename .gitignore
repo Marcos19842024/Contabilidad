@@ -34,6 +34,12 @@ historial_autocompletado.json
 config_ui.json
 categorias_manuales.json
 correos_procesados.json
+# Configuración de egresos (contiene credenciales)
+config_egresos.json
+proveedores_tc.json
+proveedores_sucursal.json
+observaciones_egresos.json
+registros_egresos_*.json
 
 # Catálogo (opcional, ver nota abajo)
 # catalogo_qvet.json
