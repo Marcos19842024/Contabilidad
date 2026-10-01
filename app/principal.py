@@ -78,7 +78,7 @@ class AppPrincipal(ttk.Window):
             titulo="EGRESOS",
             descripcion="Facturas de compra\n(próximamente)",
             comando=self._abrir_egresos,
-            habilitado=False,
+            habilitado=True,
             columna=1
         )
 
@@ -167,11 +167,13 @@ class AppPrincipal(ttk.Window):
             messagebox.showerror("Error", f"No se pudo abrir Ingresos:\n{e}")
 
     def _abrir_egresos(self):
-        """Abre el módulo de Egresos (próximamente)."""
-        messagebox.showinfo(
-            "Próximamente",
-            "El módulo de Egresos estará disponible en una futura versión."
-        )
+        """Abre el módulo de Egresos."""
+        try:
+            from modulos.egresos import AppEgresos
+            app = AppEgresos(master=self)
+            app.protocol("WM_DELETE_WINDOW", lambda: self._cerrar_modulo(app))
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo abrir Egresos:\n{e}")
 
     def _abrir_configuracion(self):
         """Abre el diálogo de configuración general."""
