@@ -126,9 +126,7 @@ Temas recomendados:
 - superhero (oscuro con azules)
 - flatly (claro)
 
----
-
-## 4. Flujo de trabajo diario (Ingresos)
+---## 4. Flujo de trabajo diario (Ingresos)
 
 ### 4.1 Sincronizar facturas del correo
 
@@ -276,9 +274,7 @@ Clic derecho → Adjuntar factura.
 
 Clic derecho → Ver adjuntos → Abrir carpeta.
 
----
-
-## 9. Módulo de Egresos
+---## 9. Módulo de Egresos
 
 ### 9.1 ¿Qué es?
 
@@ -408,7 +404,7 @@ Se elimina el registro y su XML asociado.
 
 1. Clic derecho en la fila → Abrir carpeta del XML.
 
-### 9.7 Generar Excel PUE/PPD
+---### 9.7 Generar Excel PUE/PPD
 
 1. Verifica el mes en el selector.
 2. Clic en `📊 Generar Excel`.
@@ -435,14 +431,14 @@ El backup se guarda como:
 ### 9.8 Reportes de Egresos
 
 Clic en `📈 Reportes`. Se abre un árbol:
-2026
-├── Septiembre
-│ ├── Baalak
-│ └── Animalia
-└── Octubre
-├── Baalak
-└── Animalia
 
+    2026
+    ├── Septiembre
+    │   ├── Baalak
+    │   └── Animalia
+    └── Octubre
+        ├── Baalak
+        └── Animalia
 
 Doble clic en cualquier nodo:
 
@@ -494,134 +490,156 @@ La app limpia automáticamente las solicitudes con más de 24 horas.
 
 Si no lo hace, ejecuta en Terminal:
 
-```bash
-python3 -c "from config.config_egresos import limpiar_solicitud_activa; limpiar_solicitud_activa(); print('Limpiada')"
+`python3 -c "from config.config_egresos import limpiar_solicitud_activa; limpiar_solicitud_activa(); print('Limpiada')"`
 
-9.10 Historial de Egresos
+### 9.10 Historial de Egresos
+
 La app mantiene un historial de:
 
-RFCs de emisores
-
-Nombres de emisores
-
-Observaciones usadas
+- RFCs de emisores
+- Nombres de emisores
+- Observaciones usadas
 
 Se guarda en:
 
-~/Documents/Contabilidad App/historial_egresos.json
+`~/Documents/Contabilidad App/historial_egresos.json`
 
 Se usa para autocompletar en los diálogos de edición.
 
-10. Configuración avanzada
-10.1 Cambiar tema
+---
+
+## 10. Configuración avanzada
+
+### 10.1 Cambiar tema
+
 Ver sección 3.3.
 
-10.2 Ver logs
+### 10.2 Ver logs
+
 Clic en Ver logs (Ingresos). Se abre la carpeta de logs.
 
-10.3 Reset caché
+### 10.3 Reset caché
+
 Clic en Reset caché (Ingresos). Aparece confirmación.
 
-11. Solución de problemas generales
-11.1 La app no abre en Windows
+---
+
+## 11. Solución de problemas generales
+
+### 11.1 La app no abre en Windows
+
 Clic derecho → Ejecutar como administrador.
 
-11.2 La app no abre en macOS
+### 11.2 La app no abre en macOS
+
 Ejecuta en Terminal:
 
-xattr -cr "/Applications/Sistema Ingresos.app"
+`xattr -cr "/Applications/Sistema Ingresos.app"`
 
-11.3 La sincronización falla
+### 11.3 La sincronización falla
+
 Causas posibles:
 
-Sin internet.
+- Sin internet.
+- Contraseña de app incorrecta.
+- Etiqueta de Gmail mal escrita.
+- Filtro muy estricto.
 
-Contraseña de app incorrecta.
+### 11.4 El Excel está bloqueado
 
-Etiqueta de Gmail mal escrita.
-
-Filtro muy estricto.
-
-11.4 El Excel está bloqueado
 Cierra Excel y vuelve a intentar.
 
-11.5 Los totales no cuadran
+### 11.5 Los totales no cuadran
+
 Revisa el desglose por categoría o las facturas de Animalia.
 
-12. Preguntas frecuentes
+---## 12. Preguntas frecuentes
 
-Dónde se guardan los datos?
-Windows: C:\Users\<usuario>\Documents\Contabilidad App\
+### ¿Dónde se guardan los datos?
 
-macOS: ~/Documents/Contabilidad App/
+- Windows: `C:\Users\<usuario>\Documents\Contabilidad App\`
+- macOS: `~/Documents/Contabilidad App/`
 
-¿Cómo hago backup?
+### ¿Cómo hago backup?
+
 Copia la carpeta completa a un USB o la nube.
 
-¿Puedo usar la app en varias computadoras?
+### ¿Puedo usar la app en varias computadoras?
+
 Sí, pero los datos no se sincronizan. Copia manualmente la carpeta.
 
-¿Qué pasa si cambio de año?
+### ¿Qué pasa si cambio de año?
+
 La app crea automáticamente un archivo nuevo.
 
-¿Cómo actualizo la app?
-Descarga la nueva versión.
+### ¿Cómo actualizo la app?
 
-Descomprime en una carpeta diferente.
-
-Prueba que funcione.
-
-Reemplaza la carpeta anterior.
+1. Descarga la nueva versión.
+2. Descomprime en una carpeta diferente.
+3. Prueba que funcione.
+4. Reemplaza la carpeta anterior.
 
 NO borres la carpeta Contabilidad App.
 
-¿Qué hago si la app se cierra sola?
+### ¿Qué hago si la app se cierra sola?
+
 Ábrela desde CMD/Terminal para ver el error.
 
-¿Cuántas solicitudes al SAT puedo hacer?
+### ¿Cuántas solicitudes al SAT puedo hacer?
+
 Solo una a la vez por contribuyente. El SAT rechaza solicitudes simultáneas.
 
-¿Dónde queda el historial de Egresos?
-En ~/Documents/Contabilidad App/historial_egresos.json.
+### ¿Dónde queda el historial de Egresos?
 
-¿Puedo recuperar un Excel que reemplacé?
+En `~/Documents/Contabilidad App/historial_egresos.json`.
+
+### ¿Puedo recuperar un Excel que reemplacé?
+
 Sí. Los backups están en la misma carpeta con el nombre:
 
-<archivo>_backup_YYYY-MM-DD_HH-MM-SS.xlsx
+`<archivo>_backup_YYYY-MM-DD_HH-MM-SS.xlsx`
 
-Renómbralo quitando el _backup_....
+Renómbralo quitando el `_backup_...`.
 
-13. Glosario
-Término	Significado
-QVET	Sistema de gestión veterinaria.
-CFDI	Comprobante Fiscal Digital por Internet.
-XML	Archivo del CFDI.
-PDF	Representación impresa del CFDI.
-UUID	Identificador único del CFDI.
-Folio Fiscal	Ver UUID.
-RFC	Registro Federal de Contribuyentes.
-IVA	Impuesto al Valor Agregado (16%).
-IEPS	Impuesto Especial sobre Producción y Servicios.
-Serie	Prefijo del folio.
-Folio	Número consecutivo de la factura.
-PUE	Pago en Una Exhibición.
-PPD	Pago en Parcialidades o Diferido.
-FIEL	Firma Electrónica Avanzada (e.firma).
-.cer	Certificado de la e.firma.
-.key	Llave privada de la e.firma.
-Backup	Copia de seguridad.
-Log	Registro de actividad.
-Caché	Almacén temporal de datos.
-Soporte
+---
+
+## 13. Glosario
+
+| Término | Significado |
+|---------|-------------|
+| QVET | Sistema de gestión veterinaria. |
+| CFDI | Comprobante Fiscal Digital por Internet. |
+| XML | Archivo del CFDI. |
+| PDF | Representación impresa del CFDI. |
+| UUID | Identificador único del CFDI. |
+| Folio Fiscal | Ver UUID. |
+| RFC | Registro Federal de Contribuyentes. |
+| IVA | Impuesto al Valor Agregado (16%). |
+| IEPS | Impuesto Especial sobre Producción y Servicios. |
+| Serie | Prefijo del folio. |
+| Folio | Número consecutivo de la factura. |
+| PUE | Pago en Una Exhibición. |
+| PPD | Pago en Parcialidades o Diferido. |
+| FIEL | Firma Electrónica Avanzada (e.firma). |
+| .cer | Certificado de la e.firma. |
+| .key | Llave privada de la e.firma. |
+| Backup | Copia de seguridad. |
+| Log | Registro de actividad. |
+| Caché | Almacén temporal de datos. |
+
+---
+
+## Soporte
+
 Si tienes problemas:
 
-Revisa este manual primero.
+1. Revisa este manual primero.
+2. Revisa los logs.
+3. Contacta al desarrollador.
 
-Revisa los logs.
+---
 
-Contacta al desarrollador.
+**Fin del manual.**
 
-Fin del manual.
-
-Versión: 2.0.0
-Última actualización: Octubre 2026
+**Versión:** 2.0.0  
+**Última actualización:** Octubre 2026
