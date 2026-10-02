@@ -24,7 +24,7 @@ def abrir_dialogo_reclasificador(app):
     Abre el diálogo del reclasificador de productos.
 
     Parámetros:
-      app: instancia de AppIngresos (para _configurar_ventana)
+      app: instancia de AppIngresos (para configurar_ventana)
     """
     catalogo = cargar_catalogo()
     excepciones_actuales = dict(cargar_excepciones_manuales())

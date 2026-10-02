@@ -26,7 +26,7 @@ def abrir_dialogo_reportes(app):
            - app.var_anio, app.var_mes, app.var_centro
            - app.registros, app._anio_cargado
            - app._refrescar_tabla(), app._actualizar_titulo()
-           - app._configurar_ventana()
+           - configurar_ventana(app, ventana, ...)  # de ui/utils.py
     """
     # ============================================================
     # 1. Recolectar datos

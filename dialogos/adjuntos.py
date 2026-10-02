@@ -18,7 +18,7 @@ def abrir_dialogo_adjuntos(app, reg):
     Muestra una ventana con los adjuntos del registro dado.
 
     Parámetros:
-      app: instancia de AppIngresos (para _configurar_ventana, _abrir_archivo,
+      app: instancia de AppIngresos (para configurar_ventana, _abrir_archivo,
            _adjuntar_factura)
       reg: el registro (dict) cuyos adjuntos se quieren ver
     """
