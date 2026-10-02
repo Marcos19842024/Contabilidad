@@ -66,7 +66,7 @@ class AppPrincipal(ttk.Window):
             botones_frame,
             icono="💰",
             titulo="INGRESOS",
-            descripcion="Facturas de venta\n(lo que ya tienes)",
+            descripcion="Facturas de venta\n(descarga del Qvet o Gmail)",
             comando=self._abrir_ingresos,
             habilitado=True,
             columna=0
@@ -76,7 +76,7 @@ class AppPrincipal(ttk.Window):
             botones_frame,
             icono="💸",
             titulo="EGRESOS",
-            descripcion="Facturas de compra\n(próximamente)",
+            descripcion="Facturas de compra\n(descarga del SAT)",
             comando=self._abrir_egresos,
             habilitado=True,
             columna=1
@@ -183,12 +183,15 @@ class AppPrincipal(ttk.Window):
         )
 
     def _abrir_ayuda(self):
-        """Abre la ayuda."""
-        messagebox.showinfo(
-            "Ayuda",
-            "Consulta el manual de usuario:\n\n"
-            "MANUAL.md en el repositorio de GitHub."
-        )
+        """Abre el manual de usuario."""
+        try:
+            from dialogos.manual import abrir_manual
+            abrir_manual(self)
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"No se pudo abrir el manual:\n{e}"
+            )
 
     def _cerrar_modulo(self, app):
         """Se llama al cerrar un módulo. Vuelve a mostrar la pantalla de inicio."""

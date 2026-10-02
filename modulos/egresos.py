@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 modulos/egresos.py
-Módulo de Egresos.
+Modulo de Egresos con tabla, edicion, reportes y generacion de Excel.
 """
 
 from ui.utils import configurar_ventana
 import sys
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 _raiz = Path(__file__).parent.parent
@@ -17,105 +19,631 @@ import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
+from config.campos import MESES_ES
+from config.config_egresos import (
+    cargar_config_egresos,
+    cargar_solicitud_activa,
+    horas_desde_solicitud,
+    limpiar_solicitud_activa,
+)
+from core.persistencia_egresos import (
+    cargar_db_egresos,
+    guardar_db_egresos,
+    actualizar_historial_egresos,
+)
+from core.rutas_egresos import (
+    ruta_egreso,
+    ruta_deposito_egreso,
+)
+from sat.guardar_egresos import (
+    guardar_facturas,
+)
+
 
 class AppEgresos(ttk.Toplevel):
-    """Módulo de Egresos."""
+    """Modulo de Egresos."""
 
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Sistema de Egresos - Contabilidad")
 
-        # Configurar tamaño y centrar
+        # Configurar tamano y centrar
         configurar_ventana(
             master, self,
-            ancho=1250, alto=880,
-            min_ancho=1000, min_alto=700,
-            centrar_en_padre=True
+            ancho=1300, alto=880,
+            min_ancho=1050, min_alto=700,
+            centrar_en_padre=True,
         )
 
-        self._construir_ui()
+        # Estado interno
+        try:
+            self._anio_cargado = int(datetime.now().year)
+        except Exception:
+            self._anio_cargado = datetime.now().year
 
+        self.registros = cargar_db_egresos(self._anio_cargado)
+        self.var_anio = ttk.StringVar(value=str(self._anio_cargado))
+        self.var_mes = ttk.StringVar(value=MESES_ES[datetime.now().month - 1])
+        self.var_sucursal = ttk.StringVar(value="Baalak")
+
+        self._construir_ui()
+        self._refrescar_tabla()
+        self._actualizar_boton_sat()
+
+    # ============================================================
+    # UI
+    # ============================================================
     def _construir_ui(self):
-        """Construye la UI básica."""
-        # Barra superior
-        top = ttk.LabelFrame(self, text="Configuración", padding=10)
+        # ---- Barra superior de filtros ----
+        top = ttk.LabelFrame(self, text="Configuracion", padding=10)
         top.pack(fill="x", padx=10, pady=5)
 
-        # Centro / Sucursal
         ttk.Label(top, text="Sucursal:").grid(row=0, column=0, padx=5, sticky="e")
-        self.var_sucursal = ttk.StringVar(value="Baalak")
         ttk.Combobox(
             top, textvariable=self.var_sucursal,
             values=["Baalak", "Animalia"],
-            width=12, state="readonly", bootstyle="primary"
+            width=12, state="readonly", bootstyle="primary",
         ).grid(row=0, column=1, padx=5)
 
-        # Año
-        ttk.Label(top, text="Año:").grid(row=0, column=2, padx=5, sticky="e")
-        from datetime import datetime
-        self.var_anio = ttk.StringVar(value=str(datetime.now().year))
+        ttk.Label(top, text="Anio:").grid(row=0, column=2, padx=5, sticky="e")
         ttk.Entry(top, textvariable=self.var_anio, width=6,
                   style="Custom.TEntry").grid(row=0, column=3, padx=5)
 
-        # Mes
-        from config.campos import MESES_ES
         ttk.Label(top, text="Mes:").grid(row=0, column=4, padx=5, sticky="e")
-        self.var_mes = ttk.StringVar(value=MESES_ES[datetime.now().month - 1])
-        ttk.Combobox(top, textvariable=self.var_mes, values=MESES_ES,
-                     width=11, state="readonly", bootstyle="primary").grid(
-            row=0, column=5, padx=5)
+        ttk.Combobox(
+            top, textvariable=self.var_mes,
+            values=MESES_ES, width=11, state="readonly",
+            bootstyle="primary",
+        ).grid(row=0, column=5, padx=5)
 
-        # Botones
-        ttk.Button(top, text="⚙️ Configuración SAT",
-                   command=self._abrir_configuracion,
-                   bootstyle="info-outline").grid(row=0, column=7, padx=10)
+        ttk.Button(
+            top, text="Abrir carpeta",
+            command=self._abrir_carpeta_egreso,
+            bootstyle="info-outline",
+        ).grid(row=0, column=6, padx=10)
 
-        ttk.Button(top, text="📥 Descargar del SAT",
-                   command=self._descargar_sat,
-                   bootstyle="info-outline").grid(row=0, column=8, padx=10)
+        # Filtro PUE / PPD / Todas
+        ttk.Label(top, text="Ver:").grid(row=0, column=7, padx=(15, 5), sticky="e")
+        self.var_filtro_metodo = tk.StringVar(value="TODAS")
+        for i, (txt, val) in enumerate([
+            ("Todas", "TODAS"),
+            ("PUE", "PUE"),
+            ("PPD", "PPD"),
+        ]):
+            ttk.Radiobutton(
+                top, text=txt, value=val,
+                variable=self.var_filtro_metodo,
+                command=self._refrescar_tabla,
+                bootstyle="info-toolbutton",
+            ).grid(row=0, column=8 + i, padx=2)
 
-        # Contenido principal
-        frame = ttk.Frame(self, padding=20)
-        frame.pack(fill="both", expand=True)
+        # ---- Barra de botones de acciones ----
+        botones = ttk.Frame(self, padding=(10, 5))
+        botones.pack(fill="x", padx=10)
 
-        ttk.Label(
-            frame,
-            text="💸 Módulo de Egresos",
-            font=("Segoe UI", 24, "bold"),
-            bootstyle="info"
-        ).pack(pady=(40, 20))
+        ttk.Button(
+            botones, text="⚙️ Configuracion SAT",
+            command=self._abrir_configuracion,
+            bootstyle="secondary-outline",
+        ).pack(side="left", padx=3)
 
-        ttk.Label(
-            frame,
-            text="Próximamente disponible",
-            font=("Segoe UI", 14),
-            foreground="gray"
-        ).pack(pady=(0, 40))
+        # Frame dinamico: descargar / verificar
+        self._btn_sat_frame = ttk.Frame(botones)
+        self._btn_sat_frame.pack(side="left", padx=3)
 
-        ttk.Label(
-            frame,
-            text=(
-                "Este módulo permitirá:\n\n"
-                "• Descargar facturas de compra del SAT.\n"
-                "• Procesar los XML automáticamente.\n"
-                "• Separar facturas por sucursal (Animalia / Baalak).\n"
-                "• Generar el reporte de egresos en Excel (PUE y PPD)."
-            ),
-            font=("Segoe UI", 11),
-            justify="left"
-        ).pack(pady=20)
+        self._btn_descargar = ttk.Button(
+            self._btn_sat_frame,
+            text="📥 Descargar del SAT",
+            command=self._descargar_sat,
+            bootstyle="info-outline",
+        )
 
+        self._btn_verificar = ttk.Button(
+            self._btn_sat_frame,
+            text="🔄 Verificar solicitud",
+            command=self._verificar_solicitud,
+            bootstyle="warning-outline",
+        )
+
+        ttk.Button(
+            botones, text="🏢 Clasificar sucursal",
+            command=self._clasificar_sucursal,
+            bootstyle="warning-outline",
+        ).pack(side="left", padx=3)
+
+        ttk.Button(
+            botones, text="📊 Generar Excel",
+            command=self._generar_excel,
+            bootstyle="success-outline",
+        ).pack(side="left", padx=3)
+
+        ttk.Button(
+            botones, text="📈 Reportes",
+            command=self._ver_reportes,
+            bootstyle="info-outline",
+        ).pack(side="left", padx=3)
+
+        # ---- Tabla (con scroll horizontal y vertical) ----
+        frame_tabla = ttk.LabelFrame(self, text="Registros de Egresos", padding=5)
+        frame_tabla.pack(fill="both", expand=True, padx=10, pady=5)
+
+        contenedor = ttk.Frame(frame_tabla)
+        contenedor.pack(fill="both", expand=True)
+
+        cols = (
+            "linea", "fecha", "folio", "uuid", "rfc_emisor",
+            "nombre_emisor", "subtotal", "iva", "ieps", "total",
+            "forma_pago_texto", "metodo_pago", "observacion",
+            "sucursal", "carpeta",
+        )
+        encabezados = {
+            "linea": "#",
+            "fecha": "FECHA",
+            "folio": "FACTURA",
+            "uuid": "UUID",
+            "rfc_emisor": "RFC EMISOR",
+            "nombre_emisor": "NOMBRE EMISOR",
+            "subtotal": "SUBTOTAL",
+            "iva": "IVA",
+            "ieps": "IEPS",
+            "total": "TOTAL",
+            "forma_pago_texto": "FORMA PAGO",
+            "metodo_pago": "METODO",
+            "observacion": "OBSERVACION",
+            "sucursal": "SUCURSAL",
+            "carpeta": "CARPETA",
+        }
+        anchos = {
+            "linea": 40,
+            "fecha": 90,
+            "folio": 130,
+            "uuid": 260,
+            "rfc_emisor": 120,
+            "nombre_emisor": 220,
+            "subtotal": 90,
+            "iva": 80,
+            "ieps": 70,
+            "total": 100,
+            "forma_pago_texto": 100,
+            "metodo_pago": 70,
+            "observacion": 160,
+            "sucursal": 90,
+            "carpeta": 90,
+        }
+
+        self.tabla = ttk.Treeview(
+            contenedor, columns=cols, show="headings", height=18,
+            bootstyle="primary",
+        )
+        for c in cols:
+            self.tabla.heading(c, text=encabezados[c])
+            self.tabla.column(c, width=anchos[c], anchor="center")
+
+        # Scroll vertical
+        sb_v = ttk.Scrollbar(contenedor, orient="vertical",
+                             command=self.tabla.yview)
+        # Scroll horizontal
+        sb_h = ttk.Scrollbar(contenedor, orient="horizontal",
+                             command=self.tabla.xview)
+        self.tabla.configure(yscrollcommand=sb_v.set, xscrollcommand=sb_h.set)
+
+        self.tabla.grid(row=0, column=0, sticky="nsew")
+        sb_v.grid(row=0, column=1, sticky="ns")
+        sb_h.grid(row=1, column=0, sticky="ew")
+        contenedor.rowconfigure(0, weight=1)
+        contenedor.columnconfigure(0, weight=1)
+
+        # ---- Footer de totales ----
+        self.lbl_totales = ttk.Label(
+            self, text="", font=("Segoe UI", 10, "bold"),
+        )
+        self.lbl_totales.pack(fill="x", padx=15, pady=(0, 8))
+
+        # ---- Menu contextual ----
+        self._crear_menu_contextual()
+
+        # ---- Bindings ----
+        self.tabla.bind("<Double-Button-1>", self._editar_seleccionado)
+        self.var_anio.trace_add("write", self._al_cambiar_anio)
+        self.var_mes.trace_add("write", lambda *a: self._refrescar_tabla())
+        self.var_sucursal.trace_add("write", lambda *a: self._refrescar_tabla())
+
+    def _crear_menu_contextual(self):
+        self.menu_ctx = tk.Menu(self, tearoff=0)
+        self.menu_ctx.add_command(label="✏️  Editar", command=self._editar_seleccionado)
+        self.menu_ctx.add_command(label="🗑️  Eliminar", command=self._eliminar_seleccionado)
+        self.menu_ctx.add_separator()
+        self.menu_ctx.add_command(label="📂  Abrir carpeta del XML", command=self._abrir_carpeta_xml)
+        self.menu_ctx.add_command(label="📂  Abrir carpeta del mes", command=self._abrir_carpeta_egreso)
+
+        self.tabla.bind("<Button-3>", self._mostrar_menu_ctx)
+        self.tabla.bind("<Button-2>", self._mostrar_menu_ctx)
+        self.tabla.bind("<Control-Button-1>", self._mostrar_menu_ctx)
+
+    def _mostrar_menu_ctx(self, event):
+        item = self.tabla.identify_row(event.y)
+        if not item:
+            return
+        self.tabla.selection_set(item)
+        try:
+            self.menu_ctx.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.menu_ctx.grab_release()
+
+    # ============================================================
+    # TABLA
+    # ============================================================
+    def _al_cambiar_anio(self, *args):
+        try:
+            anio = int(self.var_anio.get())
+        except Exception:
+            return
+        if self._anio_cargado != anio:
+            self.registros = cargar_db_egresos(anio)
+            self._anio_cargado = anio
+        self._refrescar_tabla()
+
+    def _refrescar_tabla(self):
+        # Limpiar
+        for i in self.tabla.get_children():
+            self.tabla.delete(i)
+
+        try:
+            anio = int(self.var_anio.get())
+        except Exception:
+            anio = self._anio_cargado
+
+        mes = self.var_mes.get()
+        sucursal = self.var_sucursal.get()
+
+        # Filtro PUE/PPD
+        filtro_metodo = getattr(self, "var_filtro_metodo", None)
+        filtro_metodo = filtro_metodo.get() if filtro_metodo else "TODAS"
+
+        # Filtrar
+        filtrados = [
+            r for r in self.registros
+            if r.get("anio") == anio
+            and r.get("mes") == mes
+            and r.get("sucursal", "Baalak") == sucursal
+        ]
+
+        # Aplicar filtro PUE/PPD
+        if filtro_metodo == "PUE":
+            filtrados = [r for r in filtrados if r.get("metodo_pago") != "PPD"]
+        elif filtro_metodo == "PPD":
+            filtrados = [r for r in filtrados if r.get("metodo_pago") == "PPD"]
+
+        # Ordenar por fecha y linea
+        def _orden(r):
+            try:
+                partes = r.get("fecha", "").split("/")
+                if len(partes) == 3:
+                    fecha = (int(partes[2]), int(partes[1]), int(partes[0]))
+                else:
+                    fecha = (0, 0, 0)
+            except Exception:
+                fecha = (0, 0, 0)
+            return (fecha, r.get("linea", 9999) or 9999)
+
+        filtrados.sort(key=_orden)
+
+        for r in filtrados:
+            self.tabla.insert(
+                "", "end", iid=str(r.get("id")),
+                values=(
+                    r.get("linea", ""),
+                    r.get("fecha", ""),
+                    r.get("folio", ""),
+                    r.get("uuid", ""),
+                    r.get("rfc_emisor", ""),
+                    r.get("nombre_emisor", ""),
+                    f"${r.get('subtotal', 0):,.2f}",
+                    f"${r.get('iva', 0):,.2f}",
+                    f"${r.get('ieps', 0):,.2f}",
+                    f"${r.get('total', 0):,.2f}",
+                    r.get("forma_pago_texto", ""),
+                    r.get("metodo_pago", ""),
+                    r.get("observacion", ""),
+                    r.get("sucursal", ""),
+                    r.get("carpeta", ""),
+                ),
+            )
+
+        # Totales
+        total = sum(r.get("total", 0) for r in filtrados)
+        pue_count = sum(1 for r in filtrados if r.get("metodo_pago") != "PPD")
+        ppd_count = sum(1 for r in filtrados if r.get("metodo_pago") == "PPD")
+
+        if filtro_metodo == "PUE":
+            texto = f"PUE: {len(filtrados)}  |  Total PUE: ${total:,.2f}"
+        elif filtro_metodo == "PPD":
+            texto = f"PPD: {len(filtrados)}  |  Total PPD: ${total:,.2f}"
+        else:
+            total_pue = sum(
+                r.get("total", 0) for r in filtrados
+                if r.get("metodo_pago") != "PPD"
+            )
+            total_ppd = sum(
+                r.get("total", 0) for r in filtrados
+                if r.get("metodo_pago") == "PPD"
+            )
+            texto = (
+                f"Total registros: {len(filtrados)}  |  "
+                f"PUE: {pue_count} (${total_pue:,.2f})  |  "
+                f"PPD: {ppd_count} (${total_ppd:,.2f})  |  "
+                f"Total: ${total:,.2f}"
+            )
+
+        self.lbl_totales.configure(text=texto)
+
+    # ============================================================
+    # SELECCION
+    # ============================================================
+    def _obtener_seleccionado(self):
+        sel = self.tabla.selection()
+        if not sel:
+            return None
+        id_sel = int(sel[0])
+        for r in self.registros:
+            if r.get("id") == id_sel:
+                return r
+        return None
+
+    # ============================================================
+    # EDICION
+    # ============================================================
+    def _editar_seleccionado(self, event=None):
+        reg = self._obtener_seleccionado()
+        if not reg:
+            messagebox.showinfo("Editar", "Selecciona un registro.")
+            return
+        from dialogos.egresos_editar import abrir_dialogo_editar_egreso
+        if abrir_dialogo_editar_egreso(self, reg):
+            self._guardar_cambios()
+            self._refrescar_tabla()
+
+    def _eliminar_seleccionado(self):
+        reg = self._obtener_seleccionado()
+        if not reg:
+            messagebox.showinfo("Eliminar", "Selecciona un registro.")
+            return
+        folio = reg.get("folio", "?")
+        if not messagebox.askyesno(
+            "Eliminar",
+            f"¿Eliminar el registro de la factura {folio}?\n\n"
+            f"Tambien se eliminara su XML (si existe)."
+        ):
+            return
+
+        # Borrar XML
+        ruta_xml = reg.get("ruta_xml") or reg.get("ruta_xml_destino")
+        if ruta_xml:
+            try:
+                p = Path(ruta_xml)
+                if p.exists():
+                    p.unlink()
+            except Exception as e:
+                print(f"Error al eliminar XML: {e}")
+
+        # Quitar del JSON
+        self.registros = [r for r in self.registros if r.get("id") != reg.get("id")]
+        self._guardar_cambios()
+        self._refrescar_tabla()
+
+    def _guardar_cambios(self):
+        """Guarda los registros actuales y actualiza el historial."""
+        try:
+            anio = int(self.var_anio.get())
+        except Exception:
+            anio = self._anio_cargado
+        guardar_db_egresos(self.registros, anio)
+        actualizar_historial_egresos(self.registros)
+
+    # ============================================================
+    # BOTONES DE ACCION
+    # ============================================================
     def _abrir_configuracion(self):
-        """Abre el diálogo de configuración de Egresos."""
         from dialogos.egresos_config import abrir_dialogo_config_egresos
         abrir_dialogo_config_egresos(self)
 
     def _descargar_sat(self):
-        """Inicia el flujo de descarga del SAT (próximamente)."""
-        messagebox.showinfo(
-            "Próximamente",
-            "La descarga del SAT estará disponible en una futura versión."
+        from dialogos.descargar_sat import abrir_dialogo_descargar_sat
+        abrir_dialogo_descargar_sat(self)
+        self.after(2000, self._actualizar_boton_sat)
+
+    def _verificar_solicitud(self):
+        from dialogos.descargar_sat import verificar_solicitud_pendiente
+        verificar_solicitud_pendiente(self)
+        self.after(2000, self._actualizar_boton_sat)
+
+    def _actualizar_boton_sat(self):
+        datos = cargar_solicitud_activa()
+        if datos:
+            horas = horas_desde_solicitud(datos)
+            if horas is not None and horas > 24:
+                limpiar_solicitud_activa()
+                datos = None
+
+        for w in self._btn_sat_frame.winfo_children():
+            w.pack_forget()
+
+        if datos:
+            self._btn_verificar.pack()
+        else:
+            self._btn_descargar.pack()
+
+    def _clasificar_sucursal(self):
+        try:
+            anio = int(self.var_anio.get())
+        except Exception:
+            messagebox.showwarning("Anio invalido", "El anio no es valido.")
+            return
+        from dialogos.clasificar_sucursal import abrir_dialogo_clasificar_sucursal
+        abrir_dialogo_clasificar_sucursal(self, anio=anio)
+        self._refrescar_tabla()
+
+    def _ver_reportes(self):
+        from dialogos.reportes_egresos import abrir_dialogo_reportes_egresos
+        abrir_dialogo_reportes_egresos(self)
+
+    def _abrir_carpeta_xml(self):
+        reg = self._obtener_seleccionado()
+        if not reg:
+            return
+        ruta_xml = reg.get("ruta_xml") or reg.get("ruta_xml_destino")
+        if not ruta_xml:
+            messagebox.showinfo("Sin XML", "Este registro no tiene XML asociado.")
+            return
+        p = Path(ruta_xml)
+        if not p.exists():
+            messagebox.showwarning("No existe", f"El archivo no existe:\n{p}")
+            return
+        self._abrir_carpeta(p.parent)
+
+    def _abrir_carpeta_egreso(self):
+        try:
+            anio = int(self.var_anio.get())
+        except Exception:
+            return
+        mes_idx = MESES_ES.index(self.var_mes.get()) + 1
+        ruta = ruta_egreso(anio, mes_idx)
+        ruta.mkdir(parents=True, exist_ok=True)
+        self._abrir_carpeta(ruta)
+
+    @staticmethod
+    def _abrir_carpeta(ruta):
+        import os
+        if sys.platform.startswith("win"):
+            os.startfile(str(ruta))
+        elif sys.platform == "darwin":
+            os.system(f'open "{ruta}"')
+        else:
+            os.system(f'xdg-open "{ruta}"')
+
+    # ============================================================
+    # EXCEL
+    # ============================================================
+    def _generar_excel(self):
+        """Genera los Excel PUE y PPD del mes/anio/sucursal activos."""
+        try:
+            anio = int(self.var_anio.get())
+        except Exception:
+            messagebox.showwarning("Anio invalido", "El anio no es valido.")
+            return
+
+        mes_nombre = self.var_mes.get()
+        if mes_nombre not in MESES_ES:
+            messagebox.showwarning("Mes invalido", "Selecciona un mes valido.")
+            return
+        mes_idx = MESES_ES.index(mes_nombre) + 1
+
+        # Filtrar registros de la sucursal activa (Baalak excluye Animalia)
+        sucursal_activa = self.var_sucursal.get()
+        filtrados = [
+            r for r in self.registros
+            if r.get("anio") == anio
+            and r.get("mes") == mes_nombre
+            and r.get("sucursal", "Baalak") == sucursal_activa
+        ]
+
+        if not filtrados:
+            messagebox.showwarning(
+                "Sin datos",
+                f"No hay registros para {sucursal_activa} - {mes_nombre} {anio}."
+            )
+            return
+
+        pue = [r for r in filtrados if r.get("metodo_pago") != "PPD"]
+        ppd = [r for r in filtrados if r.get("metodo_pago") == "PPD"]
+
+        carpeta = ruta_deposito_egreso(anio, mes_idx)
+        carpeta.mkdir(parents=True, exist_ok=True)
+
+        from excel.egresos import generar_excel_pue, generar_excel_ppd
+
+        msgs = []
+
+        # PUE
+        if pue:
+            ruta_pue = carpeta / f"RELACION FACTURAS PUE - {mes_nombre} {anio}.xlsx"
+            self._generar_con_backup(
+                ruta_pue,
+                lambda ruta: generar_excel_pue(pue, ruta, mes_nombre, anio),
+                msgs, f"PUE ({len(pue)} facturas)",
+            )
+
+        # PPD
+        if ppd:
+            ruta_ppd = carpeta / f"RELACION FACTURAS PPD - {mes_nombre} {anio}.xlsx"
+            self._generar_con_backup(
+                ruta_ppd,
+                lambda ruta: generar_excel_ppd(ppd, ruta, mes_nombre, anio),
+                msgs, f"PPD ({len(ppd)} facturas)",
+            )
+
+        msgs.append(f"\nCarpeta:\n{carpeta}")
+        messagebox.showinfo("Excel generado", "\n".join(msgs))
+        self._abrir_carpeta(carpeta)
+
+    def _generar_con_backup(self, ruta_xlsx, generador, msgs, etiqueta):
+        """
+        Genera un Excel. Si ya existe, pregunta: reemplazar o anexar.
+        Hace backup antes de reemplazar.
+        """
+        if not ruta_xlsx.exists():
+            try:
+                generador(ruta_xlsx)
+                msgs.append(f"✅ {etiqueta}: creado")
+            except Exception as e:
+                msgs.append(f"❌ {etiqueta}: {e}")
+            return
+
+        # El archivo ya existe
+        respuesta = messagebox.askyesnocancel(
+            "Archivo existente",
+            f"El archivo ya existe:\n{ruta_xlsx.name}\n\n"
+            f"• Sí  → Reordenar TODO (backup + regenerar)\n"
+            f"• No  → Solo verificar que esté al día (no hace nada)\n"
+            f"• Cancelar → Omitir",
         )
+
+        if respuesta is None:
+            msgs.append(f"⏭️ {etiqueta}: omitido")
+            return
+
+        if respuesta is False:
+            msgs.append(f"ℹ️ {etiqueta}: ya existe, no se modifico")
+            return
+
+        # Hacer backup
+        try:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            nombre_backup = (
+                f"{ruta_xlsx.stem}_backup_{timestamp}{ruta_xlsx.suffix}"
+            )
+            ruta_backup = ruta_xlsx.parent / nombre_backup
+            shutil.copy2(ruta_xlsx, ruta_backup)
+        except Exception as e:
+            msgs.append(f"⚠️ {etiqueta}: no se pudo crear backup ({e})")
+            return
+
+        # Borrar el original
+        try:
+            ruta_xlsx.unlink()
+        except Exception as e:
+            msgs.append(f"❌ {etiqueta}: no se pudo borrar el original ({e})")
+            return
+
+        # Regenerar
+        try:
+            generador(ruta_xlsx)
+            msgs.append(
+                f"✅ {etiqueta}: reordenado\n"
+                f"    Backup: {ruta_backup.name}"
+            )
+        except Exception as e:
+            msgs.append(f"❌ {etiqueta}: {e}")
 
 
 if __name__ == "__main__":

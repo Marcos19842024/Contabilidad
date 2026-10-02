@@ -137,3 +137,62 @@ def guardar_observaciones(obs):
     """Guarda el mapeo de observaciones."""
     with open(OBSERVACIONES_FILE, "w", encoding="utf-8") as f:
         json.dump(obs, f, ensure_ascii=False, indent=2)
+
+
+
+# ============================================================
+# SOLICITUDES SAT PENDIENTES
+# ============================================================
+SOLICITUD_ACTIVA_FILE = _CARPETA_DATOS / "solicitud_sat_activa.json"
+
+
+def cargar_solicitud_activa():
+    """
+    Carga la solicitud activa (si hay una en curso).
+
+    Devuelve un dict:
+      {
+        "id_solicitud": "...",
+        "rfc": "...",
+        "anio": 2026,
+        "mes_idx": 9,
+        "mes_nombre": "septiembre",
+        "fecha_solicitud": "2026-10-02T14:30:00",
+      }
+    O None si no hay.
+    """
+    if not SOLICITUD_ACTIVA_FILE.exists():
+        return None
+    try:
+        with open(SOLICITUD_ACTIVA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def guardar_solicitud_activa(datos):
+    """Guarda la solicitud activa."""
+    with open(SOLICITUD_ACTIVA_FILE, "w", encoding="utf-8") as f:
+        json.dump(datos, f, ensure_ascii=False, indent=2)
+
+
+def limpiar_solicitud_activa():
+    """Elimina el archivo de solicitud activa."""
+    try:
+        if SOLICITUD_ACTIVA_FILE.exists():
+            SOLICITUD_ACTIVA_FILE.unlink()
+    except Exception:
+        pass
+
+
+def horas_desde_solicitud(datos):
+    """Devuelve cuántas horas han pasado desde que se creó la solicitud."""
+    from datetime import datetime
+    if not datos:
+        return None
+    try:
+        fecha = datetime.fromisoformat(datos.get("fecha_solicitud", ""))
+        delta = datetime.now() - fecha
+        return delta.total_seconds() / 3600
+    except Exception:
+        return None

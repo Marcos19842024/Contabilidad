@@ -89,31 +89,61 @@ def solicitar_descarga(ruta_cer, ruta_key, password, rfc,
 # ============================================================
 def verificar_solicitud(ruta_cer, ruta_key, password, rfc, id_solicitud):
     """
-    Verifica el estado de una solicitud.
-
-    Devuelve un dict en el formato que espera dialogos/espera_sat.py:
-      {
-        "estado": "1"|"2"|"3"|"4"|"5"|"6",
-        "mensaje": "...",
-        "numero_cfdis": "0",
-        "paquetes": [...],
-      }
+    Verifica el estado de una solicitud (con reintentos por timeout).
     """
-    fiel = _cargar_fiel(ruta_cer, ruta_key, password)
-    token = Autenticacion(fiel).obtener_token()
+    import time as _time
 
-    verificacion = VerificaSolicitudDescarga(fiel)
-    resultado = verificacion.verificar_descarga(
-        token=token,
-        rfc_solicitante=rfc,
-        id_solicitud=id_solicitud,
-    )
+    fiel = _cargar_fiel(ruta_cer, ruta_key, password)
+
+    ultimo_error = None
+    for intento in range(3):
+        try:
+            token = Autenticacion(fiel).obtener_token()
+            verificacion = VerificaSolicitudDescarga(fiel)
+            resultado = verificacion.verificar_descarga(
+                token=token,
+                rfc_solicitante=rfc,
+                id_solicitud=id_solicitud,
+            )
+
+            estado = str(resultado.get("estado_solicitud", "?"))
+            mensaje_sat = resultado.get("mensaje", "")
+            codigo = str(resultado.get("codigo_estado_solicitud", ""))
+
+            # Interpretar mensajes confusos
+            mensaje_mostrar = mensaje_sat
+            if estado == "5":
+                # Rechazada - el SAT a veces no da motivo claro
+                if "aceptada" in mensaje_sat.lower():
+                    mensaje_mostrar = (
+                        "Solicitud rechazada. Posible causa: ya existe "
+                        "una solicitud en proceso para el mismo periodo. "
+                        "Espera unos minutos o usa un rango de fechas distinto."
+                    )
+                else:
+                    mensaje_mostrar = f"Solicitud rechazada: {mensaje_sat}"
+
+            return {
+                "estado": estado,
+                "mensaje": mensaje_mostrar,
+                "numero_cfdis": str(resultado.get("numero_cfdis", "0")),
+                "paquetes": resultado.get("paquetes", []) or [],
+                "codigo": codigo,
+            }
+        except Exception as e:
+            ultimo_error = e
+            msg = str(e).lower()
+            if "timed out" in msg or "timeout" in msg:
+                _time.sleep(5)
+                continue
+            raise
 
     return {
-        "estado": str(resultado.get("estado_solicitud", "?")),
-        "mensaje": resultado.get("mensaje", ""),
-        "numero_cfdis": str(resultado.get("numero_cfdis", "0")),
-        "paquetes": resultado.get("paquetes", []) or [],
+        "estado": "2",
+        "mensaje": "El SAT no responde, reintentando...",
+        "numero_cfdis": "0",
+        "paquetes": [],
+        "codigo": "",
     }
 
 

@@ -172,14 +172,27 @@ def _lanzar_descarga(app, anio, mes_idx, mes_nombre):
             parent=app)
         return
 
-    # Rango de fechas: del 1 al último día del mes
-    fecha_inicio = datetime(anio, mes_idx, 1)
-    if mes_idx == 12:
-        fecha_fin = datetime(anio + 1, 1, 1)
-    else:
-        fecha_fin = datetime(anio, mes_idx + 1, 1)
-    # Ajustar al último segundo del mes
-    fecha_fin = fecha_fin.replace(hour=0, minute=0, second=0)
+    # Rango de fechas: del primer dia del mes al ultimo dia (23:59:59)
+    # IMPORTANTE: el SAT NO acepta fechas futuras.
+    from calendar import monthrange
+
+    fecha_inicio = datetime(anio, mes_idx, 1, 0, 0, 0)
+
+    ultimo_dia = monthrange(anio, mes_idx)[1]
+    fecha_fin = datetime(anio, mes_idx, ultimo_dia, 23, 59, 59)
+
+    # Si el mes es el actual, recortar a HOY (23:59:59)
+    hoy = datetime.now()
+    if anio == hoy.year and mes_idx == hoy.month:
+        fecha_fin = hoy.replace(hour=23, minute=59, second=59)
+
+    # Si el rango queda en el futuro, avisar
+    if fecha_inicio > hoy:
+        messagebox.showwarning(
+            "Fechas invalidas",
+            f"No se puede descargar {mes_nombre} {anio} porque aun no ha pasado.",
+            parent=app)
+        return
 
     from sat.descarga import solicitar_descarga
 
@@ -196,13 +209,45 @@ def _lanzar_descarga(app, anio, mes_idx, mes_nombre):
             parent=app)
         return
 
-    id_solicitud = resultado.get("id_solicitud", "")
+    id_solicitud = resultado.get("id_solicitud")
     if not id_solicitud:
+        # El SAT rechazó la solicitud. Mostrar motivo real.
+        cod = resultado.get("cod_estatus", "?")
+        msg = resultado.get("mensaje", "Sin mensaje")
+
+        # Traducir los códigos más comunes
+        traduccion = {
+            "301": "XML mal formado (revisa fechas o RFC)",
+            "302": "RFC no válido o sin permisos",
+            "303": "Certificado no válido",
+            "304": "Ya existe una solicitud en proceso para este periodo",
+            "305": "Rango de fechas inválido",
+            "306": "Sin información para ese periodo",
+            "404": "No se encontró la solicitud",
+            "5000": "OK",
+        }
+        explicacion = traduccion.get(str(cod), "Error desconocido")
+
         messagebox.showerror(
-            "Error",
-            f"El SAT no devolvió id_solicitud:\n\n{resultado}",
+            "Solicitud rechazada por el SAT",
+            f"El SAT rechazó la solicitud.\n\n"
+            f"Código: {cod}\n"
+            f"Motivo: {explicacion}\n\n"
+            f"Mensaje del SAT:\n{msg}",
             parent=app)
         return
+
+    # Guardar la solicitud activa para poder retomarla
+    from config.config_egresos import guardar_solicitud_activa
+    from datetime import datetime as _dt
+    guardar_solicitud_activa({
+        "id_solicitud": id_solicitud,
+        "rfc": rfc,
+        "anio": anio,
+        "mes_idx": mes_idx,
+        "mes_nombre": mes_nombre,
+        "fecha_solicitud": _dt.now().isoformat(timespec="seconds"),
+    })
 
     # 2) Abrir ventana de espera con el verificador
     from dialogos.espera_sat import abrir_ventana_espera_sat
@@ -236,6 +281,10 @@ def _descargar_y_procesar(app, cer, key, pwd, rfc, paquetes, anio, mes_idx):
             from sat.procesar_completo import procesar_todo
             resumen = procesar_todo(anio, mes_idx, carpeta_xml=carpeta_destino)
 
+            # Limpiar la solicitud activa (ya terminó todo)
+            from config.config_egresos import limpiar_solicitud_activa
+            limpiar_solicitud_activa()
+
             # Mostrar resumen
             def _mostrar():
                 messagebox.showinfo(
@@ -260,3 +309,70 @@ def _descargar_y_procesar(app, cer, key, pwd, rfc, paquetes, anio, mes_idx):
             app.after(0, _mostrar_error)
 
     threading.Thread(target=_worker, daemon=True).start()
+
+
+# ============================================================
+# VERIFICAR SOLICITUD PENDIENTE (retomar)
+# ============================================================
+def verificar_solicitud_pendiente(app):
+    """
+    Retoma una solicitud que quedó en curso.
+    - Lee el id_solicitud guardado
+    - Abre la ventana de espera
+    - Cuando termina, descarga y procesa, y limpia la solicitud
+    """
+    from config.config_egresos import (
+        cargar_solicitud_activa,
+        cargar_config_egresos,
+    )
+
+    datos = cargar_solicitud_activa()
+    if not datos:
+        messagebox.showinfo(
+            "Sin solicitudes",
+            "No hay ninguna solicitud pendiente.",
+            parent=app)
+        return
+
+    cfg = cargar_config_egresos()
+    rfc = cfg.get("rfc_receptor", "")
+    cer = cfg.get("certificado_cer", "")
+    key = cfg.get("certificado_key", "")
+    pwd = cfg.get("password_fiel", "")
+
+    if not all([rfc, cer, key, pwd]):
+        messagebox.showwarning(
+            "Configuración incompleta",
+            "Falta configurar la e.firma.\n\n"
+            "Ve a ⚙️ Configuración SAT primero.",
+            parent=app)
+        return
+
+    id_solicitud = datos.get("id_solicitud", "")
+    anio = datos.get("anio", 0)
+    mes_idx = datos.get("mes_idx", 1)
+
+    if not id_solicitud:
+        messagebox.showerror(
+            "Solicitud inválida",
+            "El archivo de solicitud no tiene id_solicitud.",
+            parent=app)
+        return
+
+    # Abrir ventana de espera
+    from dialogos.espera_sat import abrir_ventana_espera_sat
+    from sat.descarga import verificar_solicitud
+
+    def _verificador():
+        return verificar_solicitud(cer, key, pwd, rfc, id_solicitud)
+
+    def _on_completado(resultado_verif):
+        paquetes = resultado_verif.get("paquetes", [])
+        _descargar_y_procesar(
+            app, cer, key, pwd, rfc, paquetes, anio, mes_idx,
+        )
+        # Limpiar la solicitud activa
+        from config.config_egresos import limpiar_solicitud_activa
+        limpiar_solicitud_activa()
+
+    abrir_ventana_espera_sat(app, _verificador, on_completado=_on_completado)

@@ -84,3 +84,8 @@ observaciones_egresos.json
 test_*.py
 convertir_fiel.py
 ver_xml.py
+
+# Datos del usuario (Egresos)
+historial_egresos.json
+solicitud_sat_activa.json
+registros_egresos_*.json
