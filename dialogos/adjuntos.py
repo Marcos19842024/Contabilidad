@@ -30,10 +30,12 @@ def abrir_dialogo_adjuntos(app, reg):
             app._adjuntar_factura()
         return
 
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
     ventana.title(f"Adjuntos de {reg.get('no_factura', '')}")
-    app._configurar_ventana(ventana, ancho=340, alto=320,
-                            min_ancho=300, min_alto=280)
+    configurar_ventana(app, ventana, ancho=340, alto=320,
+                       min_ancho=300, min_alto=280)
 
     ttk.Label(ventana, text=f"Adjuntos de {reg.get('no_factura', '')}:",
               font=("Segoe UI", 11, "bold")).pack(pady=8)

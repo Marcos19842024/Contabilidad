@@ -4,6 +4,7 @@ modulos/egresos.py
 Módulo de Egresos.
 """
 
+from ui.utils import configurar_ventana
 import sys
 from pathlib import Path
 
@@ -23,32 +24,16 @@ class AppEgresos(ttk.Toplevel):
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Sistema de Egresos - Contabilidad")
-        self.geometry("1250x880")
-        self.minsize(1000, 700)
+
+        # Configurar tamaño y centrar
+        configurar_ventana(
+            master, self,
+            ancho=1250, alto=880,
+            min_ancho=1000, min_alto=700,
+            centrar_en_padre=True
+        )
 
         self._construir_ui()
-
-    def _configurar_ventana(self, ventana, ancho=500, alto=400,
-                            min_ancho=400, min_alto=320,
-                            centrar_en_padre=True):
-        """Configura tamaño, minsize y centrado de un Toplevel."""
-        try:
-            self.grab_release()
-        except Exception:
-            pass
-
-        ventana.geometry(f"{ancho}x{alto}")
-        ventana.minsize(min_ancho, min_alto)
-        ventana.transient(self)
-        ventana.grab_set()
-        ventana.update_idletasks()
-
-        if centrar_en_padre:
-            x = self.winfo_rootx() + (self.winfo_width() - ancho) // 2
-            y = self.winfo_rooty() + (self.winfo_height() - alto) // 2
-            x = max(0, x)
-            y = max(0, y)
-            ventana.geometry(f"+{x}+{y}")
 
     def _construir_ui(self):
         """Construye la UI básica."""

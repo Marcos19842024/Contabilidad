@@ -32,10 +32,12 @@ def abrir_dialogo_temas(app):
     except Exception:
         temas = ["superhero", "darkly", "cyborg", "flatly", "litera", "minty"]
 
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
     ventana.title("🎨 Elegir tema")
-    app._configurar_ventana(ventana, ancho=360, alto=480,
-                            min_ancho=320, min_alto=420)
+    configurar_ventana(app, ventana, ancho=360, alto=480,
+                       min_ancho=320, min_alto=420)
 
     # Encabezado
     ttk.Label(ventana, text="Selecciona un tema:",

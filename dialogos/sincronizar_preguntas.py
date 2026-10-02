@@ -18,10 +18,12 @@ def preguntar_modo_descarga(app, dias_atras):
       - "editar"    → abrir configuración
       - "cancelar"  → cerrar sin hacer nada
     """
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
-    app._configurar_ventana(ventana, ancho=520, alto=340,
-        min_ancho=480, min_alto=320)
     ventana.title("Sincronizar facturas")
+    configurar_ventana(app, ventana, ancho=520, alto=340,
+                       min_ancho=480, min_alto=320)
 
     # Encabezado
     ttk.Label(ventana, text="⚡ Sincronizar facturas",
@@ -35,12 +37,10 @@ def preguntar_modo_descarga(app, dias_atras):
     def _elegir(modo):
         try:
             ventana.grab_release()
-            print("[DEBUG modo] grab_release ok")
-        except Exception as e:
-            print(f"[DEBUG modo] grab_release falló: {e}")
+        except Exception:
+            pass
         resultado["modo"] = modo
         ventana.destroy()
-        print("[DEBUG modo] ventana destruida")
 
     # Botón: Solo no leídos
     ttk.Button(
@@ -93,10 +93,12 @@ def preguntar_accion_facturas(app, num_archivos, num_facturas, carpeta):
       - "solo_guardar"   → solo guardar en disco
       - "cancelar"       → cerrar sin hacer nada
     """
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
     ventana.title("Facturas descargadas")
-    app._configurar_ventana(ventana, ancho=500, alto=380,
-                            min_ancho=460, min_alto=340)
+    configurar_ventana(app, ventana, ancho=500, alto=380,
+                       min_ancho=460, min_alto=340)
 
     # Contenedor con padding
     contenedor = ttk.Frame(ventana, padding=25)

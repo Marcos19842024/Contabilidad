@@ -6,6 +6,7 @@ Registros por año (un archivo JSON por año).
 """
 import sys
 from pathlib import Path
+from ui.utils import configurar_ventana
 
 # Agregar la raíz del proyecto al path
 _raiz = Path(__file__).parent.parent
@@ -116,11 +117,19 @@ def centro_desde_serie(serie):
 # INTERFAZ PRINCIPAL
 # ============================================================
 class AppIngresos(ttk.Toplevel):
+    """Módulo de Ingresos."""
+
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Sistema de Ingresos - Contabilidad")
-        self.geometry("1250x880")
-        self.minsize(1000, 700)
+
+        # Configurar tamaño y centrar
+        configurar_ventana(
+            master, self,
+            ancho=1250, alto=880,
+            min_ancho=1000, min_alto=700,
+            centrar_en_padre=True
+        )
 
         # Año del archivo de registros cargado actualmente
         try:
@@ -1435,10 +1444,12 @@ class AppIngresos(ttk.Toplevel):
         lineas.append("¿Qué quieres hacer?")
 
         # ---- Diálogo personalizado ----
+        from ui.utils import configurar_ventana
+
         ventana = ttk.Toplevel(self)
         ventana.title("Reclasificación sugerida")
-        self._configurar_ventana(ventana, ancho=700, alto=500,
-                                 min_ancho=600, min_alto=400)
+        configurar_ventana(self, ventana, ancho=700, alto=500,
+                           min_ancho=600, min_alto=400)
 
         # Encabezado
         ttk.Label(ventana,
@@ -1686,29 +1697,6 @@ class AppIngresos(ttk.Toplevel):
         """Abre el diálogo para elegir el tema visual."""
         from dialogos.temas import abrir_dialogo_temas
         abrir_dialogo_temas(self)
-
-    def _configurar_ventana(self, ventana, ancho=500, alto=400,
-        min_ancho=400, min_alto=320,
-        centrar_en_padre=True):
-        """..."""
-        # Liberar cualquier grab previo (por si otra ventana lo tenía)
-        try:
-            self.grab_release()
-        except Exception:
-            pass
-
-        ventana.geometry(f"{ancho}x{alto}")
-        ventana.minsize(min_ancho, min_alto)
-        ventana.transient(self)
-        ventana.grab_set()
-        ventana.update_idletasks()
-
-        if centrar_en_padre:
-            x = self.winfo_rootx() + (self.winfo_width() - ancho) // 2
-            y = self.winfo_rooty() + (self.winfo_height() - alto) // 2
-            x = max(0, x)
-            y = max(0, y)
-            ventana.geometry(f"+{x}+{y}")
 
     def _repintar_sidebar(self):
         """Aplica los colores del tema actual a todos los widgets del sidebar."""

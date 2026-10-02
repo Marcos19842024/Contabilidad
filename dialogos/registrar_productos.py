@@ -24,10 +24,12 @@ def abrir_dialogo_registrar_productos(app, avisos):
     if not avisos:
         return
 
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
     ventana.title("➕ Registrar productos en el catálogo")
-    app._configurar_ventana(ventana, ancho=750, alto=550,
-                            min_ancho=650, min_alto=450)
+    configurar_ventana(app, ventana, ancho=750, alto=550,
+                       min_ancho=650, min_alto=450)
 
     # ---- Encabezado ----
     ttk.Label(ventana,

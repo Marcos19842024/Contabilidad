@@ -67,3 +67,20 @@ convertir_fiel.py
 # Archivos temporales de pruebas SAT
 test_*.py
 convertir_fiel.py
+
+# Archivos de Egresos (sensibles)
+config_egresos.json
+registros_egresos_*.json
+proveedores_tc.json
+proveedores_sucursal.json
+observaciones_egresos.json
+
+# Certificados de la FIEL
+*.key
+*.cer
+*.pem
+
+# Scripts de prueba
+test_*.py
+convertir_fiel.py
+ver_xml.py

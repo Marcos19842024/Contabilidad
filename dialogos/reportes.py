@@ -58,10 +58,12 @@ def abrir_dialogo_reportes(app):
     # ============================================================
     # 2. Crear la ventana
     # ============================================================
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
     ventana.title("📊 Reportes disponibles")
-    app._configurar_ventana(ventana, ancho=680, alto=480,
-                            min_ancho=560, min_alto=380)
+    configurar_ventana(app, ventana, ancho=680, alto=480,
+                       min_ancho=560, min_alto=380)
 
     # Encabezado
     header = ttk.Frame(ventana)

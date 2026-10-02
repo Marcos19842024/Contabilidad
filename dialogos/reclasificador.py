@@ -33,10 +33,12 @@ def abrir_dialogo_reclasificador(app):
     categorias = ["U", "ACCESORIOS", "MEDICAMENTOS", "HIGIENE",
                   "ESTETICA", "TRANSPORTE", "PENSION", "VACUNA", "CLINICA"]
 
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
     ventana.title("🏷️ Reclasificador de productos")
-    app._configurar_ventana(ventana, ancho=1150, alto=720,
-                            min_ancho=900, min_alto=560)
+    configurar_ventana(app, ventana, ancho=1150, alto=720,
+                       min_ancho=900, min_alto=560)
 
     # --- Barra superior ---
     top = ttk.Frame(ventana)

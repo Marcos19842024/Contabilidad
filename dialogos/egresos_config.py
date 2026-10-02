@@ -28,10 +28,12 @@ def abrir_dialogo_config_egresos(app):
     """
     cfg = cargar_config_egresos()
 
+    from ui.utils import configurar_ventana
+
     ventana = ttk.Toplevel(app)
     ventana.title("⚙️ Configuración de Egresos")
-    app._configurar_ventana(ventana, ancho=650, alto=600,
-                            min_ancho=550, min_alto=500)
+    configurar_ventana(app, ventana, ancho=650, alto=600,
+                       min_ancho=550, min_alto=500)
 
     # ---- Encabezado ----
     ttk.Label(ventana,
