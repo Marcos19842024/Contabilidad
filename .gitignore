@@ -58,3 +58,8 @@ Thumbs.db
 .idea/
 *.swp
 *.bak
+# Archivos temporales de FIEL
+test_fiel*.py
+test_sat_auth.py
+convertir_fiel.py
+

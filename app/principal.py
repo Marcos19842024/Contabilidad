@@ -28,7 +28,7 @@ class AppPrincipal(ttk.Window):
 
     def __init__(self):
         super().__init__(themename=TEMA)
-        self.title("Sistema de Contabilidad QVET")
+        self.title("Sistema de Contabilidad")
         self.geometry("800x600")
         self.minsize(700, 500)
 
@@ -43,7 +43,7 @@ class AppPrincipal(ttk.Window):
         # ---- Encabezado ----
         ttk.Label(
             frame,
-            text="📊 Sistema de Contabilidad QVET",
+            text="📊 Sistema de Contabilidad",
             font=("Segoe UI", 24, "bold"),
             bootstyle="info"
         ).pack(pady=(20, 10))
