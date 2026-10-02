@@ -63,3 +63,7 @@ test_fiel*.py
 test_sat_auth.py
 convertir_fiel.py
 
+
+# Archivos temporales de pruebas SAT
+test_*.py
+convertir_fiel.py
