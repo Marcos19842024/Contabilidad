@@ -369,17 +369,24 @@ def leer_pdf_completo(ruta_pdf):
         if remision_actual and "no aplica" in linea.lower():
             # Formato real del PDF de QVET:
             # NOMBRE CANTIDAD no aplica P.V.P Dto. Impuesto Importe
-            # Ej: "HEMOFINN C/TABS 6,00 no aplica 55,00 0,00 16,00% 330,00"
-            # Ej: "BAYTRIL F.150 MG C/TAB 5,00 no aplica 57,00 0,00 0,00% 285,00"
+            #
+            # Con tasa:   "LATA PUPPY 1,00 no aplica 114,00 0,00 16,00% 0, 114,00"
+            # Sin tasa:   "LEIDOFS 400MG 10,00 no aplica 37,00 0,00 0, 370,00"
+            #
+            # La columna "Impuesto" puede ser:
+            #   - "16,00% 0,"  → tiene IVA 16%
+            #   - "6,00% 0,"   → tiene IEPS 6%
+            #   - "7,00% 0,"   → tiene IEPS 7%
+            #   - "0,"         → sin impuesto
             m_prod = re.match(
-                r"^(.+?)\s+"                             # 1. nombre
-                r"(\d+[,.]\d+)\s+"                       # 2. cantidad
-                r"no\s+aplica\s+"                        #    "no aplica"
-                r"([\d.,]+)\s+"                          # 3. PVP
-                r"([\d.,]+)\s+"                          # 4. Dto
-                r"([\d.,]+)\s*%?\s*"                     # 5. Tasa (con o sin %)
-                r"(?:([\d.,]+)\s+)?"                     # 6. campo extra opcional
-                r"([\d.,]+)",                            # 7. Importe
+                r"^(.+?)\s+"                        # 1. nombre
+                r"(\d+[,.]\d+)\s+"                  # 2. cantidad
+                r"no\s+aplica\s+"                   #    "no aplica"
+                r"([\d.,]+)\s+"                     # 3. PVP
+                r"([\d.,]+)\s+"                     # 4. Dto
+                r"(?:([\d.,]+)\s*%\s*)?"            # 5. Tasa OPCIONAL "16,00%"
+                r"0,\s*"                            #    "0," del impuesto
+                r"([\d.,]+)$",                      # 6. Importe (al final)
                 linea, re.IGNORECASE
             )
             if m_prod:
@@ -387,14 +394,14 @@ def leer_pdf_completo(ruta_pdf):
                 nombre = re.sub(r"[\s,;:.]+$", "", nombre)
                 cantidad_str = m_prod.group(2).replace(",", ".")
                 pvp_str = m_prod.group(3)
-                tasa_str = m_prod.group(5)          # ← puede ser "0," o "16,00"
-                importe_str = m_prod.group(7)       # ← ahora es el grupo 7
+                tasa_str = m_prod.group(5)      # ← None si no hay tasa
+                importe_str = m_prod.group(6)   # ← antes era group(7)
 
                 # Interpretar la tasa
-                # "0," → 0.0 ; "16,00" → 16.0
-                try:
+                # "16,00" → 0.16 ; None → 0.0
+                if tasa_str:
                     tasa_iva_pdf = _conv_numero_simple(tasa_str) / 100.0
-                except Exception:
+                else:
                     tasa_iva_pdf = 0.0
 
                 if nombre and len(nombre) > 1:
@@ -667,13 +674,19 @@ def procesar_factura(ruta_xml=None, ruta_pdf=None):
 
 def agrupar_por_categoria(datos, ajustar_centavos=True):
     """
-    Agrupa conceptos por categoría.
+    Agrupa productos por categoría.
+
+    Estrategia nueva:
+      1. Toma los productos del PDF (productos_por_remision).
+      2. Cada producto se clasifica individualmente.
+      3. Se agrupa por categoría.
+      4. Se deduplica: si hay mismo nombre + misma cantidad, se omite el 2do.
+
     Devuelve:
       - agrupado: totales por categoría
-      - detalle: lista de términos para construir la expresión
+      - detalle: expresiones para el desglose del Excel
       - avisos_reclasificacion: productos con IVA en categorías sin IVA
     """
-    # Extraer datos de la factura para los avisos
     info_factura = {
         "no_factura": datos.get("no_factura", ""),
         "nombre": datos.get("nombre", ""),
@@ -685,39 +698,117 @@ def agrupar_por_categoria(datos, ajustar_centavos=True):
     agrupado = {}
     detalle = {}
     avisos_reclasificacion = []
-    CATEGORIAS_SIN_IVA = ("VACUNA", "CLINICA")
 
-    # Categorías válidas en la app
+    CATEGORIAS_SIN_IVA = ("VACUNA", "CLINICA")
     CATEGORIAS_VALIDAS = {
         "U", "ACCESORIOS", "MEDICAMENTOS", "HIGIENE",
         "ESTETICA", "TRANSPORTE", "PENSION", "VACUNA", "CLINICA"
     }
 
-    # Categorías que manejan IVA
-    CATEGORIAS_CON_IVA = {
-        "U", "ACCESORIOS", "MEDICAMENTOS", "HIGIENE",
-        "ESTETICA", "TRANSPORTE", "PENSION"
-    }
+    # ============================================================
+    # Recolectar TODOS los productos (del PDF si hay, si no del XML)
+    # ============================================================
+    productos_todos = []
+
+    productos_por_remision = datos.get("productos_por_remision", {})
+
+    if productos_por_remision:
+        # ---- CASO 1: viene del PDF ----
+        for rem, prods in productos_por_remision.items():
+            for p in prods:
+                productos_todos.append({
+                    "nombre": p.get("nombre", ""),
+                    "cantidad": p.get("cantidad", 1.0),
+                    "importe_con_imp": p.get("importe_pdf", 0.0),
+                    "tasa_iva": p.get("tasa_iva_pdf", 0.0),
+                    "tasa_ieps": p.get("tasa_ieps_pdf", 0.0),
+                    "remision": rem,
+                })
+    else:
+        # ---- CASO 2: no hay PDF, usar conceptos del XML ----
+        # Los conceptos del XML ya traen importe base (sin impuesto)
+        for conc in datos.get("conceptos", []):
+            importe_base = conc.get("importe", 0.0)
+            tasa_iva = conc.get("tasa_iva", 0.0)
+            tasa_ieps = conc.get("tasa_ieps", 0.0)
+            # Para el cálculo unificado, convertir base a "con impuesto"
+            factor = 1 + max(tasa_iva, tasa_ieps)
+            productos_todos.append({
+                "nombre": conc.get("descripcion", ""),
+                "cantidad": conc.get("cantidad", 1.0),
+                "importe_con_imp": importe_base * factor,
+                "tasa_iva": tasa_iva,
+                "tasa_ieps": tasa_ieps,
+                "remision": conc.get("remision", ""),
+                "es_xml": True,
+            })
 
     # ============================================================
-    # Bucle principal: agrupar conceptos
+    # Deduplicar: mismo nombre + misma cantidad → omitir el 2do
     # ============================================================
-    for conc in datos.get("conceptos", []):
-        cat = conc.get("categoria") or "CLINICA"
+    def _clave_dedup(p):
+        n = normalizar(p["nombre"])
+        c = round(p["cantidad"], 2)
+        return (n, c)
 
-        # Si la categoría no es válida (por ejemplo, "ALIMENTOS"),
-        # forzarla a "U".
+    vistos = set()
+    productos_unicos = []
+    for p in productos_todos:
+        k = _clave_dedup(p)
+        if k in vistos:
+            print(f"ℹ️  Deduplicado: {p['nombre']} (cantidad {p['cantidad']})")
+            continue
+        vistos.add(k)
+        productos_unicos.append(p)
+
+    # ============================================================
+    # Procesar cada producto
+    # ============================================================
+    for p in productos_unicos:
+        nombre = p["nombre"]
+        cantidad = p["cantidad"]
+        importe_con_imp = p["importe_con_imp"]
+        tasa_iva = p["tasa_iva"]
+        tasa_ieps = p["tasa_ieps"]
+        remision = p.get("remision", "")
+
+        # Detectar tipo
+        if tasa_ieps > 0:
+            tipo = "ieps"
+        elif tasa_iva > 0:
+            tipo = "iva"
+        else:
+            tipo = "sin_iva"
+
+        # Calcular base e impuesto
+        if tipo == "ieps":
+            base = importe_con_imp / (1 + tasa_ieps)
+            ieps = base * tasa_ieps
+            iva = 0.0
+        elif tipo == "iva":
+            base = importe_con_imp / (1 + tasa_iva)
+            ieps = 0.0
+            iva = base * tasa_iva
+        else:
+            base = importe_con_imp
+            ieps = 0.0
+            iva = 0.0
+
+        base = round(base, 2)
+        iva = round(iva, 2)
+        ieps = round(ieps, 2)
+
+        # Clasificar categoría
+        cat = clasificar_por_descripcion(nombre)
         if cat not in CATEGORIAS_VALIDAS:
             cat = "U"
-            conc["categoria"] = "U"
 
-        # Si la categoría NO maneja IVA (VACUNA, CLINICA) pero el
-        # concepto SÍ tiene IVA, moverlo a U y marcar el original.
-        if cat in CATEGORIAS_SIN_IVA and conc.get("tiene_iva") and conc.get("tasa_iva", 0) > 0:
-            conc["categoria_original_para_aviso"] = cat
+        # Si la categoría no maneja IVA/IEPS, mover a U y avisar
+        cat_original = cat
+        if cat in CATEGORIAS_SIN_IVA and (tasa_iva > 0 or tasa_ieps > 0):
             cat = "U"
-            conc["categoria"] = "U"
 
+        # Inicializar categoría
         if cat not in agrupado:
             agrupado[cat] = {
                 "importe": 0.0, "sin_iva": 0.0, "iva": 0.0,
@@ -725,130 +816,56 @@ def agrupar_por_categoria(datos, ajustar_centavos=True):
                 "sin_ieps_7": 0.0, "ieps_7": 0.0,
             }
 
-        imp = conc["importe"]
-        tiene_iva = conc["tiene_iva"]
-        tasa_iva = conc["tasa_iva"]
-        tiene_ieps = conc["tiene_ieps"]
-        tasa_ieps = conc["tasa_ieps"]
-        productos_pdf = conc.get("productos_pdf", [])
+        # Helper para formatear números
+        def _fmt(v):
+            if abs(v - round(v)) < 0.001:
+                return f"{v:.0f}"
+            return f"{v:.2f}"
 
-        # Construir expresiones del concepto
-        termino_expresion = None
-        termino_expresion_iva = None
+        # Sumar al agrupado + construir expresión de detalle
+        if tipo == "iva":
+            # Ej: base=114/1.16, iva=(114-114/1.16)
+            expr_base = f"{_fmt(importe_con_imp)}/{1+tasa_iva:.2f}"
+            expr_iva = f"({_fmt(importe_con_imp)}-{_fmt(importe_con_imp)}/{1+tasa_iva:.2f})"
 
-        if productos_pdf:
-            # Helper: formatea un número sin decimales si son .00
-            def _fmt(v):
-                if abs(v - round(v)) < 0.001:
-                    return f"{v:.0f}"
-                return f"{v:.2f}"
+            agrupado[cat]["sin_iva"] += base
+            agrupado[cat]["iva"] += iva
+            detalle.setdefault(f"{cat}__sin_iva", []).append(expr_base)
+            detalle.setdefault(f"{cat}__iva", []).append(expr_iva)
 
-            # Agrupar los productos por remisión
-            from collections import defaultdict
-            por_remision = defaultdict(list)
-            for p in productos_pdf:
-                rem = p.get("remision", "")
-                imp_pdf = p.get("importe_pdf", 0.0)
-                por_remision[rem].append(imp_pdf)
+        elif tipo == "ieps":
+            # Ej: base=1082/1.06, ieps=(1082-1082/1.06)
+            expr_base = f"{_fmt(importe_con_imp)}/{1+tasa_ieps:.2f}"
+            expr_ieps = f"({_fmt(importe_con_imp)}-{_fmt(importe_con_imp)}/{1+tasa_ieps:.2f})"
 
-            # Construir cada remisión:
-            #   - 1 producto → "180"
-            #   - 2+ productos → "(180+180)"
-            grupos = []
-            for rem, importes in por_remision.items():
-                if len(importes) == 1:
-                    grupos.append(_fmt(importes[0]))
-                else:
-                    suma = "+".join(_fmt(x) for x in importes)
-                    grupos.append(f"({suma})")
+            if abs(tasa_ieps - 0.06) < 0.001:
+                agrupado[cat]["sin_ieps_6"] += base
+                agrupado[cat]["ieps_6"] += ieps
+                detalle.setdefault(f"{cat}__sin_ieps_6", []).append(expr_base)
+                detalle.setdefault(f"{cat}__ieps_6", []).append(expr_ieps)
+            elif abs(tasa_ieps - 0.07) < 0.001:
+                agrupado[cat]["sin_ieps_7"] += base
+                agrupado[cat]["ieps_7"] += ieps
+                detalle.setdefault(f"{cat}__sin_ieps_7", []).append(expr_base)
+                detalle.setdefault(f"{cat}__ieps_7", []).append(expr_ieps)
 
-            # Unir todos los grupos con "+"
-            if len(grupos) == 1:
-                suma_total = grupos[0]
-            else:
-                suma_total = "+".join(grupos)
+        else:  # sin_iva
+            agrupado[cat]["importe"] += base
+            detalle.setdefault(f"{cat}__importe", []).append(_fmt(importe_con_imp))
 
-            if tiene_iva and tasa_iva > 0 and cat in CATEGORIAS_CON_IVA:
-                # === CON IVA ===
-                # IMPORTE: (suma)/1.16
-                termino_expresion = f"({suma_total})/{1+tasa_iva:.2f}"
-
-                # IVA: ((suma)-(suma)/1.16)
-                # Envolver TODO entre paréntesis para que al unir varios
-                # términos con "+" no se rompa la precedencia.
-                termino_expresion_iva = (
-                    f"(({suma_total})-({suma_total})/{1+tasa_iva:.2f})"
-                )
-
-            else:
-                # === SIN IVA ===
-                termino_expresion = suma_total
-
-        # ============================================================
-        # Clasificar en la categoría correcta
-        # ============================================================
-        if cat in ("MEDICAMENTOS", "HIGIENE"):
-            if tiene_iva:
-                agrupado[cat]["sin_iva"] += imp
-                agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
-                if termino_expresion:
-                    detalle.setdefault(f"{cat}__sin_iva", []).append(termino_expresion)
-                if termino_expresion_iva:
-                    detalle.setdefault(f"{cat}__iva", []).append(termino_expresion_iva)
-            else:
-                agrupado[cat]["importe"] += imp
-                if termino_expresion:
-                    detalle.setdefault(f"{cat}__importe", []).append(termino_expresion)
-
-            if cat == "HIGIENE" and tiene_ieps:
-                if abs(tasa_ieps - 0.06) < 0.001:
-                    agrupado[cat]["sin_ieps_6"] += imp
-                    agrupado[cat]["ieps_6"] += round(imp * 0.06, 2)
-                    if termino_expresion:
-                        detalle.setdefault(f"{cat}__sin_ieps_6", []).append(termino_expresion)
-                elif abs(tasa_ieps - 0.07) < 0.001:
-                    agrupado[cat]["sin_ieps_7"] += imp
-                    agrupado[cat]["ieps_7"] += round(imp * 0.07, 2)
-                    if termino_expresion:
-                        detalle.setdefault(f"{cat}__sin_ieps_7", []).append(termino_expresion)
-        else:
-            agrupado[cat]["importe"] += imp
-            if termino_expresion:
-                detalle.setdefault(f"{cat}__importe", []).append(termino_expresion)
-            if tiene_iva:
-                agrupado[cat]["iva"] += round(imp * tasa_iva, 2)
-                if termino_expresion_iva:
-                    detalle.setdefault(f"{cat}__iva", []).append(termino_expresion_iva)
-
-    # ============================================================
-    # Detectar productos que tenían IVA en categorías sin IVA
-    # (VACUNA, CLINICA) y fueron movidos a U automáticamente.
-    # ============================================================
-    vistos = set()
-    for conc in datos.get("conceptos", []):
-        cat = conc.get("categoria_original_para_aviso")
-        if not cat:
-            continue
-
-        nombres = conc.get("nombres_pdf", [])
-        if not nombres:
-            nombres = [conc.get("descripcion", "?")]
-
-        for nombre in nombres:
-            clave = (cat, nombre.strip().upper())
-            if clave in vistos:
-                continue
-            vistos.add(clave)
-
+        # Aviso de reclasificación
+        if cat_original in CATEGORIAS_SIN_IVA and cat == "U":
             avisos_reclasificacion.append({
-                "categoria_actual": cat,
+                "categoria_actual": cat_original,
                 "producto": nombre,
-                "remision": conc.get("remision", ""),
-                "importe": conc.get("importe", 0.0),
+                "remision": remision,
+                "importe": base,
                 **info_factura,
             })
 
+    # ============================================================
     # Redondear
+    # ============================================================
     for cat, vals in agrupado.items():
         for k in vals:
             vals[k] = round(vals[k], 2)
@@ -858,18 +875,17 @@ def agrupar_por_categoria(datos, ajustar_centavos=True):
     # ============================================================
     if ajustar_centavos:
         suma_bases = 0.0
-        suma_exentas = 0.0
         for cat, vals in agrupado.items():
             if cat in ("MEDICAMENTOS", "HIGIENE"):
-                suma_bases += vals["sin_iva"]
-                suma_exentas += vals["importe"]
+                suma_bases += vals["sin_iva"] + vals["importe"]
+                suma_bases += vals["sin_ieps_6"] + vals["sin_ieps_7"]
             else:
-                suma_bases += vals["importe"]
+                suma_bases += vals["importe"] + vals["sin_iva"]
         suma_impuestos = sum(
             vals["iva"] + vals["ieps_6"] + vals["ieps_7"]
             for vals in agrupado.values()
         )
-        total_calculado = suma_bases + suma_exentas + suma_impuestos
+        total_calculado = suma_bases + suma_impuestos
         total_objetivo = datos.get("total", 0)
         dif = round(total_objetivo - total_calculado, 2)
 
