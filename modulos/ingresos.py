@@ -129,7 +129,8 @@ class AppIngresos(ttk.Toplevel):
         self.id_actual = None
         self._ultima_factura_xml = None
         self._ultima_factura_pdf = None
-
+        # Flag para bloquear múltiples sincronizaciones simultáneas
+        self._sincronizacion_activa = False
         self._construir_ui()
         self._refrescar_tabla()
 
@@ -466,8 +467,22 @@ class AppIngresos(ttk.Toplevel):
     # ACCIONES DE BOTONES (las mismas de antes)
     # ============================================================
     def _sincronizar(self):
-        from dialogos.sincronizar import sincronizar_facturas
-        sincronizar_facturas(self)
+        if self._sincronizacion_activa:
+            from tkinter import messagebox
+            messagebox.showwarning(
+                "Sincronización en curso",
+                "Ya hay una sincronización activa.\n\n"
+                "Espera a que termine o ciérrala antes de iniciar otra.",
+                parent=self,
+            )
+            return
+
+        self._sincronizacion_activa = True
+        try:
+            from dialogos.sincronizar import sincronizar_facturas
+            sincronizar_facturas(self)
+        finally:
+            self._sincronizacion_activa = False
 
     def _leer_factura(self):
         """Lee un XML (y opcionalmente un PDF) y guarda el registro."""

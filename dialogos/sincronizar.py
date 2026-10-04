@@ -85,29 +85,54 @@ def sincronizar_facturas(app):
     ventana_prog.geometry("900x700")
     ventana_prog.minsize(700, 500)
     ventana_prog.transient(app)
+    ventana_prog.resizable(True, True)
+
+    # Bloquear la ventana padre mientras esta activa
+    try:
+        ventana_prog.grab_set()
+    except Exception:
+        pass
 
     # ---- Estado de cancelación ----
     estado = {"cancelar": False}
 
     def _al_intentar_cerrar():
         if estado["cancelar"]:
+            # Ya se pidió cancelar antes, forzar cierre
+            try:
+                ventana_prog.destroy()
+            except Exception:
+                pass
             return
+
         respuesta = messagebox.askyesno(
             "Cancelar descarga",
             "La descarga está en curso.\n\n"
-            "¿Quieres cancelarla?\n\n"
+            "¿Quieres cancelarla y cerrar la ventana?\n\n"
             "Los correos ya descargados quedarán guardados.\n"
             "El proceso se detendrá en el próximo correo.",
             parent=ventana_prog
         )
         if respuesta:
             estado["cancelar"] = True
-            log("⚠️ Cancelación solicitada. Esperando a que termine el correo actual...")
             try:
                 barra_progreso.stop()
-                lbl_progreso.configure(text="⚠️ Cancelando...")
+                lbl_progreso.configure(text="⚠️ Cancelando... cerrando en 3 segundos")
             except Exception:
                 pass
+            # Forzar cierre tras 3 segundos (por si el hilo tarda)
+            ventana_prog.after(3000, lambda: _forzar_cierre())
+
+    def _forzar_cierre():
+        """Fuerza el cierre de la ventana (por si el hilo sigue corriendo)."""
+        try:
+            estado["cancelar"] = True
+        except Exception:
+            pass
+        try:
+            ventana_prog.destroy()
+        except Exception:
+            pass
 
     ventana_prog.protocol("WM_DELETE_WINDOW", _al_intentar_cerrar)
 
@@ -539,6 +564,12 @@ def sincronizar_facturas(app):
                 abrir_dialogo_registrar_productos(app, todos_avisos)
         else:
             messagebox.showinfo("Sincronización completa", mensaje_base)
+
+    # Liberar el grab al terminar normalmente
+    try:
+        ventana_prog.grab_release()
+    except Exception:
+        pass
 
     try:
         ventana_prog.protocol("WM_DELETE_WINDOW", ventana_prog.destroy)
