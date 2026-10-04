@@ -223,9 +223,6 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
     ttk.Button(fr_btn, text="💾 Guardar clasificación",
                command=_guardar,
                bootstyle="info-outline").pack(side="right", padx=5)
-    ttk.Button(fr_btn, text="❌ Cancelar",
-               command=_cancelar,
-               bootstyle="secondary-outline").pack(side="right", padx=5)
 
     # Botones rápidos
     def _marcar_todas_baalak():

@@ -53,3 +53,12 @@ def guardar_config(cfg):
 # Configuración global cargada al importar
 CONFIG = cargar_config()
 TEMA = CONFIG.get("tema", CONFIG_DEFAULT["tema"])
+
+def obtener_tema_actual():
+    """
+    Devuelve el tema actualmente guardado en config_ui.json.
+    A diferencia de TEMA, esta funcion lee del archivo cada vez,
+    por lo que siempre esta actualizado.
+    """
+    cfg = cargar_config()
+    return cfg.get("tema", CONFIG_DEFAULT["tema"])

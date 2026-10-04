@@ -10,22 +10,19 @@ import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
-from config.ajustes import CONFIG, TEMA, guardar_config
+from config.ajustes import CONFIG, TEMA, guardar_config, obtener_tema_actual
 from config.temas import refrescar_colores
 
 
 def abrir_dialogo_temas(app):
     """
     Abre el diálogo para elegir el tema visual.
-    
-    Parámetros:
-      app: instancia de AppIngresos (para acceder a:
-           - app._configurar_estilos()
-           - app._repintar_todo()
-           - app._repintar_sidebar()
     """
     import ttkbootstrap as _ttk
     from config import temas as cfg_temas
+
+    # Leer el tema ACTUAL desde el archivo (no desde la constante)
+    tema_actual = obtener_tema_actual()
 
     try:
         temas = sorted(_ttk.Style().theme_names())
@@ -66,9 +63,9 @@ def abrir_dialogo_temas(app):
     for tema in temas:
         tree.insert("", "end", iid=tema, values=(tema,))
 
-    if TEMA in temas:
-        tree.selection_set(TEMA)
-        tree.see(TEMA)
+    if tema_actual in temas:
+        tree.selection_set(tema_actual)
+        tree.see(tema_actual)
 
     # Scroll con la rueda
     def _on_mousewheel(event):
@@ -89,7 +86,7 @@ def abrir_dialogo_temas(app):
 
     _bind_wheel(ventana)
 
-    var_tema = tk.StringVar(value=TEMA)
+    var_tema = tk.StringVar(value=tema_actual)
 
     def _preview(tema):
         try:
@@ -118,7 +115,7 @@ def abrir_dialogo_temas(app):
 
     tree.bind("<<TreeviewSelect>>", _al_seleccionar)
 
-    lbl_actual = ttk.Label(ventana, text=f"Tema actual: {TEMA}",
+    lbl_actual = ttk.Label(ventana, text=f"Tema actual: {tema_actual}",
                             font=("Segoe UI", 10, "bold"),
                             bootstyle="info")
     lbl_actual.pack(pady=8)

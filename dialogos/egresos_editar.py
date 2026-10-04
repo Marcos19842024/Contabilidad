@@ -67,8 +67,8 @@ def abrir_dialogo_editar_egreso(app, registro):
 
     ventana = ttk.Toplevel(app)
     ventana.title("✏️ Editar registro de Egreso")
-    configurar_ventana(app, ventana, ancho=650, alto=680,
-                       min_ancho=580, min_alto=600)
+    configurar_ventana(app, ventana, ancho=580, alto=600,
+                       min_ancho=500, min_alto=500)
 
     # Encabezado
     ttk.Label(
@@ -183,11 +183,6 @@ def abrir_dialogo_editar_egreso(app, registro):
     ttk.Button(
         fr_btn, text="💾 Guardar cambios",
         command=_guardar, bootstyle="success-outline",
-    ).pack(side="right", padx=5)
-
-    ttk.Button(
-        fr_btn, text="❌ Cancelar",
-        command=_cancelar, bootstyle="secondary-outline",
     ).pack(side="right", padx=5)
 
     ventana.protocol("WM_DELETE_WINDOW", _cancelar)

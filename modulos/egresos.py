@@ -121,12 +121,6 @@ class AppEgresos(ttk.Toplevel):
         botones = ttk.Frame(self, padding=(10, 5))
         botones.pack(fill="x", padx=10)
 
-        ttk.Button(
-            botones, text="⚙️ Configuracion SAT",
-            command=self._abrir_configuracion,
-            bootstyle="secondary-outline",
-        ).pack(side="left", padx=3)
-
         # Frame dinamico: descargar / verificar
         self._btn_sat_frame = ttk.Frame(botones)
         self._btn_sat_frame.pack(side="left", padx=3)
@@ -240,7 +234,7 @@ class AppEgresos(ttk.Toplevel):
         self.lbl_totales.pack(fill="x", padx=15, pady=(0, 8))
 
         # ---- Menu contextual ----
-        self._crear_menu_contextual()
+        #self._crear_menu_contextual()
 
         # ---- Bindings ----
         self.tabla.bind("<Double-Button-1>", self._editar_seleccionado)
@@ -443,10 +437,6 @@ class AppEgresos(ttk.Toplevel):
     # ============================================================
     # BOTONES DE ACCION
     # ============================================================
-    def _abrir_configuracion(self):
-        from dialogos.egresos_config import abrir_dialogo_config_egresos
-        abrir_dialogo_config_egresos(self)
-
     def _descargar_sat(self):
         from dialogos.descargar_sat import abrir_dialogo_descargar_sat
         abrir_dialogo_descargar_sat(self)

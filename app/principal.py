@@ -177,10 +177,14 @@ class AppPrincipal(ttk.Window):
 
     def _abrir_configuracion(self):
         """Abre el diálogo de configuración general."""
-        messagebox.showinfo(
-            "Configuración",
-            "La configuración general estará disponible en el módulo de Ingresos."
-        )
+        try:
+            from dialogos.config_general import abrir_dialogo_config_general
+            abrir_dialogo_config_general(self)
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"No se pudo abrir la configuración:\n{e}"
+            )
 
     def _abrir_ayuda(self):
         """Abre el manual de usuario."""

@@ -41,8 +41,8 @@ def abrir_dialogo_descargar_sat(app):
 
     ventana = ttk.Toplevel(app)
     ventana.title("📥 Descargar del SAT")
-    configurar_ventana(app, ventana, ancho=520, alto=420,
-                       min_ancho=480, min_alto=380)
+    configurar_ventana(app, ventana, ancho=450, alto=350,
+                       min_ancho=400, min_alto=300)
 
     # Encabezado
     ttk.Label(
@@ -91,6 +91,11 @@ def abrir_dialogo_descargar_sat(app):
         justify="center",
     ).pack(pady=(15, 10))
 
+    # Botón para configurar e.firma
+    def _abrir_config():
+        from dialogos.egresos_config import abrir_dialogo_config_egresos
+        abrir_dialogo_config_egresos(app)
+
     resultado = {"ok": False}
 
     def _descargar():
@@ -132,16 +137,16 @@ def abrir_dialogo_descargar_sat(app):
 
     ttk.Button(
         fr_btn,
-        text="📥 Descargar",
-        command=_descargar,
-        bootstyle="info-outline",
-    ).pack(side="right", padx=5)
+        text="⚙️ Configurar e.firma (SAT)",
+        command=_abrir_config,
+        bootstyle="secondary-outline",
+    ).pack(side="left", padx=5)
 
     ttk.Button(
         fr_btn,
-        text="❌ Cancelar",
-        command=_cancelar,
-        bootstyle="secondary-outline",
+        text="📥 Descargar",
+        command=_descargar,
+        bootstyle="info-outline",
     ).pack(side="right", padx=5)
 
     ventana.protocol("WM_DELETE_WINDOW", _cancelar)

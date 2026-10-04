@@ -286,17 +286,6 @@ def abrir_dialogo_reportes_egresos(app):
     arbol.bind("<Double-Button-1>", lambda e: _ir_a_seleccionado())
     arbol.bind("<Return>", lambda e: _ir_a_seleccionado())
 
-    # Botones inferiores
-    ttk.Button(
-        fr, text="Ir al reporte",
-        command=_ir_a_seleccionado, bootstyle="info-outline",
-    ).pack(side="left", padx=5)
-
-    ttk.Button(
-        fr, text="Cerrar",
-        command=ventana.destroy, bootstyle="secondary-outline",
-    ).pack(side="left", padx=5)
-
     # Expandir el primer anio
     hijos = arbol.get_children()
     if hijos:

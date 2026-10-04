@@ -32,8 +32,8 @@ def abrir_dialogo_config_egresos(app):
 
     ventana = ttk.Toplevel(app)
     ventana.title("⚙️ Configuración de Egresos")
-    configurar_ventana(app, ventana, ancho=650, alto=600,
-                       min_ancho=550, min_alto=500)
+    configurar_ventana(app, ventana, ancho=500, alto=500,
+                       min_ancho=450, min_alto=450)
 
     # ---- Encabezado ----
     ttk.Label(ventana,
@@ -194,9 +194,6 @@ def abrir_dialogo_config_egresos(app):
     ttk.Button(fr_btn, text="💾 Guardar",
                command=_guardar,
                bootstyle="info-outline").pack(side="right", padx=5)
-    ttk.Button(fr_btn, text="❌ Cancelar",
-               command=_cancelar,
-               bootstyle="secondary-outline").pack(side="right", padx=5)
 
     ventana.protocol("WM_DELETE_WINDOW", _cancelar)
     ventana.bind("<Escape>", lambda e: _cancelar())
