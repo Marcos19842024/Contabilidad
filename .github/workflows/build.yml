@@ -16,12 +16,12 @@ jobs:
         include:
           - os: windows-latest
             nombre_artefacto: build-windows
-            comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json;." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
+            comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json;." --add-data "MANUAL.md;." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
             ruta_dist: dist/SistemaIngresos
 
           - os: macos-latest
             nombre_artefacto: build-macos
-            comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json:." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
+            comando_compilar: pyinstaller --onedir --windowed --name SistemaIngresos --clean --noconfirm --add-data "catalogo_qvet.json:." --add-data "MANUAL.md:." --hidden-import ttkbootstrap --hidden-import PIL --hidden-import pdfminer --hidden-import pdfplumber --exclude-module matplotlib --exclude-module numpy --exclude-module pandas --exclude-module scipy main.py
             ruta_dist: dist/SistemaIngresos.app
 
     steps:

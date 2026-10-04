@@ -3,7 +3,7 @@
 dialogos/manual.py
 Visor del manual de usuario integrado en la app.
 """
-
+import sys
 import tkinter as tk
 import ttkbootstrap as ttk
 from pathlib import Path
@@ -13,13 +13,44 @@ def abrir_manual(app):
     from ui.utils import configurar_ventana
     from tkinter import messagebox
 
-    raiz = Path(__file__).parent.parent
-    ruta_manual = raiz / "MANUAL.md"
+        # Buscar MANUAL.md en varias ubicaciones posibles
+    ruta_manual = None
 
-    if not ruta_manual.exists():
+    # 1. Dentro del bundle de PyInstaller (app compilada)
+    if getattr(sys, 'frozen', False):
+        candidatos = [
+            Path(sys._MEIPASS) / "MANUAL.md",
+            Path(sys.executable).parent / "MANUAL.md",
+            Path(sys.executable).parent / "_internal" / "MANUAL.md",
+        ]
+        for c in candidatos:
+            if c.exists():
+                ruta_manual = c
+                break
+
+    # 2. En desarrollo (raiz del proyecto)
+    if ruta_manual is None:
+        raiz = Path(__file__).parent.parent
+        candidato_dev = raiz / "MANUAL.md"
+        if candidato_dev.exists():
+            ruta_manual = candidato_dev
+
+    # 3. Fallback: en la carpeta de datos del usuario
+    if ruta_manual is None:
+        try:
+            from config.ajustes import _CARPETA_DATOS
+            candidato = _CARPETA_DATOS / "MANUAL.md"
+            if candidato.exists():
+                ruta_manual = candidato
+        except Exception:
+            pass
+
+    if ruta_manual is None:
         messagebox.showwarning(
             "Manual no encontrado",
-            "No se encontro MANUAL.md en la raiz del proyecto."
+            "No se encontro el archivo MANUAL.md.\n\n"
+            "En la version compilada deberia estar dentro del bundle.\n"
+            "Si estas en desarrollo, verifica que este en la raiz del proyecto."
         )
         return
 
