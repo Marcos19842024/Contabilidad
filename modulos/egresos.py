@@ -166,7 +166,7 @@ class AppEgresos(ttk.Toplevel):
 
         cols = (
             "linea", "fecha", "folio", "uuid", "rfc_emisor",
-            "nombre_emisor", "subtotal", "iva", "ieps", "total",
+            "nombre_emisor", "cp", "subtotal", "iva", "ieps", "total",
             "forma_pago_texto", "metodo_pago", "observacion",
             "sucursal", "carpeta",
         )
@@ -177,6 +177,7 @@ class AppEgresos(ttk.Toplevel):
             "uuid": "UUID",
             "rfc_emisor": "RFC EMISOR",
             "nombre_emisor": "NOMBRE EMISOR",
+            "cp": "C.P.",
             "subtotal": "SUBTOTAL",
             "iva": "IVA",
             "ieps": "IEPS",
@@ -194,6 +195,7 @@ class AppEgresos(ttk.Toplevel):
             "uuid": 260,
             "rfc_emisor": 120,
             "nombre_emisor": 220,
+            "cp": 70,
             "subtotal": 90,
             "iva": 80,
             "ieps": 70,
@@ -332,6 +334,7 @@ class AppEgresos(ttk.Toplevel):
                     r.get("uuid", ""),
                     r.get("rfc_emisor", ""),
                     r.get("nombre_emisor", ""),
+                    r.get("cp", ""),
                     f"${r.get('subtotal', 0):,.2f}",
                     f"${r.get('iva', 0):,.2f}",
                     f"${r.get('ieps', 0):,.2f}",
@@ -388,13 +391,41 @@ class AppEgresos(ttk.Toplevel):
     # EDICION
     # ============================================================
     def _editar_seleccionado(self, event=None):
+        """Abre el diálogo de edición/adjuntos para el registro seleccionado."""
         reg = self._obtener_seleccionado()
         if not reg:
             messagebox.showinfo("Editar", "Selecciona un registro.")
             return
+
         from dialogos.egresos_editar import abrir_dialogo_editar_egreso
-        if abrir_dialogo_editar_egreso(self, reg):
+        resultado = abrir_dialogo_editar_egreso(self, reg)
+
+        # Compatibilidad: si devuelve bool, tratarlo como "guardado"
+        if isinstance(resultado, bool):
+            resultado = {"guardado": resultado, "eliminado": False}
+
+        if resultado.get("eliminado"):
+            # Quitar del JSON
+            self.registros = [
+                r for r in self.registros if r.get("id") != reg.get("id")
+            ]
+            try:
+                anio = int(self.var_anio.get())
+            except Exception:
+                anio = self._anio_cargado
+            from sat.guardar_egresos import guardar_db_egresos
+            guardar_db_egresos(self.registros, anio)
+            self._refrescar_tabla()
+
+        elif resultado.get("guardado"):
+            # Guardar cambios en JSON + recargar
             self._guardar_cambios()
+            try:
+                anio = int(self.var_anio.get())
+            except Exception:
+                anio = self._anio_cargado
+            from sat.guardar_egresos import cargar_db_egresos
+            self.registros = cargar_db_egresos(anio)
             self._refrescar_tabla()
 
     def _eliminar_seleccionado(self):

@@ -24,7 +24,6 @@ NS = {
 # Mapeo de FormaPago
 MAPA_FORMA_PAGO = {
     "01": "EFVO",
-    "02": "CHEQUE",
     "03": "TRANSF",
     "04": "TC",
     "28": "TD",
@@ -101,6 +100,7 @@ def leer_xml_egreso(ruta_xml):
     # Datos generales
     folio = (root.get("Folio") or "").strip()
     serie = (root.get("Serie") or "").strip()
+    cp = (root.get("LugarExpedicion") or "").strip()
 
     # Si no hay folio, usar el UUID como fallback
     if not folio:
@@ -172,6 +172,7 @@ def leer_xml_egreso(ruta_xml):
         "uso_cfdi": uso_cfdi,
         "uuid": uuid,
         "conceptos": conceptos,
+        "cp": cp,
     }
 
 

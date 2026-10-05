@@ -174,6 +174,51 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
             )
             combo.pack(side="left", padx=3)
 
+            # Botón "Guardar como regla" (marca el proveedor como
+            # siempre de esa sucursal)
+            def _guardar_regla(r=reg, v=var):
+                rfc = r.get("rfc_emisor", "").strip()
+                nombre = r.get("nombre_emisor", "").strip()
+                if not rfc:
+                    messagebox.showwarning(
+                        "Sin RFC",
+                        "Esta factura no tiene RFC de emisor.",
+                        parent=ventana)
+                    return
+
+                sucursal = v.get()
+                from config.config_egresos import (
+                    cargar_proveedores_sucursal,
+                    guardar_proveedores_sucursal,
+                )
+                proveedores = cargar_proveedores_sucursal()
+                proveedores[rfc] = sucursal
+                guardar_proveedores_sucursal(proveedores)
+
+                messagebox.showinfo(
+                    "Regla guardada",
+                    f"✅ Proveedor registrado\n\n"
+                    f"RFC: {rfc}\n"
+                    f"Nombre: {nombre[:40]}\n"
+                    f"Sucursal: {sucursal}\n\n"
+                    f"Las próximas facturas de este proveedor se\n"
+                    f"clasificarán automáticamente como {sucursal}.",
+                    parent=ventana)
+
+                # Aplicar a todas las facturas del mismo RFC
+                for r_otro in registros:
+                    if r_otro.get("rfc_emisor", "").strip() == rfc:
+                        if r_otro["id"] in vars_sucursal:
+                            vars_sucursal[r_otro["id"]].set(sucursal)
+
+            ttk.Button(
+                fila,
+                text="💾 Regla",
+                command=_guardar_regla,
+                bootstyle="info-outline",
+                width=8,
+            ).pack(side="left", padx=3)
+
             fila_dict = {"id": reg["id"], "var": var, "combo": combo}
             filas_widgets.append(fila_dict)
 
@@ -198,24 +243,84 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
 
     def _guardar():
         # Actualizar registros con las sucursales marcadas
+        cambios = []
         for reg in registros:
             if reg["id"] in vars_sucursal:
-                reg["sucursal"] = vars_sucursal[reg["id"]].get()
+                nueva = vars_sucursal[reg["id"]].get()
+                if reg.get("sucursal") != nueva:
+                    cambios.append((reg, nueva))
+                reg["sucursal"] = nueva
 
+        # Guardar en JSON
         guardar_db_egresos(registros, anio)
 
         # Contar
         animalia = sum(1 for r in registros if r.get("sucursal") == "Animalia")
         baalak = sum(1 for r in registros if r.get("sucursal") == "Baalak")
 
-        messagebox.showinfo(
-            "Clasificación guardada",
-            f"✅ Clasificación guardada\n\n"
-            f"• Animalia: {animalia} facturas\n"
-            f"• Baalak:   {baalak} facturas",
-            parent=ventana
-        )
+        # Si hay cambios, preguntar si mover archivos
+        if cambios:
+            mover = messagebox.askyesno(
+                "Mover archivos",
+                f"✅ Clasificación guardada\n\n"
+                f"• Animalia: {animalia} facturas\n"
+                f"• Baalak:   {baalak} facturas\n\n"
+                f"Se cambiaron {len(cambios)} facturas de sucursal.\n\n"
+                f"¿Quieres mover los archivos a sus nuevas carpetas?",
+                parent=ventana,
+            )
+
+            if mover:
+                _mover_archivos(cambios, anio)
+        else:
+            messagebox.showinfo(
+                "Clasificación guardada",
+                f"✅ Clasificación guardada\n\n"
+                f"• Animalia: {animalia} facturas\n"
+                f"• Baalak:   {baalak} facturas",
+                parent=ventana,
+            )
+
         ventana.destroy()
+
+    def _mover_archivos(cambios, anio):
+        """Mueve físicamente los XMLs de los registros que cambiaron."""
+        from sat.mover_egresos import mover_un_registro
+
+        # Obtener el mes_idx promedio (por si hay varios)
+        from config.campos import MESES_ES
+        mes_idx_por_defecto = 9  # default septiembre
+
+        movidos = 0
+        errores = []
+
+        for reg, nueva_sucursal in cambios:
+            # Determinar mes del registro
+            try:
+                mes_nombre = reg.get("mes", "septiembre")
+                mes_idx = MESES_ES.index(mes_nombre) + 1
+            except Exception:
+                mes_idx = mes_idx_por_defecto
+
+            ok, msg = mover_un_registro(reg, anio, mes_idx)
+            if ok:
+                movidos += 1
+            else:
+                errores.append(f"{reg.get('folio', '?')}: {msg}")
+
+        # Guardar de nuevo (con las rutas actualizadas)
+        guardar_db_egresos(registros, anio)
+
+        # Resumen
+        lineas = [f"✅ {movidos} archivos movidos"]
+        if errores:
+            lineas.append(f"\n⚠️ Errores ({len(errores)}):")
+            for e in errores[:5]:
+                lineas.append(f"  • {e}")
+            if len(errores) > 5:
+                lineas.append(f"  ... y {len(errores) - 5} más")
+
+        messagebox.showinfo("Mover archivos", "\n".join(lineas), parent=ventana)
 
     def _cancelar():
         ventana.destroy()

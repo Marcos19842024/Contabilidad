@@ -151,6 +151,9 @@ def generar_excel_ppd(facturas, ruta_xlsx, mes_nombre, anio):
       # | FECHA | FACTURA | QVET | PROVEEDOR | UUID | METODO |
       SUBTOTAL | IVA | IEPS | TOTAL | REFERENCIA
     """
+    # Ordenar por número de línea (igual que PUE)
+    facturas = sorted(facturas, key=lambda f: f.get("linea", 9999))
+
     wb = Workbook()
     ws = wb.active
     ws.title = f"PPD {mes_nombre.capitalize()} {anio}"[:31]

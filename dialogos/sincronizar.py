@@ -447,14 +447,11 @@ def sincronizar_facturas(app):
                 no_factura_final = datos.get("no_factura", "")
                 log(f"  ⚠️ No. factura no encontrado en asunto, usando XML: {no_factura_final}")
 
+            # Ya no hay formulario: solo actualizamos el dict
             if qvet_final:
-                app.entradas["qvet"].delete(0, tk.END)
-                app.entradas["qvet"].insert(0, qvet_final)
                 datos_completos["qvet"] = qvet_final
 
             if no_factura_final:
-                app.entradas["no_factura"].delete(0, tk.END)
-                app.entradas["no_factura"].insert(0, no_factura_final)
                 datos_completos["no_factura"] = no_factura_final
 
             app._ultima_factura_xml = str(files["xml"])
@@ -519,9 +516,6 @@ def sincronizar_facturas(app):
             log(f"   • {nf}: {err}")
 
     log(f"\n📄 Log completo guardado en: {info.get('log', '')}")
-
-    app._refrescar_tabla()
-    app._nuevo()
 
     # ---- Si hay productos a reclasificar, ofrecer registrarlos ----
     if todos_avisos:

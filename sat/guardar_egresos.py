@@ -56,14 +56,33 @@ def existe_uuid_egresos(registros, uuid, ignorar_id=None):
     return False
 
 
+def _sucursal_para_rfc(rfc):
+    """
+    Consulta el archivo de proveedores-sucursal y devuelve la sucursal
+    asignada al RFC (o None si no está registrado).
+    """
+    if not rfc:
+        return None
+    try:
+        from config.config_egresos import cargar_proveedores_sucursal
+        proveedores = cargar_proveedores_sucursal()
+        rfc = str(rfc).strip().upper()
+        # Buscar sin importar mayúsculas
+        for k, v in proveedores.items():
+            if str(k).strip().upper() == rfc:
+                return v
+    except Exception:
+        pass
+    return None
+
+
 def guardar_facturas(facturas, anio=None, agregar_sucursal=True):
     """
     Guarda las facturas procesadas en el archivo del año.
     
-    Parámetros:
-      - facturas: lista de dicts (del procesar_xml).
-      - anio: año de los registros. Si es None, se toma de cada factura.
-      - agregar_sucursal: si True, agrega el campo "sucursal" (default: "Baalak").
+    Auto-clasifica la sucursal consultando proveedores_sucursal.json:
+      - Si el RFC está registrado → usa esa sucursal.
+      - Si no → default "Baalak".
     
     Devuelve:
       - (nuevas, duplicadas)
@@ -89,8 +108,23 @@ def guardar_facturas(facturas, anio=None, agregar_sucursal=True):
         f["id"] = int(datetime.now().timestamp() * 1000) + nuevas
         f["anio"] = anio
         f["mes"] = _mes_desde_fecha(f.get("fecha", ""))
+
         if agregar_sucursal:
-            f["sucursal"] = "Baalak"  # Default
+            # Auto-clasificar por RFC
+            rfc = f.get("rfc_emisor", "")
+            sucursal_auto = _sucursal_para_rfc(rfc)
+            f["sucursal"] = sucursal_auto or "Baalak"
+
+        # Determinar forma_pago_texto (para carpeta)
+        metodo = f.get("metodo_pago", "PUE")
+        if metodo == "PPD":
+            f["forma_pago_texto"] = "PPD"
+        else:
+            # PUE: usar la forma de pago del XML
+            forma = f.get("forma_pago_texto", "")
+            if not forma:
+                forma = _forma_pago_desde_codigo(f.get("forma_pago", ""))
+            f["forma_pago_texto"] = forma or "Efectivo"
 
         registros.append(f)
         nuevas += 1
@@ -112,3 +146,14 @@ def _mes_desde_fecha(fecha):
     except Exception:
         pass
     return ""
+
+
+def _forma_pago_desde_codigo(codigo):
+    """Convierte el código SAT de forma de pago a texto de carpeta."""
+    mapa = {
+        "01": "Efectivo",
+        "03": "Transferencia",
+        "04": "TC",
+        "28": "TD",
+    }
+    return mapa.get(str(codigo).strip(), "Efectivo")
