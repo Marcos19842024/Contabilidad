@@ -123,10 +123,26 @@ def abrir_dialogo_descargar_sat(app):
 
         mes_idx = MESES_ES.index(mes_nombre) + 1
 
+        # ⚠️ VALIDAR CONFIG ANTES de cerrar la ventana
+        from config.config_egresos import cargar_config_egresos
+        cfg = cargar_config_egresos()
+        rfc = cfg.get("rfc_receptor", "")
+        cer = cfg.get("certificado_cer", "")
+        key = cfg.get("certificado_key", "")
+        pwd = cfg.get("password_fiel", "")
+
+        if not all([rfc, cer, key, pwd]):
+            messagebox.showwarning(
+                "Configuración incompleta",
+                "Falta configurar la e.firma.\n\n"
+                "Ve a ⚙️ Configurar e.firma (SAT) primero.",
+                parent=ventana)
+            return
+
+        # Ahora sí, cerrar y lanzar
         resultado["ok"] = True
         ventana.destroy()
 
-        # Lanzar el flujo en un hilo
         _lanzar_descarga(app, anio, mes_idx, mes_nombre)
 
     def _cancelar():
