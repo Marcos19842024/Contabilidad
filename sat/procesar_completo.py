@@ -73,11 +73,10 @@ def mover_xmls(anio, mes_idx, carpeta_origen="/tmp/sat_descargas"):
 # ============================================================
 def actualizar_json(anio, mes_nombre):
     """
-    Actualiza los campos 'linea' y 'ruta_xml' en el JSON buscando
+    Actualiza los campos 'ruta_xml' en el JSON buscando
     los XMLs ya movidos en las carpetas del mes.
 
-    Reutiliza la logica de actualizar_lineas.py + actualizar_rutas.py
-    pero SIN depender de sus constantes globales.
+    Ya NO asigna 'linea' (se calcula al vuelo).
     """
     import re
 
@@ -90,22 +89,29 @@ def actualizar_json(anio, mes_nombre):
 
     registros = cargar_db_egresos(anio)
 
-    # Indexar XML por folio
+    # Indexar XML por nombre de archivo
     xml_por_folio = {}
-    for subcarpeta in ["PUE", "PPD", "Animalia"]:
-        carpeta = base_egreso / subcarpeta
-        if not carpeta.exists():
-            continue
-        for ruta in carpeta.glob("*.xml"):
-            match = re.match(r"^(\d+)-(.+)\.xml$", ruta.name)
-            if match:
-                linea = int(match.group(1))
-                folio = match.group(2)
-                xml_por_folio[folio] = {
-                    "ruta": str(ruta),
-                    "linea": linea,
-                    "carpeta": subcarpeta,
-                }
+    for sucursal in ["Baalak", "Animalia"]:
+        for metodo in ["PUE", "PPD"]:
+            for forma in ["Efectivo", "TC", "TD", "Transferencia", "PPD"]:
+                carpeta = base_egreso / sucursal / metodo / forma
+                if not carpeta.exists():
+                    continue
+                for ruta in carpeta.glob("*.xml"):
+                    # Nombre: <serie>-<folio>.xml o <folio>.xml
+                    stem = ruta.stem
+                    if "-" in stem:
+                        partes = stem.split("-", 1)
+                        if len(partes) == 2 and partes[0].upper() == "S1":
+                            folio = partes[1]
+                        else:
+                            folio = stem
+                    else:
+                        folio = stem
+                    xml_por_folio[folio] = {
+                        "ruta": str(ruta),
+                        "carpeta": f"{sucursal}/{metodo}/{forma}",
+                    }
 
     actualizados = 0
     no_encontrados = 0
@@ -118,7 +124,6 @@ def actualizar_json(anio, mes_nombre):
         if info:
             reg["ruta_xml"] = info["ruta"]
             reg["ruta_xml_destino"] = info["ruta"]
-            reg["linea"] = info["linea"]
             reg["carpeta"] = info["carpeta"]
             actualizados += 1
         else:

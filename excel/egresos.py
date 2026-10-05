@@ -42,8 +42,20 @@ def generar_excel_pue(facturas, ruta_xlsx, mes_nombre, anio):
       # | No. FACTURA | UUID | RFC EMISOR | NOMBRE O RAZÓN SOCIAL DEL EMISOR |
       FECHA | TOTAL | METODO DE PAGO | OBSERVACIONES
     """
-    # Ordenar por número de línea
-    facturas = sorted(facturas, key=lambda f: f.get("linea", 9999))
+    # Ordenar por fecha ascendente, luego por folio
+    def _clave_orden(f):
+        fecha_str = f.get("fecha", "")
+        try:
+            partes = fecha_str.split("/")
+            if len(partes) == 3:
+                fecha = (int(partes[2]), int(partes[1]), int(partes[0]))
+            else:
+                fecha = (0, 0, 0)
+        except Exception:
+            fecha = (0, 0, 0)
+        return (fecha, str(f.get("folio", "")))
+
+    facturas = sorted(facturas, key=_clave_orden)
     wb = Workbook()
     ws = wb.active
     ws.title = f"PUE {mes_nombre.capitalize()} {anio}"[:31]
@@ -72,10 +84,9 @@ def generar_excel_pue(facturas, ruta_xlsx, mes_nombre, anio):
 
     # Filas
     fila = 2
-    for f in facturas:
-        # Usar el número de línea guardado, o el índice
-        num_linea = f.get("linea", 0) or (fila - 1)
-        ws[f"A{fila}"] = num_linea
+    for idx, f in enumerate(facturas, 1):
+        # Número de línea enumerado al vuelo
+        ws[f"A{fila}"] = idx
         ws[f"A{fila}"].alignment = CENTRO
         ws[f"A{fila}"].border = BORDER
 
@@ -84,7 +95,7 @@ def generar_excel_pue(facturas, ruta_xlsx, mes_nombre, anio):
         c.value = f.get("folio", "")
         c.alignment = IZQUIERDA
         c.border = BORDER
-        ruta_pdf = _obtener_ruta_pdf_egreso(f, num_linea)
+        ruta_pdf = _obtener_ruta_pdf_egreso(f)
         if ruta_pdf:
             c.hyperlink = ruta_pdf
             c.font = FUENTE_LINK
@@ -151,8 +162,20 @@ def generar_excel_ppd(facturas, ruta_xlsx, mes_nombre, anio):
       # | FECHA | FACTURA | QVET | PROVEEDOR | UUID | METODO |
       SUBTOTAL | IVA | IEPS | TOTAL | REFERENCIA
     """
-    # Ordenar por número de línea (igual que PUE)
-    facturas = sorted(facturas, key=lambda f: f.get("linea", 9999))
+    # Ordenar por fecha ascendente, luego por folio
+    def _clave_orden(f):
+        fecha_str = f.get("fecha", "")
+        try:
+            partes = fecha_str.split("/")
+            if len(partes) == 3:
+                fecha = (int(partes[2]), int(partes[1]), int(partes[0]))
+            else:
+                fecha = (0, 0, 0)
+        except Exception:
+            fecha = (0, 0, 0)
+        return (fecha, str(f.get("folio", "")))
+
+    facturas = sorted(facturas, key=_clave_orden)
 
     wb = Workbook()
     ws = wb.active
@@ -182,11 +205,10 @@ def generar_excel_ppd(facturas, ruta_xlsx, mes_nombre, anio):
         c.border = BORDER
         ws.column_dimensions[letra].width = ancho
 
-    fila = 2
-    for f in facturas:
-        # Usar el número de línea guardado, o el índice
-        num_linea = f.get("linea", 0) or (fila - 1)
-        ws[f"A{fila}"] = num_linea
+        fila = 2
+    for idx, f in enumerate(facturas, 1):
+        # Número de línea enumerado al vuelo
+        ws[f"A{fila}"] = idx
         ws[f"A{fila}"].alignment = CENTRO
         ws[f"A{fila}"].border = BORDER
 
@@ -199,7 +221,7 @@ def generar_excel_ppd(facturas, ruta_xlsx, mes_nombre, anio):
         c.value = f.get("folio", "")
         c.alignment = IZQUIERDA
         c.border = BORDER
-        ruta_pdf = _obtener_ruta_pdf_egreso(f, num_linea)
+        ruta_pdf = _obtener_ruta_pdf_egreso(f)
         if ruta_pdf:
             c.hyperlink = ruta_pdf
             c.font = FUENTE_LINK
@@ -270,25 +292,30 @@ def generar_excel_ppd(facturas, ruta_xlsx, mes_nombre, anio):
     return ruta_xlsx
 
 
-def _obtener_ruta_pdf_egreso(factura, num_linea):
+def _obtener_ruta_pdf_egreso(factura):
     """
     Construye la ruta relativa al PDF de una factura de Egreso.
-    El Excel está en Egreso/Deposito_Egreso/.
-    El PDF está en Egreso/PUE/ o Egreso/PPD/.
+
+    El Excel está en: Egreso/<Sucursal>/Deposito/ (o similar).
+    El PDF está en:   Egreso/<Sucursal>/<Metodo>/<Forma>/<nombre>.PDF
+
+    Nombre del PDF: <serie>-<folio>.PDF o <folio>.PDF
     """
     try:
         folio = factura.get("folio", "")
         if not folio:
             return None
 
-        # Determinar subcarpeta
-        metodo = factura.get("metodo_pago", "PUE")
-        if metodo == "PPD":
-            subcarpeta = "PPD"
+        serie = str(factura.get("serie", "")).strip()
+        if serie:
+            nombre = f"{serie}-{folio}.PDF"
         else:
-            subcarpeta = "PUE"
+            nombre = f"{folio}.PDF"
 
-        # Ruta relativa desde Deposito_Egreso a PUE/ o PPD/
-        return f"../{subcarpeta}/{num_linea}-{folio}.PDF"
+        # Ruta relativa al Excel (que está en Deposito_Egreso/ o Deposito/)
+        carpeta = factura.get("carpeta", "")  # ej: "Baalak/PUE/TC"
+        if carpeta:
+            return f"../{carpeta}/{nombre}"
+        return f"../{nombre}"
     except Exception:
         return None

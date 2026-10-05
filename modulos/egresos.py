@@ -96,26 +96,29 @@ class AppEgresos(ttk.Toplevel):
             bootstyle="primary",
         ).grid(row=0, column=5, padx=5)
 
+        # ---- Filtro Método (Todas / PUE / PPD) ----
+        ttk.Label(top, text="Método:").grid(row=0, column=6, padx=(15, 5), sticky="e")
+        self.var_filtro_metodo = ttk.StringVar(value="Todas")
+        ttk.Combobox(
+            top, textvariable=self.var_filtro_metodo,
+            values=["Todas", "PUE", "PPD"],
+            width=10, state="readonly", bootstyle="primary",
+        ).grid(row=0, column=7, padx=5)
+
+        # ---- Filtro Forma de pago ----
+        ttk.Label(top, text="Forma:").grid(row=0, column=8, padx=(15, 5), sticky="e")
+        self.var_filtro_forma = ttk.StringVar(value="Todas")
+        ttk.Combobox(
+            top, textvariable=self.var_filtro_forma,
+            values=["Todas", "Efectivo", "TC", "TD", "Transferencia", "PPD"],
+            width=14, state="readonly", bootstyle="primary",
+        ).grid(row=0, column=9, padx=5)
+
         ttk.Button(
             top, text="Abrir carpeta",
             command=self._abrir_carpeta_egreso,
             bootstyle="info-outline",
-        ).grid(row=0, column=6, padx=10)
-
-        # Filtro PUE / PPD / Todas
-        ttk.Label(top, text="Ver:").grid(row=0, column=7, padx=(15, 5), sticky="e")
-        self.var_filtro_metodo = tk.StringVar(value="TODAS")
-        for i, (txt, val) in enumerate([
-            ("Todas", "TODAS"),
-            ("PUE", "PUE"),
-            ("PPD", "PPD"),
-        ]):
-            ttk.Radiobutton(
-                top, text=txt, value=val,
-                variable=self.var_filtro_metodo,
-                command=self._refrescar_tabla,
-                bootstyle="info-toolbutton",
-            ).grid(row=0, column=8 + i, padx=2)
+        ).grid(row=0, column=10, padx=10)
 
         # ---- Barra de botones de acciones ----
         botones = ttk.Frame(self, padding=(10, 5))
@@ -243,6 +246,8 @@ class AppEgresos(ttk.Toplevel):
         self.var_anio.trace_add("write", self._al_cambiar_anio)
         self.var_mes.trace_add("write", lambda *a: self._refrescar_tabla())
         self.var_sucursal.trace_add("write", lambda *a: self._refrescar_tabla())
+        self.var_filtro_metodo.trace_add("write", lambda *a: self._refrescar_tabla())
+        self.var_filtro_forma.trace_add("write", lambda *a: self._refrescar_tabla())
 
     def _crear_menu_contextual(self):
         self.menu_ctx = tk.Menu(self, tearoff=0)
@@ -292,11 +297,14 @@ class AppEgresos(ttk.Toplevel):
         mes = self.var_mes.get()
         sucursal = self.var_sucursal.get()
 
-        # Filtro PUE/PPD
+        # Filtros adicionales
         filtro_metodo = getattr(self, "var_filtro_metodo", None)
-        filtro_metodo = filtro_metodo.get() if filtro_metodo else "TODAS"
+        filtro_metodo = filtro_metodo.get() if filtro_metodo else "Todas"
 
-        # Filtrar
+        filtro_forma = getattr(self, "var_filtro_forma", None)
+        filtro_forma = filtro_forma.get() if filtro_forma else "Todas"
+
+        # Filtrar base: año + mes + sucursal
         filtrados = [
             r for r in self.registros
             if r.get("anio") == anio
@@ -304,13 +312,20 @@ class AppEgresos(ttk.Toplevel):
             and r.get("sucursal", "Baalak") == sucursal
         ]
 
-        # Aplicar filtro PUE/PPD
+        # Aplicar filtro Método
         if filtro_metodo == "PUE":
             filtrados = [r for r in filtrados if r.get("metodo_pago") != "PPD"]
         elif filtro_metodo == "PPD":
             filtrados = [r for r in filtrados if r.get("metodo_pago") == "PPD"]
 
-        # Ordenar por fecha y linea
+        # Aplicar filtro Forma de pago
+        if filtro_forma != "Todas":
+            filtrados = [
+                r for r in filtrados
+                if self._forma_pago_de(r) == filtro_forma
+            ]
+
+        # Ordenar por fecha + folio
         def _orden(r):
             try:
                 partes = r.get("fecha", "").split("/")
@@ -320,15 +335,15 @@ class AppEgresos(ttk.Toplevel):
                     fecha = (0, 0, 0)
             except Exception:
                 fecha = (0, 0, 0)
-            return (fecha, r.get("linea", 9999) or 9999)
+            return (fecha, str(r.get("folio", "")))
 
         filtrados.sort(key=_orden)
 
-        for r in filtrados:
+        for idx, r in enumerate(filtrados, 1):
             self.tabla.insert(
                 "", "end", iid=str(r.get("id")),
                 values=(
-                    r.get("linea", ""),
+                    idx,
                     r.get("fecha", ""),
                     r.get("folio", ""),
                     r.get("uuid", ""),
@@ -373,6 +388,28 @@ class AppEgresos(ttk.Toplevel):
             )
 
         self.lbl_totales.configure(text=texto)
+
+    def _forma_pago_de(self, reg):
+        """
+        Devuelve la forma de pago normalizada de un registro
+        (para el filtro).
+        """
+        # Si es PPD, siempre es "PPD"
+        if reg.get("metodo_pago") == "PPD":
+            return "PPD"
+
+        forma = reg.get("forma_pago_texto", "")
+        if not forma:
+            return "Efectivo"
+
+        # Mapear antiguos valores a nuevos
+        mapa = {
+            "EFVO": "Efectivo",
+            "TRANSF": "Transferencia",
+            "EFECTIVO": "Efectivo",
+            "CHEQUE": "Efectivo",  # por si quedó alguno
+        }
+        return mapa.get(forma, forma)
 
     # ============================================================
     # SELECCION
