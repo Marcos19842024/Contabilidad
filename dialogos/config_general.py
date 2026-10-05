@@ -110,18 +110,5 @@ def abrir_dialogo_config_general(app):
         justify="center",
     ).pack(pady=20)
 
-    # ============================================================
-    # BOTÓN CERRAR
-    # ============================================================
-    fr_btn = ttk.Frame(ventana)
-    fr_btn.pack(fill="x", padx=20, pady=(0, 15))
-
-    ttk.Button(
-        fr_btn,
-        text="Cerrar",
-        command=ventana.destroy,
-        bootstyle="secondary-outline",
-    ).pack(side="right")
-
     ventana.protocol("WM_DELETE_WINDOW", ventana.destroy)
     ventana.bind("<Escape>", lambda e: ventana.destroy())

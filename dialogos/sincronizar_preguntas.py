@@ -22,8 +22,8 @@ def preguntar_modo_descarga(app, dias_atras):
 
     ventana = ttk.Toplevel(app)
     ventana.title("Sincronizar facturas")
-    configurar_ventana(app, ventana, ancho=520, alto=340,
-                       min_ancho=480, min_alto=320)
+    configurar_ventana(app, ventana, ancho=380, alto=250,
+                       min_ancho=350, min_alto=200)
 
     # Encabezado
     ttk.Label(ventana, text="⚡ Sincronizar facturas",

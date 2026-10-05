@@ -10,11 +10,12 @@ Incluye:
   - Botón Eliminar
 """
 
+import shutil
 import sys
 import tkinter as tk
 import ttkbootstrap as ttk
 
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from pathlib import Path
 
 
@@ -161,40 +162,122 @@ def abrir_dialogo_editar_egreso(app, registro):
                                 padding=10)
     frame_adj.pack(fill="x", padx=15, pady=10)
 
-    ruta_xml = registro.get("ruta_xml") or registro.get("ruta_xml_destino", "")
-    ruta_pdf = registro.get("ruta_pdf", "")
+    rutas = {
+        "xml": registro.get("ruta_xml") or registro.get("ruta_xml_destino", ""),
+        "pdf": registro.get("ruta_pdf", ""),
+    }
 
-    archivos = []
-    if ruta_xml:
-        p = Path(ruta_xml)
-        archivos.append(("XML", p, p.exists()))
-    if ruta_pdf:
-        p = Path(ruta_pdf)
-        archivos.append(("PDF", p, p.exists()))
+    # Frame contenedor de botones (horizontal)
+    frame_botones_adj = ttk.Frame(frame_adj)
+    frame_botones_adj.pack(fill="x")
 
-    if not archivos:
-        ttk.Label(
-            frame_adj,
-            text="No hay archivos adjuntos.",
-            font=("Segoe UI", 9),
-            foreground="gray",
-        ).pack(pady=5)
-    else:
-        for tipo, ruta, existe in archivos:
-            icono = "📋" if tipo == "XML" else "📄"
-            nombre = ruta.name if ruta.name else f"({tipo})"
-            estado = "" if existe else "  (no existe)"
+    def _abrir_o_adjuntar(tipo):
+        """
+        Si el archivo existe → lo abre.
+        Si no existe → pide uno nuevo y lo copia a la carpeta del XML.
+        """
+        ruta_actual = rutas.get(tipo, "")
+        extension = ".xml" if tipo == "xml" else ".PDF"
+        etiqueta = "XML" if tipo == "xml" else "PDF"
 
-            btn = ttk.Button(
-                frame_adj,
-                text=f"{icono}  {nombre}{estado}",
-                command=lambda r=ruta: _abrir_archivo(r),
-                bootstyle="secondary-outline",
-                width=58,
+        # --- Caso 1: ya existe → abrir ---
+        if ruta_actual and Path(ruta_actual).exists():
+            _abrir_archivo(ruta_actual)
+            return
+
+        # --- Caso 2: no existe → adjuntar ---
+        filtros = (
+            [("XML CFDI", "*.xml"), ("Todos", "*.*")]
+            if tipo == "xml"
+            else [("PDF", "*.pdf *.PDF"), ("Todos", "*.*")]
+        )
+        ruta_origen = filedialog.askopenfilename(
+            title=f"Selecciona el {etiqueta} de la factura",
+            filetypes=filtros,
+        )
+        if not ruta_origen:
+            return
+
+        origen = Path(ruta_origen)
+
+        # Determinar carpeta destino (junto al XML)
+        ruta_xml = rutas.get("xml", "")
+        if not ruta_xml:
+            messagebox.showwarning(
+                "Sin ubicacion",
+                f"No se puede adjuntar el {etiqueta} porque el registro "
+                "no tiene un XML en disco.\n\n"
+                "Asegurate de haber descargado la factura primero.",
+                parent=ventana,
             )
-            btn.pack(fill="x", pady=2)
-            if not existe:
-                btn.configure(state="disabled")
+            return
+
+        carpeta_destino = Path(ruta_xml).parent
+        carpeta_destino.mkdir(parents=True, exist_ok=True)
+
+        # Nombre destino: mismo que el XML pero con la extensión correcta
+        nombre_xml = Path(ruta_xml).stem  # "1-A-1234"
+        nombre_destino = f"{nombre_xml}{extension}"
+        destino = carpeta_destino / nombre_destino
+
+        try:
+            if destino.exists():
+                respuesta = messagebox.askyesno(
+                    "Ya existe",
+                    f"Ya existe un archivo:\n{destino.name}\n\n"
+                    "¿Reemplazarlo?",
+                    parent=ventana,
+                )
+                if not respuesta:
+                    return
+                destino.unlink()
+
+            shutil.copy2(origen, destino)
+            rutas[tipo] = str(destino)
+
+            messagebox.showinfo(
+                f"{etiqueta} adjuntado",
+                f"✅ {etiqueta} copiado a:\n{destino}",
+                parent=ventana,
+            )
+
+            # Refrescar botones
+            _refrescar_botones()
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"No se pudo copiar el {etiqueta}:\n{e}",
+                parent=ventana,
+            )
+
+    def _refrescar_botones():
+        """Recrea los botones según el estado actual."""
+        for w in frame_botones_adj.winfo_children():
+            w.destroy()
+
+        for tipo in ("xml", "pdf"):
+            ruta_str = rutas.get(tipo, "")
+            existe = ruta_str and Path(ruta_str).exists()
+
+            if existe:
+                icono = "📋" if tipo == "xml" else "📄"
+                texto = f"{icono}  {Path(ruta_str).name}"
+                estilo = "secondary-outline"
+            else:
+                icono = "📋" if tipo == "xml" else "📄"
+                etiqueta = "XML" if tipo == "xml" else "PDF"
+                texto = f"{icono}  Adjuntar {etiqueta}"
+                estilo = "info-outline"
+
+            ttk.Button(
+                frame_botones_adj,
+                text=texto,
+                command=lambda t=tipo: _abrir_o_adjuntar(t),
+                bootstyle=estilo,
+                width=20,
+            ).pack(side="left", padx=3, pady=2)
+
+    _refrescar_botones()
 
     # ==================================================
     # BOTONES
@@ -213,6 +296,13 @@ def abrir_dialogo_editar_egreso(app, registro):
         if registro["metodo_pago"] == "PPD":
             registro["forma_pago_texto"] = "PPD"
 
+        # Guardar rutas actualizadas
+        if rutas.get("xml"):
+            registro["ruta_xml"] = rutas["xml"]
+            registro["ruta_xml_destino"] = rutas["xml"]
+        if rutas.get("pdf"):
+            registro["ruta_pdf"] = rutas["pdf"]
+
         resultado["guardado"] = True
         ventana.destroy()
 
@@ -224,16 +314,19 @@ def abrir_dialogo_editar_egreso(app, registro):
         if not messagebox.askyesno("Confirmar", msg, parent=ventana):
             return
 
-        # Eliminar archivos
+        # Eliminar archivos (XML y PDF)
         eliminados = 0
         errores = []
-        for tipo, ruta, existe in archivos:
-            if existe:
-                try:
-                    ruta.unlink()
-                    eliminados += 1
-                except Exception as e:
-                    errores.append(f"{ruta.name}: {e}")
+        for tipo_key in ("xml", "pdf"):
+            ruta_str = rutas.get(tipo_key, "")
+            if ruta_str:
+                p = Path(ruta_str)
+                if p.exists():
+                    try:
+                        p.unlink()
+                        eliminados += 1
+                    except Exception as e:
+                        errores.append(f"{p.name}: {e}")
 
         resultado["eliminado"] = True
 

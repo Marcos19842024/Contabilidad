@@ -29,15 +29,15 @@ class AppPrincipal(ttk.Window):
     def __init__(self):
         super().__init__(themename=TEMA)
         self.title("Sistema de Contabilidad")
-        self.geometry("800x600")
-        self.minsize(700, 500)
+        self.geometry("700x500")
+        self.minsize(600, 400)
 
         self._construir_ui()
         self.after(50, self._centrar_ventana)
 
     def _construir_ui(self):
         """Construye la pantalla de inicio."""
-        frame = ttk.Frame(self, padding=40)
+        frame = ttk.Frame(self, padding=20)
         frame.pack(fill="both", expand=True)
 
         # ---- Encabezado ----
@@ -84,7 +84,7 @@ class AppPrincipal(ttk.Window):
 
         # ---- Pie ----
         pie = ttk.Frame(frame)
-        pie.pack(side="bottom", fill="x", pady=(40, 0))
+        pie.pack(side="bottom", fill="x", pady=(20, 0))
 
         ttk.Button(
             pie,
@@ -99,13 +99,6 @@ class AppPrincipal(ttk.Window):
             command=self._abrir_ayuda,
             bootstyle="secondary-outline"
         ).pack(side="left", padx=5)
-
-        ttk.Button(
-            pie,
-            text="❌ Salir",
-            command=self.destroy,
-            bootstyle="danger-outline"
-        ).pack(side="right", padx=5)
 
         ttk.Label(
             pie,
@@ -208,8 +201,8 @@ class AppPrincipal(ttk.Window):
     def _centrar_ventana(self):
         """Centra la ventana en la pantalla."""
         self.update_idletasks()
-        ancho = 800
-        alto = 600
+        ancho = 700
+        alto = 500
         x = (self.winfo_screenwidth() - ancho) // 2
         y = (self.winfo_screenheight() - alto) // 2
         self.geometry(f"{ancho}x{alto}+{x}+{y}")

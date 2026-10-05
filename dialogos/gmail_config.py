@@ -22,8 +22,8 @@ def pedir_credenciales_correo(app):
 
     ventana = ttk.Toplevel(app)
     ventana.title("Configuración de Gmail")
-    configurar_ventana(app, ventana, ancho=620, alto=580,
-                       min_ancho=520, min_alto=460)
+    configurar_ventana(app, ventana, ancho=500, alto=450,
+                       min_ancho=450, min_alto=400)
 
     # ---- Contenedor con padding ----
     contenedor = ttk.Frame(ventana, padding=20)

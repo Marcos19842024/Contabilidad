@@ -240,7 +240,7 @@ def mover_un_registro(registro, anio, mes_idx):
         if ruta_origen and ruta_origen.exists() and ruta_origen.resolve() == ruta_destino.resolve():
             return True, "Sin cambios"
 
-        # Mover
+        # Mover XML
         if ruta_origen and ruta_origen.exists():
             if ruta_destino.exists():
                 ruta_destino.unlink()
@@ -248,6 +248,24 @@ def mover_un_registro(registro, anio, mes_idx):
 
         registro["ruta_xml"] = str(ruta_destino)
         registro["ruta_xml_destino"] = str(ruta_destino)
+
+        # Mover PDF si existe (junto al XML)
+        ruta_pdf_actual = registro.get("ruta_pdf", "")
+        if ruta_pdf_actual:
+            p_pdf = Path(ruta_pdf_actual)
+            if p_pdf.exists():
+                nombre_pdf = f"{linea}-{folio}.PDF"
+                destino_pdf = carpeta_destino / nombre_pdf
+                try:
+                    if destino_pdf.exists() and destino_pdf.resolve() != p_pdf.resolve():
+                        destino_pdf.unlink()
+                    if p_pdf.resolve() != destino_pdf.resolve():
+                        shutil.move(str(p_pdf), str(destino_pdf))
+                    registro["ruta_pdf"] = str(destino_pdf)
+                except Exception as e:
+                    # No fallar por el PDF
+                    pass
+
         registro["carpeta"] = f"{sucursal}/{metodo}/{forma}"
 
         return True, f"Movido a {sucursal}/{metodo}/{forma}/"
