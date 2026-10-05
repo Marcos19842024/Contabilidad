@@ -2,4 +2,4 @@ openpyxl
 ttkbootstrap
 pdfplumber
 pillow
-pyinstaller
+pyinstallercfdiclient
