@@ -185,13 +185,7 @@ def _lanzar_descarga(app, anio, mes_idx, mes_nombre):
     key = cfg.get("certificado_key", "")
     pwd = cfg.get("password_fiel", "")
 
-    if not all([rfc, cer, key, pwd]):
-        messagebox.showwarning(
-            "Configuración incompleta",
-            "Falta configurar la e.firma.\n\n"
-            "Ve a ⚙️ Configuración SAT primero.",
-            parent=app)
-        return
+    # (La config ya fue validada en _descargar antes de cerrar la ventana)
 
     # Rango de fechas: del primer dia del mes al ultimo dia (23:59:59)
     # IMPORTANTE: el SAT NO acepta fechas futuras.
