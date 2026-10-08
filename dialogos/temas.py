@@ -98,9 +98,13 @@ def abrir_dialogo_temas(app):
             cfg_temas.TEMA = tema
 
             refrescar_colores()
-            app._configurar_estilos()
-            app._repintar_todo()
-            app._repintar_sidebar()
+            # Solo llamar si el padre tiene esos métodos (defensivo)
+            if hasattr(app, "_configurar_estilos"):
+                app._configurar_estilos()
+            if hasattr(app, "_repintar_todo"):
+                app._repintar_todo()
+            if hasattr(app, "_repintar_sidebar"):
+                app._repintar_sidebar()
         except Exception as e:
             print(f"[_preview] Error: {e}")
 

@@ -15,13 +15,17 @@ BASE_DIR = Path.home() / "Documents"
 
 
 def _carpeta_datos():
-    """Carpeta de datos de la app."""
+    """
+    Carpeta de datos de la app (JSON internos).
+    - Dev:  <raíz proyecto>/egresos/
+    - Prod: ~/Documents/Vet Suite/egresos/
+    """
     if getattr(sys, 'frozen', False):
-        carpeta = Path.home() / "Documents" / "Contabilidad App"
-        carpeta.mkdir(parents=True, exist_ok=True)
-        return carpeta
+        carpeta = Path.home() / "Documents" / "Vet Suite" / "egresos"
     else:
-        return Path(__file__).parent.parent
+        carpeta = Path(__file__).parent.parent / "egresos"
+    carpeta.mkdir(parents=True, exist_ok=True)
+    return carpeta
 
 
 _CARPETA_DATOS = _carpeta_datos()
@@ -70,3 +74,7 @@ def ruta_registros_egresos(anio):
 def ruta_pdf_original(anio=None, mes=None):
     """Carpeta donde se guardan los PDFs descargados."""
     return ruta_egreso(anio, mes) / "PDFs"
+
+
+# Acceso público a la carpeta de datos (para persistencia_egresos)
+CARPETA_DATOS = _CARPETA_DATOS

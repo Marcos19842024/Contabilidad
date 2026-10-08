@@ -10,7 +10,7 @@ import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
-from lector_facturas import agregar_producto_catalogo
+from modulos.lector_facturas import agregar_producto_catalogo
 
 
 CATEGORIAS = ["U", "ACCESORIOS", "MEDICAMENTOS", "HIGIENE",
@@ -165,9 +165,6 @@ def abrir_dialogo_registrar_productos(app, avisos):
 
     ttk.Button(fr_btn, text="💾 Guardar todos",
                command=_guardar,
-               bootstyle="info-outline").pack(side="right", padx=5)
-    ttk.Button(fr_btn, text="❌ Cancelar",
-               command=_cancelar,
                bootstyle="info-outline").pack(side="right", padx=5)
 
     ventana.protocol("WM_DELETE_WINDOW", _cancelar)

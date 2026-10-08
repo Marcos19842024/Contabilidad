@@ -89,3 +89,6 @@ ver_xml.py
 historial_egresos.json
 solicitud_sat_activa.json
 registros_egresos_*.json
+
+# Datos locales de la app
+/datos/

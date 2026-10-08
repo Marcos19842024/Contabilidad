@@ -58,11 +58,20 @@ def abrir_dialogo_config_egresos(app):
     # RFC del receptor
     ttk.Label(form, text="RFC del receptor:").grid(
         row=fila, column=0, sticky="w", padx=(0, 10), pady=8)
+    
     var_rfc = tk.StringVar(value=cfg.get("rfc_receptor", ""))
     ttk.Entry(form, textvariable=var_rfc).grid(
         row=fila, column=1, sticky="ew", pady=8)
     fila += 1
 
+    # Forzar mayúsculas en vivo
+    def _force_upper_rfc(*args):
+        texto = var_rfc.get()
+        upper = texto.upper()
+        if texto != upper:
+            var_rfc.set(upper)
+    var_rfc.trace_add("write", _force_upper_rfc)
+    
     ttk.Label(form,
               text="El RFC de la empresa (Animalia/Baalak).",
               foreground="gray", font=("Segoe UI", 8)).grid(

@@ -12,7 +12,7 @@ import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
-from lector_facturas import (
+from modulos.lector_facturas import (
     cargar_catalogo,
     cargar_excepciones_manuales,
     guardar_excepciones_manuales,
@@ -37,7 +37,7 @@ def abrir_dialogo_reclasificador(app):
 
     ventana = ttk.Toplevel(app)
     ventana.title("🏷️ Reclasificador de productos")
-    configurar_ventana(app, ventana, ancho=1150, alto=720,
+    configurar_ventana(app, ventana, ancho=1100, alto=720,
                        min_ancho=900, min_alto=560)
 
     # --- Barra superior ---

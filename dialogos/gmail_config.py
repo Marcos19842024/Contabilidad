@@ -10,7 +10,7 @@ import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
-from config.ajustes import CONFIG, guardar_config
+from config.ajustes import cargar_config_correo, guardar_config_correo
 
 
 def pedir_credenciales_correo(app):
@@ -25,11 +25,9 @@ def pedir_credenciales_correo(app):
     configurar_ventana(app, ventana, ancho=500, alto=450,
                        min_ancho=450, min_alto=400)
 
-    # ---- Contenedor con padding ----
     contenedor = ttk.Frame(ventana, padding=20)
     contenedor.pack(fill="both", expand=True)
 
-    # ---- Encabezado ----
     ttk.Label(contenedor,
               text="Configuración de Gmail",
               font=("Segoe UI", 14, "bold")).pack(pady=(0, 5))
@@ -40,13 +38,12 @@ def pedir_credenciales_correo(app):
               justify="center", foreground="gray",
               font=("Segoe UI", 9)).pack(pady=(0, 20))
 
-    # ---- Formulario ----
     form = ttk.Frame(contenedor)
     form.pack(fill="x", expand=False)
     form.columnconfigure(0, weight=0)
     form.columnconfigure(1, weight=1)
 
-    cfg_actual = CONFIG.get("correo", {})
+    cfg_actual = cargar_config_correo()
     fila = 0
 
     # Correo
@@ -109,7 +106,6 @@ def pedir_credenciales_correo(app):
         row=fila, column=1, sticky="w", pady=(0, 5))
     fila += 1
 
-    # Espacio flexible
     ttk.Frame(contenedor).pack(fill="y", expand=True)
 
     resultado = {"ok": False}
@@ -132,18 +128,17 @@ def pedir_credenciales_correo(app):
             )
             return
 
-        CONFIG["correo"] = {
+        cfg_correo = {
             "usuario": u,
             "password_app": p,
             "etiqueta": e,
             "filtro_remitente": r,
             "dias_atras": d,
         }
-        guardar_config(CONFIG)
+        guardar_config_correo(cfg_correo)
         resultado["ok"] = True
         ventana.destroy()
 
-    # Botones
     fr = ttk.Frame(contenedor)
     fr.pack(fill="x", pady=(15, 0))
 
@@ -154,7 +149,6 @@ def pedir_credenciales_correo(app):
     ventana.wait_window()
 
     if resultado["ok"]:
-        return (CONFIG["correo"]["usuario"],
-                CONFIG["correo"]["password_app"],
-                CONFIG["correo"]["etiqueta"])
+        cfg = cargar_config_correo()
+        return (cfg["usuario"], cfg["password_app"], cfg["etiqueta"])
     return None, None, None

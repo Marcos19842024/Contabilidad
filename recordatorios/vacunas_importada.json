@@ -1,0 +1,597 @@
+[
+  {
+    "nombre": "America Gomez Fernandez",
+    "telefono": "529813819664",
+    "telefono_display": "9813819664",
+    "mascotas": [
+      {
+        "nombre": "Luna",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Ac Canigen Quintuple",
+                "fecha": "06/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola America Gomez Fernandez.",
+      "Baalak (Prado) le informa que su mascota 'Luna' tiene pendiente Vacunas (Ac Canigen Quintuple) el día 6 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Anayeli Hernandez De La Cruz",
+    "telefono": "527441803157",
+    "telefono_display": "7441803157",
+    "mascotas": [
+      {
+        "nombre": "Duki",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Canigen Puppy",
+                "fecha": "03/10/2026"
+              },
+              {
+                "nombre": "Ac Canigen Cuadruple",
+                "fecha": "03/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Anayeli Hernandez De La Cruz.",
+      "Baalak (Prado) le informa que su mascota 'Duki' tiene pendiente Vacunas (Canigen Puppy y Ac Canigen Cuadruple) el día 3 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Angelica Brito",
+    "telefono": "526121763881",
+    "telefono_display": "6121763881",
+    "mascotas": [
+      {
+        "nombre": "Tzalam",
+        "recordatorios": [
+          {
+            "nombre": "Control Ecto",
+            "tipos": [
+              {
+                "nombre": "Simparica Trio",
+                "fecha": "01/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Angelica Brito.",
+      "Baalak (Prado) le informa que su mascota 'Tzalam' tiene pendiente Control Ecto (Simparica Trio) el día 1 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Arles Roca Uc",
+    "telefono": "529811006199",
+    "telefono_display": "9811006199",
+    "mascotas": [
+      {
+        "nombre": "Benito",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Iverkan 30",
+                "fecha": "03/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Arles Roca Uc.",
+      "Baalak (Prado) le informa que su mascota 'Benito' tiene pendiente Desparasitaciones (Iverkan 30) el día 3 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Esperanza Poot Duran",
+    "telefono": "529817367453",
+    "telefono_display": "9817367453",
+    "mascotas": [
+      {
+        "nombre": "Hugo",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Rabigen L",
+                "fecha": "02/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Esperanza Poot Duran.",
+      "Baalak (Prado) le informa que su mascota 'Hugo' tiene pendiente Vacunas (Rabigen L) el día 2 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Estefania Abraham Dominguez",
+    "telefono": "529811381470",
+    "telefono_display": "9811381470",
+    "mascotas": [
+      {
+        "nombre": "Paula",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Drontal 10",
+                "fecha": "06/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Estefania Abraham Dominguez.",
+      "Baalak (Prado) le informa que su mascota 'Paula' tiene pendiente Desparasitaciones (Drontal 10) el día 6 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Francisco Rullan",
+    "telefono": "529811121461",
+    "telefono_display": "9811121461",
+    "mascotas": [
+      {
+        "nombre": "Honei",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Iverkan 10",
+                "fecha": "02/10/2026"
+              }
+            ]
+          },
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Canigen Quintuple 21",
+                "fecha": "07/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Francisco Rullan.",
+      "Baalak (Prado) le informa que su mascota 'Honei' tiene pendiente Desparasitaciones (Iverkan 10) y Vacunas (Canigen Quintuple 21) el día 2 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Jose Ivan Hernandez Maliachi",
+    "telefono": "529811688452",
+    "telefono_display": "981-16-88-452",
+    "mascotas": [
+      {
+        "nombre": "Luffy",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Drontal 35 X 0.5",
+                "fecha": "01/10/2026"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "nombre": "Rusell",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Drontal 35 X 0.5",
+                "fecha": "01/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Jose Ivan Hernandez Maliachi.",
+      "Baalak (Prado) le informa que sus mascotas: 'Luffy' tiene pendiente Desparasitaciones (Drontal 35 X 0.5) y 'Rusell' tiene pendiente Desparasitaciones (Drontal 35 X 0.5) el día 1 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Leticia Esperanza Garcia Cambranis",
+    "telefono": "529811262736",
+    "telefono_display": "981-126-27-36",
+    "mascotas": [
+      {
+        "nombre": "Bonita",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Drontal 10",
+                "fecha": "02/10/2026"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "nombre": "Guapo",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Endogard 30",
+                "fecha": "02/10/2026"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "nombre": "Nena",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Endogard 30 .5",
+                "fecha": "02/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Leticia Esperanza Garcia Cambranis.",
+      "Baalak (Prado) le informa que sus mascotas: 'Bonita' tiene pendiente Desparasitaciones (Drontal 10), 'Guapo' tiene pendiente Desparasitaciones (Endogard 30) y 'Nena' tiene pendiente Desparasitaciones (Endogard 30 .5) el día 2 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Lizbeth Caamal Armas",
+    "telefono": "529812062431",
+    "telefono_display": "9812062431",
+    "mascotas": [
+      {
+        "nombre": "Nalu",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Ac Canigen Quintuple",
+                "fecha": "06/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Lizbeth Caamal Armas.",
+      "Baalak (Prado) le informa que su mascota 'Nalu' tiene pendiente Vacunas (Ac Canigen Quintuple) el día 6 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Manuel Alberto Ortega Lliteras",
+    "telefono": "529811675705",
+    "telefono_display": "9811675705",
+    "mascotas": [
+      {
+        "nombre": "Camada",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Endogard 2.5",
+                "fecha": "01/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Manuel Alberto Ortega Lliteras.",
+      "Baalak (Prado) le informa que su mascota 'Camada' tiene pendiente Desparasitaciones (Endogard 2.5) el día 1 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Marbella Pool Tec",
+    "telefono": "529811088258",
+    "telefono_display": "9811088258",
+    "mascotas": [
+      {
+        "nombre": "Zoe",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Iverkan 2.5",
+                "fecha": "04/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Marbella Pool Tec.",
+      "Baalak (Prado) le informa que su mascota 'Zoe' tiene pendiente Desparasitaciones (Iverkan 2.5) el día 4 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Nicole Espinola Santos",
+    "telefono": "529817504940",
+    "telefono_display": "9817504940",
+    "mascotas": [
+      {
+        "nombre": "Mylo",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Canigen Sextuple",
+                "fecha": "03/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Nicole Espinola Santos.",
+      "Baalak (Prado) le informa que su mascota 'Mylo' tiene pendiente Vacunas (Canigen Sextuple) el día 3 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Pilar Guillem Segovia",
+    "telefono": "529811172893",
+    "telefono_display": "9811172893",
+    "mascotas": [
+      {
+        "nombre": "Donatela",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Nobivac Intra Trac Oral Bb",
+                "fecha": "04/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Pilar Guillem Segovia.",
+      "Baalak (Prado) le informa que su mascota 'Donatela' tiene pendiente Vacunas (Nobivac Intra Trac Oral Bb) el día 4 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Samaria De La Cruz Chan",
+    "telefono": "529811774865",
+    "telefono_display": "981 177 4865",
+    "mascotas": [
+      {
+        "nombre": "Mia",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Drontal 10",
+                "fecha": "05/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Samaria De La Cruz Chan.",
+      "Baalak (Prado) le informa que su mascota 'Mia' tiene pendiente Desparasitaciones (Drontal 10) el día 5 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Silvia Blanquet",
+    "telefono": "529818212045",
+    "telefono_display": "981 821 2045",
+    "mascotas": [
+      {
+        "nombre": "Campanita",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Giardiavax",
+                "fecha": "02/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Silvia Blanquet.",
+      "Baalak (Prado) le informa que su mascota 'Campanita' tiene pendiente Vacunas (Giardiavax) el día 2 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Vania Herrera Poot",
+    "telefono": "529811207516",
+    "telefono_display": "9811207516",
+    "mascotas": [
+      {
+        "nombre": "Naim",
+        "recordatorios": [
+          {
+            "nombre": "Vacunas",
+            "tipos": [
+              {
+                "nombre": "Ac Canigen Quintuple",
+                "fecha": "01/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Vania Herrera Poot.",
+      "Baalak (Prado) le informa que su mascota 'Naim' tiene pendiente Vacunas (Ac Canigen Quintuple) el día 1 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Vedelia Garcia Lopez",
+    "telefono": "529811348826",
+    "telefono_display": "9811348826",
+    "mascotas": [
+      {
+        "nombre": "Luke",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Endogard 10",
+                "fecha": "02/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Vedelia Garcia Lopez.",
+      "Baalak (Prado) le informa que su mascota 'Luke' tiene pendiente Desparasitaciones (Endogard 10) el día 2 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Viviana Lira Manrique",
+    "telefono": "529811140153",
+    "telefono_display": "9811140153",
+    "mascotas": [
+      {
+        "nombre": "Canelita",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Total Full Susp Cg",
+                "fecha": "06/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Viviana Lira Manrique.",
+      "Baalak (Prado) le informa que su mascota 'Canelita' tiene pendiente Desparasitaciones (Total Full Susp Cg) el día 6 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  },
+  {
+    "nombre": "Zeidy Antonia Azcorra Mahla",
+    "telefono": "529812938015",
+    "telefono_display": "9812938015",
+    "mascotas": [
+      {
+        "nombre": "Frida",
+        "recordatorios": [
+          {
+            "nombre": "Desparasitaciones",
+            "tipos": [
+              {
+                "nombre": "Endogard 10",
+                "fecha": "06/10/2026"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "mensajes": [
+      "Hola Zeidy Antonia Azcorra Mahla.",
+      "Baalak (Prado) le informa que su mascota 'Frida' tiene pendiente Desparasitaciones (Endogard 10) el día 6 de octubre de 2026.",
+      "\n🐾 ¿Quiere agendar su cita?"
+    ],
+    "tipo": "vacunas"
+  }
+]

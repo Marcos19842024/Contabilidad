@@ -1,7 +1,10 @@
 """
-lector_facturas.py
+modulos/lector_facturas.py
 Lee facturas CFDI 4.0 (XML) + PDF de representación impresa.
 Clasifica conceptos por descripción usando catalogo_qvet.json (editado a mano).
+
+Nota: este módulo vive en `modulos/` pero usa las rutas de datos de Ingresos
+(core.rutas) para no ensuciar la raíz del proyecto.
 """
 import sys
 import re
@@ -9,6 +12,33 @@ import json
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
+
+from core.rutas import _CARPETA_DATOS as _CARPETA_DATOS_INGRESOS
+
+
+# ============================================================
+# RUTAS
+# ============================================================
+def _carpeta_datos():
+    """
+    Carpeta de datos de Ingresos.
+    Delegado a core.rutas:
+      - Dev:  <raíz proyecto>/ingresos/
+      - Prod: ~/Documents/Vet Suite/ingresos/
+    """
+    return _CARPETA_DATOS_INGRESOS
+
+
+def _ruta_recurso(nombre_archivo):
+    """
+    Ruta del archivo empaquetado como recurso (solo lectura).
+    - Prod: sys._MEIPASS (donde PyInstaller empaqueta)
+    - Dev: raíz del proyecto (un nivel arriba de modulos/)
+    """
+    if getattr(sys, 'frozen', False):
+        return Path(sys._MEIPASS) / nombre_archivo
+    else:
+        return Path(__file__).parent.parent / nombre_archivo
 
 
 # ============================================================
@@ -85,32 +115,6 @@ def guardar_excepciones_manuales(exc):
 
 
 _EXCEPCIONES_MANUALES = None
-
-
-def _carpeta_datos():
-    """
-    Carpeta única de datos de la app (NO por año).
-    Compartida entre años: catálogo, excepciones, backups.
-    """
-    if getattr(sys, 'frozen', False):
-        carpeta = Path.home() / "Documents" / "Contabilidad App"
-        carpeta.mkdir(parents=True, exist_ok=True)
-        return carpeta
-    else:
-        return Path(__file__).parent
-
-
-def _ruta_recurso(nombre_archivo):
-    """
-    Devuelve la ruta de un archivo empaquetado como recurso (solo lectura).
-    Si corremos desde ejecutable, lo busca en el bundle.
-    Si no, en la carpeta del script.
-    """
-    if getattr(sys, 'frozen', False):
-        # PyInstaller guarda los recursos en sys._MEIPASS
-        return Path(sys._MEIPASS) / nombre_archivo
-    else:
-        return Path(__file__).parent / nombre_archivo
 
 
 def normalizar(texto):

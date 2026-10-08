@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 def generar_icono_png(ruta_salida="icono.png", tamaño=1024):
-    """Genera un ícono PNG simple con las letras 'SI'."""
+    """Genera un ícono PNG simple con las letras 'VS' (Vet Suite)."""
     try:
         from PIL import Image, ImageDraw, ImageFont
     except ImportError:
@@ -36,8 +36,8 @@ def generar_icono_png(ruta_salida="icono.png", tamaño=1024):
         fill=(50, 120, 200, 255)   # Azul claro
     )
 
-    # Texto "SI" en el centro
-    texto = "SI"
+    # Texto "VS" en el centro
+    texto = "VS"
     tamaño_fuente = int(tamaño * 0.45)
 
     # Intentar cargar una fuente del sistema

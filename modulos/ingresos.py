@@ -80,7 +80,7 @@ from excel.generador import (
     escribir_excel,
     anexar_al_excel,
 )
-from lector_facturas import procesar_factura, agrupar_por_categoria
+from modulos.lector_facturas import procesar_factura, agrupar_por_categoria
 from core.correo_utils import agrupar_facturas_descargadas
 from ui.widgets import EntryMoneda, EntryAutoComplete
 
@@ -110,7 +110,7 @@ class AppIngresos(ttk.Toplevel):
 
     def __init__(self, master=None):
         super().__init__(master)
-        self.title("Sistema de Ingresos - Contabilidad")
+        self.title("Vet Suite — Ingresos")
 
         configurar_ventana(
             master, self,

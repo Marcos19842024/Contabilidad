@@ -1,0 +1,35 @@
+{
+  "sucursal_activa": "BAALAK_PRADO",
+  "sucursales": [
+    {
+      "id": "BAALAK_CENTRAL",
+      "nombre": "Clínica Veterinaria Baalak (Central)",
+      "nombre_corto": "Baalak (Central)",
+      "activa": true,
+      "coordenadas": {
+        "lat": 19.831218,
+        "lng": -90.534602
+      }
+    },
+    {
+      "id": "BAALAK_PRADO",
+      "nombre": "Clínica Veterinaria Baalak (Prado)",
+      "nombre_corto": "Baalak (Prado)",
+      "activa": true,
+      "coordenadas": {
+        "lat": 19.832604,
+        "lng": -90.551841
+      }
+    },
+    {
+      "id": "ANIMALIA",
+      "nombre": "Clínica Veterinaria Animalia",
+      "nombre_corto": "Animalia",
+      "activa": true,
+      "coordenadas": {
+        "lat": 18.14316,
+        "lng": -94.454624
+      }
+    }
+  ]
+}

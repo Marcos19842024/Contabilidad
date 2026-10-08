@@ -1,0 +1,428 @@
+[
+  {
+    "nombre": "Andrea Che Uc",
+    "telefono": "529811333080",
+    "telefono_display": "9811333080",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "10:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Kiara",
+        "asunto": "B Y T",
+        "agenda": "Estetica",
+        "estado": "BAÑO"
+      }
+    ],
+    "mascotas": [
+      "Kiara"
+    ],
+    "mensajes": [
+      "Hola Andrea Che Uc.",
+      "Animalia le recuerda la cita de su mascota 'Kiara' para baño y transporte a las 10:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 10:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Jorge Carlos Hurtado Montero",
+    "telefono": "529811036671",
+    "telefono_display": "9811036671",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "08:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Morgan",
+        "asunto": "CP Y DESLANADO MENSUAL",
+        "agenda": "Estetica",
+        "estado": "BAÑO"
+      }
+    ],
+    "mascotas": [
+      "Morgan"
+    ],
+    "mensajes": [
+      "Hola Jorge Carlos Hurtado Montero.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Morgan' para corte y baño a las 08:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 08:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Francisco Rullan",
+    "telefono": "529811121461",
+    "telefono_display": "9811121461",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "18:00",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Honei",
+        "asunto": "mp",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      }
+    ],
+    "mascotas": [
+      "Honei"
+    ],
+    "mensajes": [
+      "Hola Francisco Rullan.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Honei' para medicina preventiva a las 18:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 18:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Huellitas Amor Y Cuidado Para Tu Mejor Amigo",
+    "telefono": "524791497863",
+    "telefono_display": "4791497863",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "15:00",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Roky",
+        "asunto": "pipeta antipulgas",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      },
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "11:30",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Roky",
+        "asunto": "PIPETA",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      }
+    ],
+    "mascotas": [
+      "Roky"
+    ],
+    "mensajes": [
+      "Hola Huellitas Amor Y Cuidado Para Tu Mejor Amigo.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Roky' tiene 2 citas programadas: para medicina preventiva a las 11:30 y medicina preventiva a las 15:00 el día 7 de octubre de 2026.\n\n⏰ Horas: 11:30, 15:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Sara Liliana Guerrero Escalante",
+    "telefono": "529811047519",
+    "telefono_display": "9811047519",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "11:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Brad",
+        "asunto": "CP",
+        "agenda": "Estetica",
+        "estado": "CORTE DE PELO"
+      },
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "12:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Clooney",
+        "asunto": "CP",
+        "agenda": "Estetica",
+        "estado": "CORTE DE PELO"
+      }
+    ],
+    "mascotas": [
+      "Clooney",
+      "Brad"
+    ],
+    "mensajes": [
+      "Hola Sara Liliana Guerrero Escalante.",
+      "Baalak (Prado) le recuerda las citas de sus mascotas: 'Brad' para corte a las 11:00 y 'Clooney' para corte a las 12:00 el día 7 de octubre de 2026.\n\n⏰ Horas: 11:00, 12:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Paloma Cahuich",
+    "telefono": "529811213386",
+    "telefono_display": "9811213386",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "18:30",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Bebe 1",
+        "asunto": "MP DESPARACITACION DE CAMADA",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      },
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "18:30",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Bebe 2",
+        "asunto": "MP",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      },
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "19:00",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Bebe 3",
+        "asunto": "MP",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      },
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "19:00",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Bebe 4",
+        "asunto": "MP",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      }
+    ],
+    "mascotas": [
+      "Bebe 2",
+      "Bebe 1",
+      "Bebe 3",
+      "Bebe 4"
+    ],
+    "mensajes": [
+      "Hola Paloma Cahuich.",
+      "Baalak (Prado) le recuerda las citas de sus mascotas: 'Bebe 1' para medicina preventiva a las 18:30, 'Bebe 2' para medicina preventiva a las 18:30, 'Bebe 3' para medicina preventiva a las 19:00 y 'Bebe 4' para medicina preventiva a las 19:00 el día 7 de octubre de 2026.\n\n⏰ Horas: 18:30, 19:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Mauricio Ojeda Medina",
+    "telefono": "529811706682",
+    "telefono_display": "9811706682",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "11:00",
+        "tipo_visita": "Consulta",
+        "tipo_visita_raw": "CONSULTA",
+        "mascota": "Chocolate",
+        "asunto": "C",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "CONSULTA"
+      }
+    ],
+    "mascotas": [
+      "Chocolate"
+    ],
+    "mensajes": [
+      "Hola Mauricio Ojeda Medina.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Chocolate' para consulta a las 11:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 11:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Abraham Adrian Munguia Ayala",
+    "telefono": "525539143591",
+    "telefono_display": "5539143591",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "10:30",
+        "tipo_visita": "Consulta",
+        "tipo_visita_raw": "CONSULTA",
+        "mascota": "Hercules",
+        "asunto": "CONSULTA",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "CONSULTA"
+      }
+    ],
+    "mascotas": [
+      "Hercules"
+    ],
+    "mensajes": [
+      "Hola Abraham Adrian Munguia Ayala.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Hercules' para consulta a las 10:30 el día 7 de octubre de 2026.\n\n⏰ Hora: 10:30\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Beatriz Cuevas Velazquez",
+    "telefono": "529812179685",
+    "telefono_display": "9812179685",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "09:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Muffy",
+        "asunto": "CP",
+        "agenda": "Estetica",
+        "estado": "CORTE DE PELO"
+      }
+    ],
+    "mascotas": [
+      "Muffy"
+    ],
+    "mensajes": [
+      "Hola Beatriz Cuevas Velazquez.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Muffy' para corte a las 09:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 09:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Francisco Julian Gomez Cancino",
+    "telefono": "529211231483",
+    "telefono_display": "921-123-14-83",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "13:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Enka",
+        "asunto": "B Y T",
+        "agenda": "Estetica",
+        "estado": "B Y TRANSPORTE"
+      },
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "13:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Canela",
+        "asunto": "B Y T",
+        "agenda": "Estetica",
+        "estado": "B Y TRANSPORTE"
+      }
+    ],
+    "mascotas": [
+      "Canela",
+      "Enka"
+    ],
+    "mensajes": [
+      "Hola Francisco Julian Gomez Cancino.",
+      "Baalak (Prado) le recuerda las citas de sus mascotas: 'Enka' para baño y transporte a las 13:00 y 'Canela' para baño y transporte a las 13:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 13:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Miriam Alcocer Daniel",
+    "telefono": "529811182903",
+    "telefono_display": "9811182903",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "08:30",
+        "tipo_visita": "Cirugia",
+        "tipo_visita_raw": "CIRUGIA",
+        "mascota": "Dobby",
+        "asunto": "CIRUGIA",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "CIRUGIA"
+      }
+    ],
+    "mascotas": [
+      "Dobby"
+    ],
+    "mensajes": [
+      "Hola Miriam Alcocer Daniel.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Dobby' para Cirugia (cirugía) a las 08:30 el día 7 de octubre de 2026.\n\n⏰ Hora: 08:30\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Isidro Hernandez 0",
+    "telefono": "529811087872",
+    "telefono_display": "9811087872",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "10:00",
+        "tipo_visita": "Peluqueria",
+        "tipo_visita_raw": "PELUQUERIA",
+        "mascota": "Mani",
+        "asunto": "CP",
+        "agenda": "Estetica",
+        "estado": "CORTE DE PELO"
+      }
+    ],
+    "mascotas": [
+      "Mani"
+    ],
+    "mensajes": [
+      "Hola Isidro Hernandez 0.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Mani' para corte a las 10:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 10:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Diana Iglesias",
+    "telefono": "529934359678",
+    "telefono_display": "9934359678",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "13:30",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Nani",
+        "asunto": "MP",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      },
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "13:30",
+        "tipo_visita": "Medicina Preventiva",
+        "tipo_visita_raw": "MEDICINA PREVENTIVA",
+        "mascota": "Lilo",
+        "asunto": "MP",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "MEDICINA PREVENTIVA"
+      }
+    ],
+    "mascotas": [
+      "Nani",
+      "Lilo"
+    ],
+    "mensajes": [
+      "Hola Diana Iglesias.",
+      "Baalak (Prado) le recuerda las citas de sus mascotas: 'Nani' para medicina preventiva a las 13:30 y 'Lilo' para medicina preventiva a las 13:30 el día 7 de octubre de 2026.\n\n⏰ Hora: 13:30\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  },
+  {
+    "nombre": "Valentina Forastieri",
+    "telefono": "525576702761",
+    "telefono_display": "5576702761",
+    "citas": [
+      {
+        "fecha": "7 de octubre de 2026",
+        "hora": "10:00",
+        "tipo_visita": "Consulta",
+        "tipo_visita_raw": "CONSULTA",
+        "mascota": "Piccolina",
+        "asunto": "CON EL MEDICO LUIS",
+        "agenda": "CLINICA CENTRAL",
+        "estado": "CONSULTA"
+      }
+    ],
+    "mascotas": [
+      "Piccolina"
+    ],
+    "mensajes": [
+      "Hola Valentina Forastieri.",
+      "Baalak (Prado) le recuerda la cita de su mascota 'Piccolina' para consulta a las 10:00 el día 7 de octubre de 2026.\n\n⏰ Hora: 10:00\n\nPor favor confirme su asistencia y el servicio con anticipación.\n\n¡Gracias! 🐾"
+    ],
+    "tipo": "citas"
+  }
+]

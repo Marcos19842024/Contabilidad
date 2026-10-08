@@ -18,14 +18,16 @@ def _carpeta_datos():
     """
     Carpeta única de datos de la app (NO por año).
     Compartida entre años: catálogo, excepciones, backups, registros.
+
+    - Dev:  <raíz proyecto>/ingresos/
+    - Prod: ~/Documents/Vet Suite/ingresos/
     """
     if getattr(sys, 'frozen', False):
-        carpeta = Path.home() / "Documents" / "Contabilidad App"
-        carpeta.mkdir(parents=True, exist_ok=True)
-        return carpeta
+        carpeta = Path.home() / "Documents" / "Vet Suite" / "ingresos"
     else:
-        # En desarrollo: carpeta del proyecto
-        return Path(__file__).parent.parent
+        carpeta = Path(__file__).parent.parent / "ingresos"
+    carpeta.mkdir(parents=True, exist_ok=True)
+    return carpeta
 
 
 _CARPETA_DATOS = _carpeta_datos()
@@ -63,3 +65,7 @@ def ruta_deposito(anio=None, mes=None):
         / "Ingreso"
         / "Deposito"
     )
+
+
+# Archivo de configuración de Gmail (usado por el módulo de Ingresos)
+GMAIL_CONFIG_FILE = _CARPETA_DATOS / "gmail_config.json"

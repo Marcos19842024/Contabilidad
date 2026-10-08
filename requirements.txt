@@ -1,6 +1,13 @@
 openpyxl
 ttkbootstrap
 pdfplumber
+pdfminer.six
 pillow
 pyinstaller
 cfdiclient
+lxml
+cryptography
+pyOpenSSL
+pycryptodome
+requests
+urllib3

@@ -5,27 +5,18 @@ Configuración del módulo de Egresos.
 """
 
 import json
-import sys
 from pathlib import Path
 
+# Importamos la carpeta de datos desde rutas_egresos (única fuente de verdad)
+from core.rutas_egresos import CARPETA_DATOS as _CARPETA_DATOS
 
-def _carpeta_datos():
-    """Carpeta de datos de la app."""
-    if getattr(sys, 'frozen', False):
-        carpeta = Path.home() / "Documents" / "Contabilidad App"
-        carpeta.mkdir(parents=True, exist_ok=True)
-        return carpeta
-    else:
-        return Path(__file__).parent.parent
-
-
-_CARPETA_DATOS = _carpeta_datos()
 
 # Archivos de configuración de egresos
-CONFIG_EGRESOS_FILE = _CARPETA_DATOS / "config_egresos.json"
-PROVEEDORES_TC_FILE = _CARPETA_DATOS / "proveedores_tc.json"
-PROVEEDORES_SUCURSAL_FILE = _CARPETA_DATOS / "proveedores_sucursal.json"
-OBSERVACIONES_FILE = _CARPETA_DATOS / "observaciones_egresos.json"
+CONFIG_EGRESOS_FILE         = _CARPETA_DATOS / "config_egresos.json"
+PROVEEDORES_TC_FILE         = _CARPETA_DATOS / "proveedores_tc.json"
+PROVEEDORES_SUCURSAL_FILE   = _CARPETA_DATOS / "proveedores_sucursal.json"
+OBSERVACIONES_FILE          = _CARPETA_DATOS / "observaciones_egresos.json"
+SOLICITUD_ACTIVA_FILE       = _CARPETA_DATOS / "solicitud_sat_activa.json"
 
 
 # ============================================================
@@ -42,7 +33,6 @@ CONFIG_EGRESOS_DEFAULT = {
 
 
 def cargar_config_egresos():
-    """Carga la configuración de Egresos."""
     if CONFIG_EGRESOS_FILE.exists():
         try:
             with open(CONFIG_EGRESOS_FILE, "r", encoding="utf-8") as f:
@@ -56,16 +46,14 @@ def cargar_config_egresos():
 
 
 def guardar_config_egresos(cfg):
-    """Guarda la configuración de Egresos."""
     with open(CONFIG_EGRESOS_FILE, "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
 
 
 # ============================================================
-# PROVEEDORES CON TC (aunque salgan como PPD)
+# PROVEEDORES CON TC
 # ============================================================
 def cargar_proveedores_tc():
-    """Carga la lista de proveedores que se pagan con TC."""
     if PROVEEDORES_TC_FILE.exists():
         try:
             with open(PROVEEDORES_TC_FILE, "r", encoding="utf-8") as f:
@@ -76,7 +64,6 @@ def cargar_proveedores_tc():
 
 
 def guardar_proveedores_tc(proveedores):
-    """Guarda la lista de proveedores TC."""
     with open(PROVEEDORES_TC_FILE, "w", encoding="utf-8") as f:
         json.dump(proveedores, f, ensure_ascii=False, indent=2)
 
@@ -85,10 +72,6 @@ def guardar_proveedores_tc(proveedores):
 # PROVEEDORES POR SUCURSAL
 # ============================================================
 def cargar_proveedores_sucursal():
-    """
-    Carga la lista de proveedores con sucursal asignada.
-    Formato: {RFC: "Animalia" | "Baalak" | "Preguntar"}
-    """
     if PROVEEDORES_SUCURSAL_FILE.exists():
         try:
             with open(PROVEEDORES_SUCURSAL_FILE, "r", encoding="utf-8") as f:
@@ -99,13 +82,12 @@ def cargar_proveedores_sucursal():
 
 
 def guardar_proveedores_sucursal(proveedores):
-    """Guarda la lista de proveedores por sucursal."""
     with open(PROVEEDORES_SUCURSAL_FILE, "w", encoding="utf-8") as f:
         json.dump(proveedores, f, ensure_ascii=False, indent=2)
 
 
 # ============================================================
-# MAPEO DE OBSERVACIONES (palabras clave)
+# MAPEO DE OBSERVACIONES
 # ============================================================
 OBSERVACIONES_DEFAULT = {
     "GASOLINA": ["gasolina", "combustible", "pemex", "gas"],
@@ -123,7 +105,6 @@ OBSERVACIONES_DEFAULT = {
 
 
 def cargar_observaciones():
-    """Carga el mapeo de observaciones (palabras clave)."""
     if OBSERVACIONES_FILE.exists():
         try:
             with open(OBSERVACIONES_FILE, "r", encoding="utf-8") as f:
@@ -134,33 +115,14 @@ def cargar_observaciones():
 
 
 def guardar_observaciones(obs):
-    """Guarda el mapeo de observaciones."""
     with open(OBSERVACIONES_FILE, "w", encoding="utf-8") as f:
         json.dump(obs, f, ensure_ascii=False, indent=2)
-
 
 
 # ============================================================
 # SOLICITUDES SAT PENDIENTES
 # ============================================================
-SOLICITUD_ACTIVA_FILE = _CARPETA_DATOS / "solicitud_sat_activa.json"
-
-
 def cargar_solicitud_activa():
-    """
-    Carga la solicitud activa (si hay una en curso).
-
-    Devuelve un dict:
-      {
-        "id_solicitud": "...",
-        "rfc": "...",
-        "anio": 2026,
-        "mes_idx": 9,
-        "mes_nombre": "septiembre",
-        "fecha_solicitud": "2026-10-02T14:30:00",
-      }
-    O None si no hay.
-    """
     if not SOLICITUD_ACTIVA_FILE.exists():
         return None
     try:
@@ -171,13 +133,11 @@ def cargar_solicitud_activa():
 
 
 def guardar_solicitud_activa(datos):
-    """Guarda la solicitud activa."""
     with open(SOLICITUD_ACTIVA_FILE, "w", encoding="utf-8") as f:
         json.dump(datos, f, ensure_ascii=False, indent=2)
 
 
 def limpiar_solicitud_activa():
-    """Elimina el archivo de solicitud activa."""
     try:
         if SOLICITUD_ACTIVA_FILE.exists():
             SOLICITUD_ACTIVA_FILE.unlink()
@@ -186,7 +146,6 @@ def limpiar_solicitud_activa():
 
 
 def horas_desde_solicitud(datos):
-    """Devuelve cuántas horas han pasado desde que se creó la solicitud."""
     from datetime import datetime
     if not datos:
         return None

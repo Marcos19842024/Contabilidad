@@ -1,0 +1,130 @@
+[
+  {
+    "id": 2,
+    "codigo": "SERVICIO DE TRANSPORTE  250",
+    "familia": "CLINICA",
+    "subfamilia": "URGENCIA",
+    "precio": 250.0,
+    "activo": true
+  },
+  {
+    "id": 3,
+    "codigo": "SERVICIO DE TRANSPORTE 160",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 160.0,
+    "activo": true
+  },
+  {
+    "id": 4,
+    "codigo": "SERVICIO DE TRANSPORTE 170",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 120.0,
+    "activo": true
+  },
+  {
+    "id": 5,
+    "codigo": "SERVICIO DE TRANSPORTE 180",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 180.0,
+    "activo": true
+  },
+  {
+    "id": 6,
+    "codigo": "SERVICIO DE TRANSPORTE 190",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 190.0,
+    "activo": true
+  },
+  {
+    "id": 7,
+    "codigo": "SERVICIO DE TRANSPORTE 200",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 200.0,
+    "activo": true
+  },
+  {
+    "id": 8,
+    "codigo": "SERVICIO DE TRANSPORTE 210",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 210.0,
+    "activo": true
+  },
+  {
+    "id": 9,
+    "codigo": "SERVICIO DE TRANSPORTE 215",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 215.0,
+    "activo": true
+  },
+  {
+    "id": 10,
+    "codigo": "SERVICIO DE TRANSPORTE 235",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 235.0,
+    "activo": true
+  },
+  {
+    "id": 11,
+    "codigo": "SERVICIO DE TRANSPORTE 285",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 285.0,
+    "activo": true
+  },
+  {
+    "id": 12,
+    "codigo": "SERVICIO DE TRANSPORTE 320",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 320.0,
+    "activo": true
+  },
+  {
+    "id": 13,
+    "codigo": "SERVICIO DE TRANSPORTE 460",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 460.0,
+    "activo": true
+  },
+  {
+    "id": 14,
+    "codigo": "SERVICIO DE TRANSPORTE 480",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 480.0,
+    "activo": true
+  },
+  {
+    "id": 15,
+    "codigo": "SERVICIO DE TRANSPORTE 570",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 570.0,
+    "activo": true
+  },
+  {
+    "id": 16,
+    "codigo": "TO GO",
+    "familia": "ESTETICA Y PENSION",
+    "subfamilia": "NORMALES",
+    "precio": 35.0,
+    "activo": true
+  },
+  {
+    "id": 17,
+    "codigo": "FLETE",
+    "familia": "CLINICA",
+    "subfamilia": "NORMAL",
+    "precio": 220.0,
+    "activo": true
+  }
+]

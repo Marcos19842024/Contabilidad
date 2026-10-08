@@ -4,11 +4,12 @@
 
 set -e
 
-APP_NAME="Sistema Ingresos"
+APP_NAME="Vet Suite"
+APP_BIN="VetSuite"
 APP_PATH="dist/${APP_NAME}.app"
 
-if [ ! -d "dist/SistemaIngresos" ]; then
-    echo "❌ No existe dist/SistemaIngresos"
+if [ ! -d "dist/${APP_BIN}" ]; then
+    echo "❌ No existe dist/${APP_BIN}"
     exit 1
 fi
 
@@ -17,8 +18,8 @@ mkdir -p "${APP_PATH}/Contents/MacOS"
 mkdir -p "${APP_PATH}/Contents/Resources"
 
 echo "→ Moviendo archivos..."
-mv dist/SistemaIngresos/SistemaIngresos "${APP_PATH}/Contents/Resources/"
-mv dist/SistemaIngresos/_internal "${APP_PATH}/Contents/Resources/"
+mv "dist/${APP_BIN}/${APP_BIN}" "${APP_PATH}/Contents/Resources/"
+mv "dist/${APP_BIN}/_internal" "${APP_PATH}/Contents/Resources/"
 
 echo "→ Creando Info.plist..."
 cat > "${APP_PATH}/Contents/Info.plist" << 'EOF'
@@ -27,17 +28,17 @@ cat > "${APP_PATH}/Contents/Info.plist" << 'EOF'
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Sistema Ingresos</string>
+    <string>Vet Suite</string>
     <key>CFBundleDisplayName</key>
-    <string>Sistema Ingresos</string>
+    <string>Vet Suite</string>
     <key>CFBundleIdentifier</key>
-    <string>com.qvet.sistemaingresos</string>
+    <string>com.vetsuite.app</string>
     <key>CFBundleVersion</key>
-    <string>1.0.0</string>
+    <string>2.0.0</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>2.0.0</string>
     <key>CFBundleExecutable</key>
-    <string>SistemaIngresos</string>
+    <string>VetSuite</string>
     <key>CFBundleIconFile</key>
     <string>icono.icns</string>
     <key>CFBundlePackageType</key>
@@ -60,12 +61,12 @@ if [ -f "icono.icns" ]; then
 fi
 
 echo "→ Creando lanzador..."
-cat > "${APP_PATH}/Contents/MacOS/SistemaIngresos" << 'EOF'
+cat > "${APP_PATH}/Contents/MacOS/${APP_BIN}" << 'EOF'
 #!/bin/bash
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-exec "$DIR/../Resources/SistemaIngresos" "$@"
+exec "$DIR/../Resources/VetSuite" "$@"
 EOF
-chmod +x "${APP_PATH}/Contents/MacOS/SistemaIngresos"
+chmod +x "${APP_PATH}/Contents/MacOS/${APP_BIN}"
 
 echo "→ Limpiando atributos extendidos..."
 xattr -cr "${APP_PATH}" 2>/dev/null || true
@@ -73,7 +74,7 @@ xattr -cr "${APP_PATH}" 2>/dev/null || true
 echo "→ Firmando binarios..."
 find "${APP_PATH}" -type f \( -name "*.so" -o -name "*.dylib" -o -name "Python" \) -exec codesign --force --sign - {} \; 2>/dev/null || true
 find "${APP_PATH}" -type d -name "*.framework" -exec codesign --force --deep --sign - {} \; 2>/dev/null || true
-codesign --force --sign - "${APP_PATH}/Contents/MacOS/SistemaIngresos" 2>/dev/null || true
+codesign --force --sign - "${APP_PATH}/Contents/MacOS/${APP_BIN}" 2>/dev/null || true
 codesign --force --deep --sign - "${APP_PATH}" 2>/dev/null || true
 
 echo "✅ ${APP_NAME}.app creada"

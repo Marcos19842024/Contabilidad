@@ -45,7 +45,7 @@ class AppEgresos(ttk.Toplevel):
 
     def __init__(self, master=None):
         super().__init__(master)
-        self.title("Sistema de Egresos - Contabilidad")
+        self.title("Vet Suite — Egresos")
 
         # Configurar tamano y centrar
         configurar_ventana(

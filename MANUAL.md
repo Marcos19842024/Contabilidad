@@ -1,6 +1,6 @@
-# Manual de Usuario — Sistema de Contabilidad QVET
+# Manual de Usuario - Vet Suite
 
-**Versión:** 2.0.0  
+**Versión:** 2.1.0  
 **Última actualización:** Octubre 2026
 
 ---
@@ -16,33 +16,33 @@
 7. Reportes (Ingresos)
 8. Adjuntos
 9. Módulo de Egresos
-10. Configuración avanzada
-11. Solución de problemas
-12. Preguntas frecuentes
-13. Glosario
+10. Módulo de Estética y Transportes
+11. Módulo de Recordatorios
+12. Configuración avanzada
+13. Solución de problemas
+14. Preguntas frecuentes
+15. Glosario
 
 ---
 
 ## 1. Introducción
 
-### ¿Qué es el Sistema de Contabilidad QVET?
+### ¿Qué es Vet Suite?
 
-Aplicación de escritorio que automatiza la captura y el reporte de las facturas de QVET.
+Aplicación de escritorio que automatiza la contabilidad, la gestión de clientes y los recordatorios de la veterinaria.
 
-Tiene dos módulos:
+Tiene **cuatro módulos**:
 
 - **Ingresos**: descarga facturas del correo Gmail, las procesa y genera el reporte mensual.
 - **Egresos**: descarga facturas del SAT con tu e.firma, las procesa y genera los reportes PUE y PPD.
+- **Estética y Transportes**: gestiona clientes, mascotas, rutas y tarifas para agendar servicios.
+- **Recordatorios**: envía recordatorios de citas y vacunas por WhatsApp.
 
 ### ¿Para qué sirve?
 
-Antes tenías que hacer todo a mano: abrir el correo, descargar XMLs, copiar datos, llenar Excel.
+**Contabilidad:** antes tenías que hacer todo a mano (abrir correo, descargar XMLs, copiar datos, llenar Excel). Ahora la app lo hace automáticamente.
 
-Ahora la app hace todo automáticamente. Tú solo:
-
-1. Presionas un botón.
-2. Revisas que todo esté bien.
-3. Generas el Excel.
+**Operaciones:** la app te ayuda a saber cuánto tiempo ocupa una estética o un transporte, y a enviar recordatorios a los clientes sin trabajo manual.
 
 ### Requisitos
 
@@ -57,6 +57,7 @@ Software:
 
 - Cuenta de Gmail (para Ingresos).
 - e.firma del SAT (.cer y .key) (para Egresos).
+- WhatsApp Desktop instalado (recomendado para Recordatorios).
 
 ---
 
@@ -66,7 +67,7 @@ Software:
 
 1. Descarga el ZIP desde GitHub Releases.
 2. Descomprime el archivo.
-3. Doble clic en `SistemaIngresos.exe`.
+3. Doble clic en `VetSuite.exe`.
 4. Si Windows avisa, clic en "Más información" → "Ejecutar de todas formas".
 5. Mueve la carpeta a un lugar fijo (no muevas solo el .exe).
 
@@ -74,17 +75,17 @@ Software:
 
 1. Descarga el ZIP desde GitHub Releases.
 2. Descomprime el archivo.
-3. Arrastra `Sistema Ingresos.app` a Aplicaciones.
+3. Arrastra `Vet Suite.app` a Aplicaciones.
 4. Clic derecho → Abrir.
 5. Si macOS bloquea, ejecuta en Terminal:
-   `xattr -cr "/Applications/Sistema Ingresos.app"`
+   `xattr -cr "/Applications/Vet Suite.app"`
 
 ### 2.3 Primer arranque
 
 Al abrir la app por primera vez se crea automáticamente la carpeta de datos:
 
-- Windows: `C:\Users\<usuario>\Documents\Contabilidad App\`
-- macOS: `~/Documents/Contabilidad App/`
+- Windows: `C:\Users\<usuario>\Documents\Vet Suite\`
+- macOS: `~/Documents/Vet Suite/`
 
 ---
 
@@ -101,6 +102,8 @@ Al abrir la app por primera vez se crea automáticamente la carpeta de datos:
    - Filtro opcional
 4. Clic en Guardar.
 
+La config se guarda en `~/Documents/Vet Suite/ingresos/gmail_config.json`.
+
 ### 3.2 Configurar la e.firma (para Egresos)
 
 1. Abre Egresos.
@@ -116,7 +119,7 @@ La app convierte los archivos automáticamente. No tienes que hacer nada extra.
 
 ### 3.3 Elegir tema visual
 
-1. En Ingresos, clic en Cambiar tema.
+1. En la pantalla principal, clic en `⚙️ Configuración`.
 2. Elige un tema.
 3. Aplicar y guardar.
 
@@ -126,7 +129,9 @@ Temas recomendados:
 - superhero (oscuro con azules)
 - flatly (claro)
 
----## 4. Flujo de trabajo diario (Ingresos)
+---
+
+## 4. Flujo de trabajo diario (Ingresos)
 
 ### 4.1 Sincronizar facturas del correo
 
@@ -146,32 +151,36 @@ Temas recomendados:
 1. Clic en Leer factura.
 2. Selecciona el XML.
 3. Selecciona el PDF (opcional).
-4. Verifica el formulario.
-5. Guardar.
+4. La app procesa el XML y el PDF automáticamente.
+5. El registro aparece en la tabla.
 
-### 4.3 El formulario
+### 4.3 La tabla de registros
 
-El formulario tiene secciones:
+La tabla muestra:
 
-- GENERAL: No. Factura, QVET, Fecha, Nombre, RFC, Folio Fiscal.
-- U (Alimentos): Importe e IVA.
-- ACCESORIOS, MEDICAMENTOS, HIGIENE, ESTETICA, TRANSPORTE, PENSION, VACUNA, CLINICA.
-- TOTAL (auto).
-- TIPO DE PAGO: Efectivo, TC, TD, Cheque, Transferencia, Vale.
+- No. Factura, QVET, Fecha, Nombre, RFC.
+- Total, Efectivo, TC, TD, Cheque, Transferencia.
+- Folio Fiscal, Centro.
+- Ícono 📎 si tiene adjuntos.
 
-Si la suma de categorías no coincide con la de pagos, aparece una alerta roja.
+Los campos de categorías (U, ACCESORIOS, MEDICAMENTOS, HIGIENE, ESTETICA, TRANSPORTE, PENSION, VACUNA, CLINICA) **se guardan automáticamente** cuando procesas una factura, y se usan al generar el Excel.
 
-### 4.4 Guardar registros
+### 4.4 Ver adjuntos y editar
 
-1. Verifica los datos.
-2. Clic en Guardar.
-3. El registro aparece en la tabla.
+1. Doble clic en un registro → abre el diálogo de edición.
+2. Puedes:
+   - Ver el XML y PDF adjuntos.
+   - Editar campos editables (los datos del SAT no se pueden cambiar).
+   - Eliminar el registro.
+3. Guardar o cerrar.
 
-### 4.5 Ver adjuntos
+### 4.5 Filtros
 
-1. Selecciona un registro.
-2. Clic derecho → Ver adjuntos.
-3. Doble clic en un archivo para abrirlo.
+En la barra superior:
+
+- Centro: Central / Prado.
+- Año.
+- Mes.
 
 ---
 
@@ -264,7 +273,7 @@ No se borran automáticamente. Puedes eliminarlos manualmente cuando ya no los n
 
 ### 8.1 Ver adjuntos
 
-Clic derecho → Ver adjuntos.
+Doble clic en un registro → pestaña de adjuntos.
 
 ### 8.2 Adjuntar manualmente
 
@@ -274,13 +283,13 @@ Clic derecho → Adjuntar factura.
 
 Clic derecho → Ver adjuntos → Abrir carpeta.
 
----## 9. Módulo de Egresos
+---
+
+## 9. Módulo de Egresos
 
 ### 9.1 ¿Qué es?
 
 El módulo de Egresos descarga automáticamente las facturas de compra (CFDI recibidos) desde el SAT usando tu e.firma, las procesa y genera los reportes PUE y PPD en Excel.
-
-A diferencia de Ingresos (que descarga del correo), Egresos se autentica directamente con el SAT.
 
 ### 9.2 Configurar la e.firma
 
@@ -290,16 +299,12 @@ Necesitas 3 cosas:
 2. Archivo `.key` — Llave privada de la e.firma.
 3. Contraseña de la e.firma.
 
-Estos archivos los descargaste cuando tramitaste tu e.firma.
-
 Pasos en la app:
 
 1. Abre Egresos.
 2. Clic en `⚙️ Configuración SAT`.
 3. Llena RFC, certificado, llave y contraseña.
 4. Clic en Guardar.
-
-La app convierte los archivos automáticamente a un formato moderno. No tienes que hacer nada extra.
 
 ### 9.3 Descargar del SAT
 
@@ -342,7 +347,7 @@ El SAT solo permite **una solicitud activa por contribuyente**.
 
 Si tienes una en proceso, el botón cambia a `🔄 Verificar solicitud pendiente`.
 
-Si lleva más de 24 horas sin respuesta, el botón vuelve a `📥 Descargar del SAT` (probablemente expiró).
+Si lleva más de 24 horas sin respuesta, el botón vuelve a `📥 Descargar del SAT`.
 
 ### 9.4 Esperar y verificar
 
@@ -404,7 +409,7 @@ Se elimina el registro y su XML asociado.
 
 1. Clic derecho en la fila → Abrir carpeta del XML.
 
----### 9.7 Generar Excel PUE/PPD
+### 9.7 Generar Excel PUE/PPD
 
 1. Verifica el mes en el selector.
 2. Clic en `📊 Generar Excel`.
@@ -423,10 +428,6 @@ Si el archivo **ya existe**:
 - **Sí** → Reordenar TODO (crea backup antes).
 - **No** → Ya existe, no hacer nada.
 - **Cancelar** → Omitir.
-
-El backup se guarda como:
-
-`RELACION FACTURAS PUE - septiembre 2026_backup_2026-10-02_14-30-00.xlsx`
 
 ### 9.8 Reportes de Egresos
 
@@ -468,75 +469,223 @@ Es normal. El SAT está saturado.
 
 Puede tardar desde minutos hasta horas.
 
-Recomendación: cierra la app y vuelve más tarde. La solicitud sigue viva en el SAT.
-
-#### Los totales del Excel no coinciden
-
-Posibles causas:
-
-1. Facturas de Animalia mal marcadas.
-2. PUE/PPD mal clasificados.
-3. Facturas sin descargar.
-
-#### La app no encuentra los XML
-
-Verifica que existan en `/tmp/sat_descargas/`.
-
-Si no están, vuelve a descargar del SAT.
-
-#### El botón dice "🔄 Verificar solicitud" pero ya expiró
-
-La app limpia automáticamente las solicitudes con más de 24 horas.
-
-Si no lo hace, ejecuta en Terminal:
-
-`python3 -c "from config.config_egresos import limpiar_solicitud_activa; limpiar_solicitud_activa(); print('Limpiada')"`
-
-### 9.10 Historial de Egresos
-
-La app mantiene un historial de:
-
-- RFCs de emisores
-- Nombres de emisores
-- Observaciones usadas
-
-Se guarda en:
-
-`~/Documents/Contabilidad App/historial_egresos.json`
-
-Se usa para autocompletar en los diálogos de edición.
+Recomendación: cierra la app y vuelve más tarde.
 
 ---
 
-## 10. Configuración avanzada
+## 10. Módulo de Estética y Transportes
 
-### 10.1 Cambiar tema
+### 10.1 ¿Qué es?
 
-Ver sección 3.3.
+Módulo auxiliar para **determinar qué espacio dar en la agenda de QVET**.
 
-### 10.2 Ver logs
+Sirve para saber de antemano:
 
-Clic en Ver logs (Ingresos). Se abre la carpeta de logs.
+- Cuánto tarda un servicio de estética para cada mascota.
+- Cuánto tarda un transporte a la ubicación del cliente.
+- Qué características tiene la mascota (raza, carácter, precauciones).
+- Qué servicios adicionales requiere (baño medicado, transporte, etc.).
 
-### 10.3 Reset caché
+Con eso puedes asignar un espacio en la agenda con información real en lugar de adivinar.
 
-Clic en Reset caché (Ingresos). Aparece confirmación.
+### 10.2 Datos que guarda
+
+- **Cliente**: nombre, población, dirección, notas.
+- **Transporte**: distancia, tiempo, tarifa, notas.
+- **Mascotas**: nombre, raza, carácter, precauciones, notas.
+- **Catálogos**: servicios de estética con duración, tarifas de transporte.
+
+### 10.3 Importar clientes desde Excel
+
+1. Clic en `📥 Importar Excel`.
+2. Selecciona el Excel de clientes (debe tener columnas `CLIENTE`, `POBLACIÓN`, `DIRECCIÓN`).
+3. La app detecta automáticamente el tipo de Excel.
+4. Revisa el preview (cuántas filas).
+5. Clic en Sí para importar.
+
+**Solo importa los que no existan** (merge por nombre).
+
+### 10.4 Buscar clientes
+
+1. Escribe en el buscador (nombre, población, dirección o mascota).
+2. La tabla filtra en vivo.
+3. Doble clic en un cliente → abre el detalle con 4 pestañas.
+
+### 10.5 Pestañas del detalle
+
+**Datos:**
+- Nombre, población, dirección.
+- Notas del cliente.
+
+**Transporte:**
+- Latitud / Longitud (botón de geocodificación automática).
+- Distancia y tiempo (botón "Calcular ruta").
+- Tarifa (combobox con el catálogo).
+- Notas de transporte.
+
+**Estética / Mascotas:**
+- Lista de mascotas.
+- Doble clic para editar.
+- Botón "+ Agregar mascota".
+- Notas de estética (a nivel cliente).
+
+**Historial (en construcción).**
+
+### 10.6 Alertas ⚠️
+
+Si un cliente tiene **notas en cualquier pestaña**, aparece un ⚠️ en la tabla principal.
+
+### 10.7 Duplicados y basura
+
+Clic en `⚠️ Duplicados / Basura`:
+
+- **Duplicados**: elige con cuál te quedas.
+- **Basura**: edita, elimina o restaura.
+
+### 10.8 Catálogos editables
+
+Clic en `📚 Catálogos`:
+
+- **Servicios de estética**: código, descripción, precio, duración.
+- **Tarifas de transporte**: código, precio.
+
+Doble clic en un registro para editar.
 
 ---
 
-## 11. Solución de problemas generales
+## 11. Módulo de Recordatorios
 
-### 11.1 La app no abre en Windows
+### 11.1 ¿Qué es?
+
+Envía recordatorios de **citas** y **vacunas** a tus clientes por WhatsApp.
+
+**Requisitos:**
+
+- WhatsApp Desktop instalado y vinculado a tu número.
+- Los Excel de agenda y vacunas exportados de QVET.
+
+### 11.2 Exportar los Excel desde QVET
+
+1. En QVET, ve a la sección de agenda y exporta.
+2. El archivo se descarga como `exportacion.xlsx` (o `exportacion(1).xlsx`).
+3. Repite para vacunas.
+4. NO importa cómo se llame el archivo, la app detecta el tipo por columnas.
+
+### 11.3 Importar Excel
+
+1. Clic en `📥 Importar Excel`.
+2. Selecciona 1 o más Excel (con Ctrl+clic).
+3. La app detecta el tipo de cada uno.
+4. Revisa el resumen.
+5. Clic en Sí.
+
+**Cada Excel debe tener las siguientes columnas:**
+
+**Citas:**
+`FECHA | INICIO | TIPO VISITA | PROPIETARIO | MASCOTA | TELÉFONO | ASUNTO | AGENDA | ESTADO`
+
+**Vacunas:**
+`CLIENTE | TELÉFONO 1 | MASCOTA | TIPO DE RECORDATORIO | VACUNA | PRÓXIMA FECHA`
+
+### 11.4 Tabs de Citas y Vacunas
+
+Después de importar, verás 2 tabs:
+
+- **Citas**: clientes agrupados por teléfono.
+- **Vacunas**: clientes agrupados por teléfono y mascota.
+
+Cada cliente tiene su **checkbox**:
+
+- ⬜ Pendiente
+- ✅ Enviado
+
+### 11.5 Ver el mensaje
+
+1. Clic en un cliente.
+2. El mensaje aparece abajo.
+
+### 11.6 Enviar por WhatsApp
+
+1. Selecciona un cliente.
+2. Clic en `Enviar por WhatsApp`.
+3. La app:
+   - Copia el mensaje al portapapeles.
+   - Abre WhatsApp Desktop con el chat del cliente.
+4. En WhatsApp:
+   - Pega el mensaje con **Cmd+V** (Mac) o **Ctrl+V** (Windows).
+   - Presiona **Enter**.
+5. Vuelve a la app.
+6. La app te pregunta: **"¿Ya enviaste?"**
+7. Clic en Sí → se marca como enviado.
+
+**Ventaja:** los emojis se preservan al pegar, y usas tu número actual.
+
+### 11.7 Marcar y desmarcar
+
+- `Marcar como enviado`: si ya enviaste el mensaje.
+- `Desmarcar`: si te equivocaste.
+
+### 11.8 Sucursales
+
+Clic en `Configurar sucursales`:
+
+- Agregar una sucursal nueva.
+- Editar existentes.
+- Activar/desactivar.
+
+La sucursal activa determina el nombre que aparece en los mensajes.
+
+### 11.9 Al cambiar de sucursal
+
+Los mensajes de los clientes **no enviados** se regeneran con el nuevo nombre de sucursal.
+
+Los mensajes **ya enviados** no cambian (para preservar el histórico).
+
+### 11.10 Limpiar todo
+
+Clic en `Limpiar todo`. Pide confirmación.
+
+Borra todos los clientes importados y el historial de mensajes en pantalla.
+
+### 11.11 Estadísticas
+
+En la parte inferior de la ventana:
+
+Citas: 14 (Enviados: 3 | Pendientes: 11)
+Vacunas: 20 (Enviados: 8 | Pendientes: 12)
+
+
+---
+
+## 12. Configuración avanzada
+
+### 12.1 Cambiar tema
+
+En la pantalla principal, clic en `⚙️ Configuración`.
+
+### 12.2 Ver logs
+
+Clic en `Ver logs` (Ingresos). Se abre la carpeta de logs.
+
+### 12.3 Reset caché
+
+Clic en `Reset caché` (Ingresos). Aparece confirmación.
+
+---
+
+## 13. Solución de problemas generales
+
+### 13.1 La app no abre en Windows
 
 Clic derecho → Ejecutar como administrador.
 
-### 11.2 La app no abre en macOS
+### 13.2 La app no abre en macOS
 
 Ejecuta en Terminal:
 
-`xattr -cr "/Applications/Sistema Ingresos.app"`
+`xattr -cr "/Applications/Vet Suite.app"`
 
-### 11.3 La sincronización falla
+### 13.3 La sincronización falla
 
 Causas posibles:
 
@@ -545,20 +694,32 @@ Causas posibles:
 - Etiqueta de Gmail mal escrita.
 - Filtro muy estricto.
 
-### 11.4 El Excel está bloqueado
+### 13.4 El Excel está bloqueado
 
 Cierra Excel y vuelve a intentar.
 
-### 11.5 Los totales no cuadran
+### 13.5 WhatsApp no abre el chat
 
-Revisa el desglose por categoría o las facturas de Animalia.
+Verifica:
 
----## 12. Preguntas frecuentes
+1. Que WhatsApp Desktop esté instalado.
+2. Que esté vinculado con tu número.
+3. Que el enlace `wa.me` esté asociado a WhatsApp Desktop (Settings → Default Apps).
+
+### 13.6 Los emojis no se ven en la app
+
+Tkinter (la librería gráfica) no renderiza emojis de forma nativa. Es normal.
+
+**Los emojis SÍ se ven correctamente en WhatsApp** cuando pegas el mensaje.
+
+---
+
+## 14. Preguntas frecuentes
 
 ### ¿Dónde se guardan los datos?
 
-- Windows: `C:\Users\<usuario>\Documents\Contabilidad App\`
-- macOS: `~/Documents/Contabilidad App/`
+- Windows: `C:\Users\<usuario>\Documents\Vet Suite\`
+- macOS: `~/Documents/Vet Suite/`
 
 ### ¿Cómo hago backup?
 
@@ -579,7 +740,7 @@ La app crea automáticamente un archivo nuevo.
 3. Prueba que funcione.
 4. Reemplaza la carpeta anterior.
 
-NO borres la carpeta Contabilidad App.
+NO borres la carpeta `Vet Suite`.
 
 ### ¿Qué hago si la app se cierra sola?
 
@@ -587,11 +748,7 @@ NO borres la carpeta Contabilidad App.
 
 ### ¿Cuántas solicitudes al SAT puedo hacer?
 
-Solo una a la vez por contribuyente. El SAT rechaza solicitudes simultáneas.
-
-### ¿Dónde queda el historial de Egresos?
-
-En `~/Documents/Contabilidad App/historial_egresos.json`.
+Solo una a la vez por contribuyente.
 
 ### ¿Puedo recuperar un Excel que reemplacé?
 
@@ -599,11 +756,17 @@ Sí. Los backups están en la misma carpeta con el nombre:
 
 `<archivo>_backup_YYYY-MM-DD_HH-MM-SS.xlsx`
 
-Renómbralo quitando el `_backup_...`.
+### ¿Puedo enviar varios recordatorios a la vez?
+
+Sí. Selecciona uno, envía, confirma, y pasa al siguiente. El flujo es rápido (~5 segundos por mensaje).
+
+### ¿Qué pasa si cambio el nombre de la sucursal?
+
+Los mensajes nuevos usan el nuevo nombre. Los ya enviados no cambian.
 
 ---
 
-## 13. Glosario
+## 15. Glosario
 
 | Término | Significado |
 |---------|-------------|
@@ -626,6 +789,8 @@ Renómbralo quitando el `_backup_...`.
 | Backup | Copia de seguridad. |
 | Log | Registro de actividad. |
 | Caché | Almacén temporal de datos. |
+| Geocodificación | Obtener coordenadas desde una dirección. |
+| wa.me | Enlace oficial de WhatsApp para abrir un chat. |
 
 ---
 
@@ -641,5 +806,5 @@ Si tienes problemas:
 
 **Fin del manual.**
 
-**Versión:** 2.0.0  
+**Versión:** 2.1.0  
 **Última actualización:** Octubre 2026

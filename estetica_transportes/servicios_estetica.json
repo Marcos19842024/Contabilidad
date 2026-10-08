@@ -1,0 +1,1172 @@
+[
+  {
+    "id": 1,
+    "codigo": "B CH PC",
+    "descripcion": "Baño chico pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 150.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 2,
+    "codigo": "B CH PL",
+    "descripcion": "Baño chico pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 180.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 3,
+    "codigo": "B EX CH PC",
+    "descripcion": "Baño extra chico pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 130.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 4,
+    "codigo": "B GATO CH PC",
+    "descripcion": "Baño gato chico pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B GATO",
+    "precio": 120.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 5,
+    "codigo": "B GATO CH PL",
+    "descripcion": "Baño gato chico pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B GATO",
+    "precio": 180.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 6,
+    "codigo": "B GATO G PC",
+    "descripcion": "Baño gato grande pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B GATO",
+    "precio": 150.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 7,
+    "codigo": "B GATO G PL",
+    "descripcion": "Baño gato grande pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B GATO",
+    "precio": 200.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 8,
+    "codigo": "B GDE PC",
+    "descripcion": "Baño grande pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 250.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 9,
+    "codigo": "B GDE PL Y DOBLE CAPA",
+    "descripcion": "Baño grande pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 350.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 10,
+    "codigo": "B GDE PM",
+    "descripcion": "Baño grande pelo mediano",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 300.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 11,
+    "codigo": "B GIG PC",
+    "descripcion": "Baño gigante pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 350.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 12,
+    "codigo": "B GIG PL",
+    "descripcion": "Baño gigante pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 400.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 13,
+    "codigo": "B M DOBLE CAPA",
+    "descripcion": "B M DOBLE CAPA",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 300.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 14,
+    "codigo": "B M PC",
+    "descripcion": "Baño mediano pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 210.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 15,
+    "codigo": "B M PM Y PL",
+    "descripcion": "Baño mediano pelo mediano",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 250.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 16,
+    "codigo": "BG A CH PC",
+    "descripcion": "Baño garrapaticida A chico pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 180.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 17,
+    "codigo": "BG A G PC",
+    "descripcion": "Baño garrapaticida A grande pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 315.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 18,
+    "codigo": "BG A GIG PC",
+    "descripcion": "Baño garrapaticida A gigante pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 390.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 19,
+    "codigo": "BG A M PC",
+    "descripcion": "Baño garrapaticida A mediano pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 260.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 20,
+    "codigo": "BG B CH PC",
+    "descripcion": "Baño garrapaticida B chico pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 240.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 21,
+    "codigo": "BG B G PC",
+    "descripcion": "Baño garrapaticida B grande pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 420.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 22,
+    "codigo": "BG B GIG PC",
+    "descripcion": "Baño garrapaticida B gigante pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 510.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 23,
+    "codigo": "BG B M PC",
+    "descripcion": "Baño garrapaticida B mediano pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 360.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 24,
+    "codigo": "BG C CH PC",
+    "descripcion": "Baño garrapaticida C chico pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 360.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 25,
+    "codigo": "BG C G PC",
+    "descripcion": "Baño garrapaticida C grande pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 630.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 26,
+    "codigo": "BG C GIG PC",
+    "descripcion": "Baño garrapaticida C gigante pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 750.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 27,
+    "codigo": "BG C M PC",
+    "descripcion": "Baño garrapaticida C mediano pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 540.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 28,
+    "codigo": "BG D CH PC",
+    "descripcion": "Baño garrapaticida D chico pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 440.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 29,
+    "codigo": "BG D G PC",
+    "descripcion": "Baño garrapaticida D grande pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 770.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 30,
+    "codigo": "BG D GIG PC",
+    "descripcion": "Baño garrapaticida D gigante pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 910.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 31,
+    "codigo": "BG D M PC",
+    "descripcion": "Baño garrapaticida D mediano pelo corto",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 660.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 32,
+    "codigo": "CEPILLO OSTER",
+    "descripcion": "CEPILLO OSTER",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 250.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 33,
+    "codigo": "CEPILLO PIN BRUSH",
+    "descripcion": "CEPILLO PIN BRUSH",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 510.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 34,
+    "codigo": "CEPILLO TUBO ENDOTRAQUEAL GDE",
+    "descripcion": "CEPILLO TUBO ENDOTRAQUEAL GDE",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 95.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 35,
+    "codigo": "CORTAUÑAS CUT&TRIM OSTER",
+    "descripcion": "CORTAUÑAS CUT&TRIM OSTER",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 295.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 36,
+    "codigo": "CORTAUÑAS DOG GRANDE LE SALON",
+    "descripcion": "CORTAUÑAS DOG GRANDE LE SALON",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 230.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 37,
+    "codigo": "CORTAUÑAS GATO CHICO LE SALON",
+    "descripcion": "CORTAUÑAS GATO CHICO LE SALON",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 145.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 38,
+    "codigo": "CORTAUÑAS PROFESIONAL FORMAY",
+    "descripcion": "CORTAUÑAS PROFESIONAL FORMAY",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 200.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 39,
+    "codigo": "CORTE DE UÑAS A",
+    "descripcion": "Corte de uñas A",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 60.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 40,
+    "codigo": "CORTE DE UÑAS B",
+    "descripcion": "Corte de uñas B",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 80.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 41,
+    "codigo": "CORTE DE UÑAS C",
+    "descripcion": "Corte de uñas C",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 100.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 42,
+    "codigo": "CP CH",
+    "descripcion": "Corte pelo chico",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 250.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 43,
+    "codigo": "CP G",
+    "descripcion": "Corte pelo grande",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 450.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 44,
+    "codigo": "CP G PM",
+    "descripcion": "Corte pelo grande pelo mediano",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 350.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 45,
+    "codigo": "CP GATO CH",
+    "descripcion": "Corte pelo gato chico",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 240.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 46,
+    "codigo": "CP GATO G",
+    "descripcion": "Corte pelo gato grande",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 350.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 47,
+    "codigo": "CP GIG",
+    "descripcion": "Corte pelo gigante",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 600.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 48,
+    "codigo": "CP M",
+    "descripcion": "Corte pelo mediano",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 400.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 49,
+    "codigo": "CP M PM",
+    "descripcion": "Corte pelo mediano pelo mediano",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 300.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 50,
+    "codigo": "EX BAÑO MEDICADO",
+    "descripcion": "Baño medicado",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 75.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 51,
+    "codigo": "EX G A CH PL",
+    "descripcion": "Extra garrapaticida A chico pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 75.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 52,
+    "codigo": "EX G A G PL",
+    "descripcion": "Extra garrapaticida A grande pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 135.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 53,
+    "codigo": "EX G A G PM",
+    "descripcion": "Extra garrapaticida A grande pelo mediano",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 125.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 54,
+    "codigo": "EX G A GIG PL",
+    "descripcion": "Extra garrapaticida A gigante pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 150.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 55,
+    "codigo": "EX G A M PL",
+    "descripcion": "Extra garrapaticida A mediano pelo largo",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 105.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 56,
+    "codigo": "EX G A M PM",
+    "descripcion": "Extra garrapaticida A mediano pelo mediano",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 105.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 57,
+    "codigo": "EX G B CH PL",
+    "descripcion": "EX G B CH PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 150.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 58,
+    "codigo": "EX G B G PL",
+    "descripcion": "EX G B G PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 270.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 59,
+    "codigo": "EX G B G PM",
+    "descripcion": "EX G B G PM",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 240.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 60,
+    "codigo": "EX G B GIG PL",
+    "descripcion": "EX G B GIG PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 300.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 61,
+    "codigo": "EX G B M PL",
+    "descripcion": "EX G B M PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 210.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 62,
+    "codigo": "EX G B M PM",
+    "descripcion": "EX G B M PM",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 210.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 63,
+    "codigo": "EX G C CH PL",
+    "descripcion": "EX G C CH PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 300.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 64,
+    "codigo": "EX G C G PL",
+    "descripcion": "EX G C G PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 540.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 65,
+    "codigo": "EX G C G PM",
+    "descripcion": "EX G C G PM",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 480.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 66,
+    "codigo": "EX G C GIG PL",
+    "descripcion": "EX G C GIG PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 600.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 67,
+    "codigo": "EX G C M PL",
+    "descripcion": "EX G C M PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 420.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 68,
+    "codigo": "EX G C M PM",
+    "descripcion": "EX G C M PM",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 420.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 69,
+    "codigo": "EX G D CH PL",
+    "descripcion": "EX G D CH PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 400.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 70,
+    "codigo": "EX G D G PL",
+    "descripcion": "EX G D G PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 720.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 71,
+    "codigo": "EX G D G PM",
+    "descripcion": "EX G D G PM",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 640.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 72,
+    "codigo": "EX G D GIG PL",
+    "descripcion": "EX G D GIG PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 800.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 73,
+    "codigo": "EX G D M PL",
+    "descripcion": "EX G D M PL",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 560.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 74,
+    "codigo": "EX G D M PM",
+    "descripcion": "EX G D M PM",
+    "familia": "BAÑOS",
+    "subfamilia": "B INSECTICIDA",
+    "precio": 560.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 75,
+    "codigo": "EX NUDOS O DESLANADOS 1",
+    "descripcion": "Deslanado nivel \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 50.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 76,
+    "codigo": "EX NUDOS O DESLANADOS 2",
+    "descripcion": "Deslanado nivel \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 75.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 77,
+    "codigo": "EX NUDOS O DESLANADOS 3",
+    "descripcion": "Deslanado nivel \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 100.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 78,
+    "codigo": "EX NUDOS O DESLANADOS 4",
+    "descripcion": "Deslanado nivel \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 125.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 79,
+    "codigo": "EX NUDOS O DESLANADOS 5",
+    "descripcion": "Deslanado nivel \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 150.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 80,
+    "codigo": "EX NUDOS O DESLANADOS 6",
+    "descripcion": "Deslanado nivel \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 175.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 81,
+    "codigo": "EX NUDOS O DESLANADOS 7",
+    "descripcion": "Deslanado nivel \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 200.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 82,
+    "codigo": "EX NUDOS O DESLANADOS SESION",
+    "descripcion": "Deslanado sesión",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 250.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 83,
+    "codigo": "EX SHAMPOO ARGAN",
+    "descripcion": "Shampoo \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 80.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 84,
+    "codigo": "EX SHAMPOO DORADO",
+    "descripcion": "Shampoo \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 80.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 85,
+    "codigo": "EX SHAMPOO MATIZADOR",
+    "descripcion": "Shampoo \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 40.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 86,
+    "codigo": "EX SHAMPOO PELO NEGRO",
+    "descripcion": "Shampoo \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 80.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 87,
+    "codigo": "PANTENE MASCARILLA REPARADORA",
+    "descripcion": "PANTENE MASCARILLA REPARADORA",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 100.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 88,
+    "codigo": "PEINADO PCH",
+    "descripcion": "Peinado \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "PEINADO",
+    "precio": 75.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 89,
+    "codigo": "QUICK STOP URUS",
+    "descripcion": "Corte de uñas - Quick Stop",
+    "familia": "CORTE DE UÑAS",
+    "subfamilia": "CORTE DE UÑAS",
+    "precio": 90.0,
+    "duracion_min": 15,
+    "activo": true
+  },
+  {
+    "id": 90,
+    "codigo": "RASURADORA  MINIMAX  OSTER",
+    "descripcion": "RASURADORA  MINIMAX  OSTER",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 0.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 91,
+    "codigo": "RASURADORA DEIKO 1 VELOCIDAD MAICO",
+    "descripcion": "RASURADORA DEIKO 1 VELOCIDAD MAICO",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 0.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 92,
+    "codigo": "SECADORA HERCULES",
+    "descripcion": "SECADORA HERCULES",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 4500.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 93,
+    "codigo": "SECADORA WIND POWER",
+    "descripcion": "SECADORA WIND POWER",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 6000.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 94,
+    "codigo": "SERVICIO EXTRA A",
+    "descripcion": "Servicio extra \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 40.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 95,
+    "codigo": "SERVICIO EXTRA B",
+    "descripcion": "Servicio extra \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 50.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 96,
+    "codigo": "SERVICIO EXTRA C",
+    "descripcion": "Servicio extra \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 100.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 97,
+    "codigo": "SERVICIO EXTRA D",
+    "descripcion": "Servicio extra \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "MUGRE Y NUDOS",
+    "precio": 150.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 98,
+    "codigo": "SERVICIO EXTRA ECTO CH (2 A 5 KG)",
+    "descripcion": "Fumigación \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "FUMIGACIONES",
+    "precio": 100.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 99,
+    "codigo": "SERVICIO EXTRA ECTO GDE (10 A 20 KG)",
+    "descripcion": "Fumigación \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "FUMIGACIONES",
+    "precio": 140.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 100,
+    "codigo": "SERVICIO EXTRA ECTO MED (5 A 10 KG)",
+    "descripcion": "Fumigación \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "FUMIGACIONES",
+    "precio": 120.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 101,
+    "codigo": "SERVICIO EXTRA ECTO XGDE (20 A 40 KG)",
+    "descripcion": "Fumigación \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "FUMIGACIONES",
+    "precio": 160.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 102,
+    "codigo": "SHAMPOO MAICO",
+    "descripcion": "SHAMPOO MAICO",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 3000.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 103,
+    "codigo": "TALCO OTICO JAURIA",
+    "descripcion": "Talco ótico \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "TRATAMIENTOS",
+    "precio": 70.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 104,
+    "codigo": "TALCO PARA HONGOS  REXONA 200G",
+    "descripcion": "TALCO PARA HONGOS  REXONA 200G",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "TRATAMIENTOS",
+    "precio": 0.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 105,
+    "codigo": "TIJERA BLENDER 7´´",
+    "descripcion": "TIJERA BLENDER 7´´",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 1500.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 106,
+    "codigo": "TIJERA DE ENTRESACADO PAWBROTHERS",
+    "descripcion": "TIJERA DE ENTRESACADO PAWBROTHERS",
+    "familia": "BAÑOS",
+    "subfamilia": "B COSMETICO",
+    "precio": 0.0,
+    "duracion_min": 45,
+    "activo": true
+  },
+  {
+    "id": 107,
+    "codigo": "TIJERA LOBO PLATA MANGO NEGRO",
+    "descripcion": "TIJERA LOBO PLATA MANGO NEGRO",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 155.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 108,
+    "codigo": "TIJERA URUS VETERINARY 8\"",
+    "descripcion": "TIJERA URUS VETERINARY 8\"",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 145.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 109,
+    "codigo": "TIJERA USO MULTIPLE ANIMAL PRINT",
+    "descripcion": "TIJERA USO MULTIPLE ANIMAL PRINT",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 125.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 110,
+    "codigo": "TIJERA VETERINARY 121-9",
+    "descripcion": "TIJERA VETERINARY 121-9",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 155.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 111,
+    "codigo": "TIJERAS DE ENTRESACADO",
+    "descripcion": "TIJERAS DE ENTRESACADO",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 145.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 112,
+    "codigo": "TIJERAS P/ESTETICA (JUEGO)",
+    "descripcion": "TIJERAS P/ESTETICA (JUEGO)",
+    "familia": "CORTE DE PELO",
+    "subfamilia": "CORTE DE PELO",
+    "precio": 3000.0,
+    "duracion_min": 60,
+    "activo": true
+  },
+  {
+    "id": 113,
+    "codigo": "TINTE PERMANENTE",
+    "descripcion": "Tinte permanente",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "COLORIMETRIA",
+    "precio": 81.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 114,
+    "codigo": "TRATAMIENTO KERACTIVE 144ML",
+    "descripcion": "Tratamiento \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "TRATAMIENTOS",
+    "precio": 98.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 115,
+    "codigo": "TRATAMIENTO KUUL",
+    "descripcion": "Tratamiento \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "TRATAMIENTOS",
+    "precio": 185.0,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 116,
+    "codigo": "TRATAMIENTO NEFERTITI",
+    "descripcion": "Tratamiento \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "TRATAMIENTOS",
+    "precio": 42.5,
+    "duracion_min": 20,
+    "activo": true
+  },
+  {
+    "id": 117,
+    "codigo": "TRATAMIENTO REVLON 245 ML",
+    "descripcion": "Tratamiento \\1",
+    "familia": "SERVICIOS EXTRAS",
+    "subfamilia": "TRATAMIENTOS",
+    "precio": 123.0,
+    "duracion_min": 20,
+    "activo": true
+  }
+]

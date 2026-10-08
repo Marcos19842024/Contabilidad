@@ -12,7 +12,7 @@ def _carpeta_datos():
     """Carpeta de datos de la app."""
     import sys
     if getattr(sys, 'frozen', False):
-        carpeta = Path.home() / "Documents" / "Contabilidad App"
+        carpeta = Path.home() / "Documents" / "Vet Suite"
         carpeta.mkdir(parents=True, exist_ok=True)
         return carpeta
     else:

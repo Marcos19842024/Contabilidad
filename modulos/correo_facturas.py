@@ -1,16 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-correo_facturas.py
-Se conecta a Gmail vía IMAP y descarga los adjuntos (XML/PDF)
-de la etiqueta de facturas de QVET.
-
-Mejoras:
-- Filtra por remitente (opcional)
-- Filtra por fecha de los últimos N días
-- Guarda registro de correos procesados (por Message-ID) para no repetir
-- Log detallado en archivo
-"""
-
 import os
 import re
 import sys
@@ -21,6 +8,9 @@ from email.header import decode_header
 from pathlib import Path
 from datetime import datetime, timedelta
 
+# Importar la carpeta de datos desde core.rutas (fuente de verdad)
+from core.rutas import _CARPETA_DATOS
+
 
 # ============================================================
 # CONFIGURACIÓN
@@ -30,12 +20,13 @@ IMAP_PORT = 993
 
 
 def _carpeta_datos():
-    if getattr(sys, 'frozen', False):
-        carpeta = Path.home() / "Documents" / "Contabilidad App"
-    else:
-        carpeta = Path(__file__).parent
-    carpeta.mkdir(parents=True, exist_ok=True)
-    return carpeta
+    """
+    Devuelve la carpeta de datos de Ingresos.
+    Delegado a core.rutas para que dev/prod usen la misma lógica:
+      - Dev:  <raíz proyecto>/ingresos/
+      - Prod: ~/Documents/Vet Suite/ingresos/
+    """
+    return _CARPETA_DATOS
 
 
 def _ruta_log():

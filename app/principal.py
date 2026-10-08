@@ -4,7 +4,9 @@ app/principal.py
 Pantalla de inicio del Sistema de Contabilidad QVET.
 Permite elegir entre:
   - Reporte de Ingresos
-  - Reporte de Egresos (próximamente)
+  - Reporte de Egresos
+  - Estética y Transportes
+  - Recordatorios
 """
 
 import sys
@@ -28,9 +30,9 @@ class AppPrincipal(ttk.Window):
 
     def __init__(self):
         super().__init__(themename=TEMA)
-        self.title("Sistema de Contabilidad")
-        self.geometry("700x500")
-        self.minsize(600, 400)
+        self.title("Vet Suite")
+        self.geometry("720x820")
+        self.minsize(680, 760)
 
         self._construir_ui()
         self.after(50, self._centrar_ventana)
@@ -43,24 +45,26 @@ class AppPrincipal(ttk.Window):
         # ---- Encabezado ----
         ttk.Label(
             frame,
-            text="📊 Sistema de Contabilidad",
+            text="🩺 Vet Suite",
             font=("Segoe UI", 24, "bold"),
             bootstyle="info"
-        ).pack(pady=(20, 10))
+        ).pack(pady=(10, 8))
 
         ttk.Label(
             frame,
             text="¿Qué quieres hacer hoy?",
-            font=("Segoe UI", 14),
+            font=("Segoe UI", 13),
             foreground="gray"
-        ).pack(pady=(0, 40))
+        ).pack(pady=(0, 25))
 
-        # ---- Botones ----
+        # ---- Botones en grid 2x2 ----
         botones_frame = ttk.Frame(frame)
         botones_frame.pack(expand=True)
 
         botones_frame.columnconfigure(0, weight=1)
         botones_frame.columnconfigure(1, weight=1)
+        botones_frame.rowconfigure(0, weight=1)
+        botones_frame.rowconfigure(1, weight=1)
 
         self._crear_boton_modulo(
             botones_frame,
@@ -69,7 +73,7 @@ class AppPrincipal(ttk.Window):
             descripcion="Facturas de venta\n(descarga del Qvet o Gmail)",
             comando=self._abrir_ingresos,
             habilitado=True,
-            columna=0
+            fila=0, columna=0
         )
 
         self._crear_boton_modulo(
@@ -79,12 +83,32 @@ class AppPrincipal(ttk.Window):
             descripcion="Facturas de compra\n(descarga del SAT)",
             comando=self._abrir_egresos,
             habilitado=True,
-            columna=1
+            fila=0, columna=1
+        )
+
+        self._crear_boton_modulo(
+            botones_frame,
+            icono="🐾",
+            titulo="ESTÉTICA\nTRANSPORTES",
+            descripcion="Clientes, mascotas,\nrutas y tarifas",
+            comando=self._abrir_estetica_transportes,
+            habilitado=True,
+            fila=1, columna=0
+        )
+
+        self._crear_boton_modulo(
+            botones_frame,
+            icono="📅",
+            titulo="RECORDATORIOS",
+            descripcion="Citas y vacunas\npor WhatsApp",
+            comando=self._abrir_recordatorios,
+            habilitado=True,
+            fila=1, columna=1
         )
 
         # ---- Pie ----
         pie = ttk.Frame(frame)
-        pie.pack(side="bottom", fill="x", pady=(20, 0))
+        pie.pack(side="bottom", fill="x", pady=(15, 0))
 
         ttk.Button(
             pie,
@@ -102,74 +126,124 @@ class AppPrincipal(ttk.Window):
 
         ttk.Label(
             pie,
-            text="v1.0.1",
+            text="v2.0.0",
             font=("Segoe UI", 8),
             foreground="gray"
         ).pack(side="right", padx=10)
 
     def _crear_boton_modulo(self, parent, icono, titulo, descripcion,
-                            comando, habilitado=True, columna=0):
-        """Crea un botón grande para un módulo."""
-        frame = ttk.LabelFrame(parent, text="", padding=20)
-        frame.grid(row=0, column=columna, padx=20, pady=10, sticky="nsew")
+                            comando, habilitado=True, fila=0, columna=0):
+        """
+        Crea un botón grande para un módulo.
+        Tamaño fijo 280x260 en grid 2x2.
+        """
+        frame = ttk.LabelFrame(parent, text="", padding=20,
+                               width=280, height=260)
+        frame.grid(row=fila, column=columna, padx=10, pady=10, sticky="nsew")
+        frame.grid_propagate(False)
+
+        contenedor = ttk.Frame(frame)
+        contenedor.place(relx=0.5, rely=0.5, anchor="center")
 
         ttk.Label(
-            frame,
+            contenedor,
             text=icono,
-            font=("Segoe UI Emoji", 48)
-        ).pack(pady=(0, 10))
+            font=("Segoe UI Emoji", 42)
+        ).pack(pady=(0, 8))
 
         ttk.Label(
-            frame,
+            contenedor,
             text=titulo,
-            font=("Segoe UI", 18, "bold")
-        ).pack(pady=(0, 10))
+            font=("Segoe UI", 15, "bold"),
+            justify="center",
+            anchor="center"
+        ).pack(pady=(0, 8))
 
         ttk.Label(
-            frame,
+            contenedor,
             text=descripcion,
-            font=("Segoe UI", 11),
+            font=("Segoe UI", 10),
             justify="center",
-            foreground="gray"
-        ).pack(pady=(0, 20))
+            foreground="gray",
+            anchor="center"
+        ).pack(pady=(0, 14))
 
         if habilitado:
             ttk.Button(
-                frame,
+                contenedor,
                 text="Abrir",
                 command=comando,
                 bootstyle="info",
-                width=15
+                width=14
             ).pack()
         else:
             ttk.Button(
-                frame,
+                contenedor,
                 text="Próximamente",
                 state="disabled",
                 bootstyle="secondary",
-                width=15
+                width=14
             ).pack()
 
+    # ============================================================
+    # Abrir módulos
+    # ============================================================
+
     def _abrir_ingresos(self):
-        """Abre el módulo de Ingresos."""
         try:
             from modulos.ingresos import AppIngresos
             app = AppIngresos(master=self)
             app.protocol("WM_DELETE_WINDOW", lambda: self._cerrar_modulo(app))
+            app.lift()
+            app.focus_force()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo abrir Ingresos:\n{e}")
 
     def _abrir_egresos(self):
-        """Abre el módulo de Egresos."""
         try:
             from modulos.egresos import AppEgresos
             app = AppEgresos(master=self)
             app.protocol("WM_DELETE_WINDOW", lambda: self._cerrar_modulo(app))
+            app.lift()
+            app.focus_force()
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo abrir Egresos:\n{e}")
 
+    def _abrir_estetica_transportes(self):
+        try:
+            from modulos.estetica_transportes import AppEsteticaTransportes
+            app = AppEsteticaTransportes(master=self)
+            app.protocol("WM_DELETE_WINDOW", lambda: self._cerrar_modulo(app))
+            app.lift()
+            app.focus_force()
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"No se pudo abrir Estética y Transportes:\n{e}"
+            )
+
+    def _abrir_recordatorios(self):
+        try:
+            from modulos.recordatorios import AppRecordatorios
+            app = AppRecordatorios(master=self)
+            app.protocol("WM_DELETE_WINDOW", lambda: self._cerrar_modulo(app))
+            app.lift()
+            app.focus_force()
+        except Exception as e:
+            messagebox.showerror(
+                "Error",
+                f"No se pudo abrir Recordatorios:\n{e}"
+            )
+
+    def _cerrar_modulo(self, app):
+        try:
+            app.destroy()
+        except Exception:
+            pass
+        self.lift()
+        self.focus_force()
+
     def _abrir_configuracion(self):
-        """Abre el diálogo de configuración general."""
         try:
             from dialogos.config_general import abrir_dialogo_config_general
             abrir_dialogo_config_general(self)
@@ -180,7 +254,6 @@ class AppPrincipal(ttk.Window):
             )
 
     def _abrir_ayuda(self):
-        """Abre el manual de usuario."""
         try:
             from dialogos.manual import abrir_manual
             abrir_manual(self)
@@ -190,19 +263,10 @@ class AppPrincipal(ttk.Window):
                 f"No se pudo abrir el manual:\n{e}"
             )
 
-    def _cerrar_modulo(self, app):
-        """Se llama al cerrar un módulo. Vuelve a mostrar la pantalla de inicio."""
-        try:
-            app.destroy()
-        except Exception:
-            pass
-        self.deiconify()
-
     def _centrar_ventana(self):
-        """Centra la ventana en la pantalla."""
         self.update_idletasks()
-        ancho = 700
-        alto = 500
+        ancho = 720
+        alto = 820
         x = (self.winfo_screenwidth() - ancho) // 2
         y = (self.winfo_screenheight() - alto) // 2
         self.geometry(f"{ancho}x{alto}+{x}+{y}")

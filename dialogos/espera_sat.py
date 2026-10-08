@@ -227,6 +227,13 @@ def abrir_ventana_espera_sat(app, verificador, on_completado=None):
                     estado["completado"] = True
 
                     def finalizar():
+                        # Verificar que la ventana aún exista
+                        try:
+                            if not ventana.winfo_exists():
+                                return
+                        except Exception:
+                            return
+
                         try:
                             barra.stop()
                             barra.configure(mode="determinate", value=100)
@@ -237,15 +244,16 @@ def abrir_ventana_espera_sat(app, verificador, on_completado=None):
                         except Exception:
                             pass
 
-                        # Notificar
                         if on_completado:
                             try:
                                 on_completado(resultado)
                             except Exception as e:
                                 print(f"Error en callback: {e}")
 
-                        # Cerrar después de 2 segundos
-                        ventana.after(2000, ventana.destroy)
+                        try:
+                            ventana.after(2000, ventana.destroy)
+                        except Exception:
+                            pass
 
                     ventana.after(0, finalizar)
                     return
@@ -255,6 +263,13 @@ def abrir_ventana_espera_sat(app, verificador, on_completado=None):
                     estado["completado"] = True
 
                     def mostrar_error():
+                        # Verificar que la ventana aún exista
+                        try:
+                            if not ventana.winfo_exists():
+                                return
+                        except Exception:
+                            return
+
                         try:
                             barra.stop()
                             lbl_mensaje.configure(
@@ -264,14 +279,21 @@ def abrir_ventana_espera_sat(app, verificador, on_completado=None):
                         except Exception:
                             pass
 
-                        messagebox.showerror(
-                            "Error del SAT",
-                            f"La solicitud terminó con error:\n\n"
-                            f"Estado: {estado_solicitud}\n"
-                            f"Mensaje: {mensaje}",
-                            parent=ventana
-                        )
-                        ventana.destroy()
+                        # Mostrar error sin parent para evitar el crash
+                        try:
+                            messagebox.showerror(
+                                "Error del SAT",
+                                f"La solicitud terminó con error:\n\n"
+                                f"Estado: {estado_solicitud}\n"
+                                f"Mensaje: {mensaje}"
+                            )
+                        except Exception:
+                            pass
+
+                        try:
+                            ventana.destroy()
+                        except Exception:
+                            pass
 
                     ventana.after(0, mostrar_error)
                     return
@@ -294,12 +316,14 @@ def abrir_ventana_espera_sat(app, verificador, on_completado=None):
             "La solicitud sigue en el SAT. Puedes verificarla después.",
             parent=ventana
         ):
+            # Marcar cancelación ANTES de destruir (para que el hilo pare)
             estado["cancelar"] = True
             try:
                 barra.stop()
             except Exception:
                 pass
-            ventana.destroy()
+            # Pequeña pausa para que el hilo alcance a notar la cancelación
+            ventana.after(100, ventana.destroy)
 
     # ---- Botón cancelar ----
     fr_btn = ttk.Frame(ventana)
@@ -311,6 +335,12 @@ def abrir_ventana_espera_sat(app, verificador, on_completado=None):
         command=cancelar,
         bootstyle="danger-outline"
     ).pack()
+
+    # Asegurar que el hilo se detenga si la ventana se destruye por cualquier razón
+    def _on_destroy(event=None):
+        estado["cancelar"] = True
+
+    ventana.bind("<Destroy>", _on_destroy, add="+")
 
     ventana.protocol("WM_DELETE_WINDOW", cancelar)
 

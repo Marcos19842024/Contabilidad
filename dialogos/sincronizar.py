@@ -21,10 +21,10 @@ from tkinter import messagebox
 from pathlib import Path
 from datetime import datetime
 
-from config.ajustes import CONFIG
+from config.ajustes import cargar_config_correo
 from core.rutas import _CARPETA_DATOS
 from core.persistencia import cargar_db, existe_valor_unico
-from lector_facturas import procesar_factura
+from modulos.lector_facturas import procesar_factura
 
 
 def sincronizar_facturas(app):
@@ -33,7 +33,7 @@ def sincronizar_facturas(app):
     qué hacer con ellas.
     Ofrece la opción de editar la configuración si hay errores.
     """
-    from correo_facturas import descargar_adjuntos_gmail
+    from modulos.correo_facturas import descargar_adjuntos_gmail
     from dialogos.gmail_config import pedir_credenciales_correo
     from dialogos.sincronizar_preguntas import (
         preguntar_modo_descarga,
@@ -44,7 +44,7 @@ def sincronizar_facturas(app):
     # ---- Bucle: permite reintentar tras editar credenciales ----
     while True:
         # ---- 1. Verificar/obtener configuración ----
-        cfg_correo = CONFIG.get("correo", {})
+        cfg_correo = cargar_config_correo()
         usuario = cfg_correo.get("usuario", "")
         password = cfg_correo.get("password_app", "")
         etiqueta = cfg_correo.get("etiqueta", "FACTURAS BAALAK")
@@ -56,7 +56,7 @@ def sincronizar_facturas(app):
             usuario, password, etiqueta = pedir_credenciales_correo(app)
             if not usuario:
                 return
-            cfg_correo = CONFIG.get("correo", {})
+            cfg_correo = cargar_config_correo()
             filtro_remitente = cfg_correo.get("filtro_remitente", "")
             dias_atras = cfg_correo.get("dias_atras", 30)
 
