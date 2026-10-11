@@ -21,7 +21,6 @@ from tkinter import messagebox
 
 from config.campos import MESES_ES
 from config.config_egresos import (
-    cargar_config_egresos,
     cargar_solicitud_activa,
     horas_desde_solicitud,
     limpiar_solicitud_activa,
@@ -34,9 +33,6 @@ from core.persistencia_egresos import (
 from core.rutas_egresos import (
     ruta_egreso,
     ruta_deposito_egreso,
-)
-from sat.guardar_egresos import (
-    guardar_facturas,
 )
 
 
@@ -706,9 +702,9 @@ class AppEgresos(ttk.Toplevel):
 
 if __name__ == "__main__":
     import ttkbootstrap as ttk_local
-    from config.ajustes import TEMA
+    from config.temas import obtener_tema
 
-    raiz = ttk_local.Window(themename=TEMA)
+    raiz = ttk_local.Window(themename=obtener_tema())
     raiz.withdraw()
     app = AppEgresos(master=raiz)
     app.protocol("WM_DELETE_WINDOW", raiz.destroy)

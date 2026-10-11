@@ -38,8 +38,8 @@ def abrir_manual(app):
     # 3. Fallback: en la carpeta de datos del usuario
     if ruta_manual is None:
         try:
-            from config.ajustes import _CARPETA_DATOS
-            candidato = _CARPETA_DATOS / "MANUAL.md"
+            from core.rutas import GMAIL_CONFIG_FILE
+            candidato = GMAIL_CONFIG_FILE.parent / "MANUAL.md"
             if candidato.exists():
                 ruta_manual = candidato
         except Exception:

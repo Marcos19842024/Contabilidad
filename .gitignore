@@ -92,3 +92,27 @@ registros_egresos_*.json
 
 # Datos locales de la app
 /datos/
+
+# Datos por módulo (dev)
+/ingresos/
+/egresos/
+/estetica_transportes/
+/recordatorios/
+
+# Config compartida generada
+/config_ui.json
+
+# Config compartida vieja (migrada)
+/recordatorios/sucursales.json
+/recordatorios/sucursales.json.bak
+
+# Entornos
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

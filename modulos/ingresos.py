@@ -7,7 +7,6 @@ Registros por año (un archivo JSON por año).
 
 import sys
 import os
-import json
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -26,26 +25,15 @@ from ui.utils import configurar_ventana
 # ============================================================
 # IMPORTS INTERNOS
 # ============================================================
-from config.ajustes import CONFIG, TEMA, cargar_config, guardar_config
 from config.campos import (
     MESES_ES,
     CAMPOS,
-    CAMPOS_DICT,
-    REGLAS_AUTO,
-    CATEGORIAS_PARA_TOTAL,
-    CAMPOS_TIPO_PAGO,
 )
 from config.temas import (
-    TEMAS_OSCUROS,
-    tema_es_oscuro,
-    COLORES,
-    refrescar_colores,
+    obtener_tema,
 )
 from core.rutas import (
-    BASE_DIR,
-    HISTORIAL_FILE,
     _CARPETA_DATOS,
-    ruta_registros,
     ruta_ingreso,
     ruta_deposito,
 )
@@ -53,26 +41,16 @@ from core.utilidades import (
     parse_fecha,
     mes_anio_desde_fecha,
     formatear_moneda,
-    limpiar_moneda,
-    evaluar_expresion,
 )
 from core.persistencia import (
     cargar_db,
     guardar_db,
-    cargar_historial,
-    guardar_historial,
     actualizar_historial,
-    existe_valor_unico,
     obtener_no_factura_numerico,
-    obtener_consecutivo_esperado,
 )
 from core.adjuntos import (
     carpeta_de_registro,
     archivos_del_registro,
-    eliminar_archivos_de_registro,
-    eliminar_carpeta_si_vacia,
-    carpeta_destino_factura,
-    nombre_destino,
     adjuntar_archivos,
 )
 from excel.generador import (
@@ -81,8 +59,6 @@ from excel.generador import (
     anexar_al_excel,
 )
 from modulos.lector_facturas import procesar_factura, agrupar_por_categoria
-from core.correo_utils import agrupar_facturas_descargadas
-from ui.widgets import EntryMoneda, EntryAutoComplete
 
 
 # ============================================================
@@ -494,12 +470,18 @@ class AppIngresos(ttk.Toplevel):
             return
 
         ruta_pdf = filedialog.askopenfilename(
-            title="Selecciona el PDF de la factura (opcional, cancelar para omitir)",
+            title="Selecciona el PDF de la factura (obligatorio)",
             filetypes=[("PDF", "*.pdf"), ("Todos", "*.*")],
         )
+        if not ruta_pdf:
+            messagebox.showwarning(
+                "Falta el PDF",
+                "El PDF es obligatorio. La factura no se procesó.",
+            )
+            return
 
         try:
-            datos = procesar_factura(ruta_xml, ruta_pdf or None)
+            datos = procesar_factura(ruta_xml, ruta_pdf)
         except Exception as e:
             messagebox.showerror(
                 "Error al leer factura",
@@ -508,21 +490,29 @@ class AppIngresos(ttk.Toplevel):
             return
 
         self._ultima_factura_xml = ruta_xml
-        self._ultima_factura_pdf = ruta_pdf or None
+        self._ultima_factura_pdf = ruta_pdf
 
-        # Llenar datos desde la factura y guardar
         resumen, datos_completos, avisos = self._llenar_desde_factura(datos)
 
         if avisos:
             self._avisar_reclasificacion(avisos)
 
-        # Guardar silenciosamente
         self._guardar_silencioso(datos_completos)
 
-        # Refrescar tabla
+        # ============================================================
+        # Sincronizar filtros del UI con el registro guardado
+        # ============================================================
+        try:
+            self.var_centro.set(datos_completos.get("centro", "Central"))
+            self.var_anio.set(str(datos_completos.get("anio", datetime.now().year)))
+            self.var_mes.set(
+                datos_completos.get("mes", MESES_ES[datetime.now().month - 1])
+            )
+        except Exception:
+            pass
+
         self._refrescar_tabla()
 
-        # Mensaje
         lineas = [
             f"Factura leída: {datos.get('no_factura', '')}",
             f"Centro: {datos_completos.get('centro', '?')}",
@@ -777,43 +767,59 @@ class AppIngresos(ttk.Toplevel):
         # Agrupar conceptos por categoría
         agrupado, detalle, avisos = agrupar_por_categoria(datos)
 
-        # Mapeo de campos
+        # Mapeo de campos (opción B confirmada)
         mapa_campos = {
-            "U": {"importe": "u_importe", "iva": "u_iva"},
-            "ACCESORIOS": {"importe": "ac_importe", "iva": "ac_iva"},
-            "ESTETICA": {"importe": "est_importe", "iva": "est_iva"},
-            "TRANSPORTE": {"importe": "tra_importe", "iva": "tra_iva"},
+            "U": {"importe": "u_importe"},
+            "ACCESORIOS": {"importe": "ac_importe"},
+            "ESTETICA": {"importe": "est_importe"},
+            "TRANSPORTE": {"importe": "tra_importe"},
             "VACUNA": {"importe": "vac_importe"},
             "CLINICA": {"importe": "cli_importe"},
-            "PENSION": {"importe": "pen_importe", "iva": "pen_iva"},
+            "PENSION": {"importe": "pen_importe"},
             "MEDICAMENTOS": {
                 "importe": "med_importe",
                 "sin_iva": "med_sin_iva",
-                "iva": "med_iva",
             },
             "HIGIENE": {
                 "importe": "hig_importe",
                 "sin_iva": "hig_sin_iva",
-                "iva": "hig_iva",
                 "sin_ieps_6": "hig_sin_ieps_6",
-                "ieps_6": "hig_ieps_6",
                 "sin_ieps_7": "hig_sin_ieps_7",
-                "ieps_7": "hig_ieps_7",
             },
         }
 
-        # Inicializar todos los campos numéricos
+        # Inicializar todos los campos numéricos a 0
         for clave, _, _, tipo in CAMPOS:
             if tipo == "number":
                 datos_completos.setdefault(clave, 0.0)
 
-        # Llenar por categoría
+        # Llenar valores desde el agrupado
         for cat, valores in agrupado.items():
             if cat not in mapa_campos:
                 continue
             for subclave, campo in mapa_campos[cat].items():
                 if subclave in valores:
                     datos_completos[campo] = round(valores[subclave], 2)
+
+        # Rellenar los IVA calculados por Python (para validación interna,
+        # el Excel usa fórmula viva pero el registro los necesita para
+        # el check rojo `_calcular_total_remisiones` vs `_calcular_total_factura`)
+        datos_completos["u_iva"] = round(datos_completos.get("u_importe", 0) * 0.16, 2)
+        datos_completos["ac_iva"] = round(datos_completos.get("ac_importe", 0) * 0.16, 2)
+        datos_completos["est_iva"] = round(datos_completos.get("est_importe", 0) * 0.16, 2)
+        datos_completos["tra_iva"] = round(datos_completos.get("tra_importe", 0) * 0.16, 2)
+        datos_completos["pen_iva"] = round(datos_completos.get("pen_importe", 0) * 0.16, 2)
+
+        # IVA / IEPS de MEDICAMENTOS y HIGIENE (para validación interna)
+        datos_completos["med_iva"] = round(datos_completos.get("med_sin_iva", 0) * 0.16, 2)
+        datos_completos["hig_iva"] = round(datos_completos.get("hig_sin_iva", 0) * 0.16, 2)
+        datos_completos["hig_ieps_6"] = round(datos_completos.get("hig_sin_ieps_6", 0) * 0.06, 2)
+        datos_completos["hig_ieps_7"] = round(datos_completos.get("hig_sin_ieps_7", 0) * 0.07, 2)
+
+        # Guardar las expresiones (fórmulas) en el registro.
+        # El detalle viene con clave "nombre_campo" → "=expr" (sin el =)
+        for campo, expr in detalle.items():
+            datos_completos[f"{campo}__expr"] = expr
 
         # Pagos
         pagos = datos.get("pagos", {})
@@ -822,9 +828,6 @@ class AppIngresos(ttk.Toplevel):
 
         # Total
         datos_completos["total"] = round(datos.get("total", 0.0), 2)
-
-        # Preservar pagos y expresiones
-        datos_completos["pagos"] = pagos
 
         return [], datos_completos, avisos
 
@@ -849,6 +852,7 @@ class AppIngresos(ttk.Toplevel):
         except Exception:
             anio_datos = self._anio_cargado
 
+        # ---- Cargar la DB del año correspondiente ----
         if anio_datos != self._anio_cargado:
             regs_destino = cargar_db(anio_datos)
         else:
@@ -857,6 +861,11 @@ class AppIngresos(ttk.Toplevel):
         regs_destino.append(datos)
         guardar_db(regs_destino, anio_datos)
 
+        # ---- Sincronizar estado en memoria ----
+        # Si el año cambió, actualizamos el año cargado y self.registros
+        if anio_datos != self._anio_cargado:
+            self._anio_cargado = anio_datos
+        self.registros = regs_destino
         self.historial = actualizar_historial(regs_destino)
 
         # Crear carpeta del registro
@@ -896,9 +905,6 @@ class AppIngresos(ttk.Toplevel):
         self._ultima_factura_xml = None
         self._ultima_factura_pdf = None
 
-        if anio_datos == self._anio_cargado:
-            self.registros = regs_destino
-
     def _avisar_reclasificacion(self, avisos):
         """Muestra aviso de reclasificación."""
         if not avisos:
@@ -913,7 +919,7 @@ class AppIngresos(ttk.Toplevel):
 # ============================================================
 if __name__ == "__main__":
     import ttkbootstrap as ttk_local
-    raiz = ttk_local.Window(themename=TEMA)
+    raiz = ttk_local.Window(themename=obtener_tema())
     raiz.withdraw()
     app = AppIngresos(master=raiz)
     app.protocol("WM_DELETE_WINDOW", raiz.destroy)

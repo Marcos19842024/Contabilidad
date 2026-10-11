@@ -10,7 +10,7 @@ import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
-from config.ajustes import cargar_config_correo, guardar_config_correo
+from config.config_ingresos import cargar_config_correo, guardar_config_correo
 
 
 def pedir_credenciales_correo(app):

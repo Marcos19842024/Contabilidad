@@ -1,6 +1,13 @@
 # modulos/recordatorios.py
 """
 Módulo de Recordatorios.
+
+Los mensajes generados se guardan en caché junto con la sucursal activa
+al momento de generarlos. Al abrir el módulo, si la sucursal activa actual
+es distinta a la guardada, se regeneran los mensajes de los clientes
+NO enviados.
+
+La sucursal activa SOLO se cambia desde Configuración General.
 """
 
 import os
@@ -17,8 +24,6 @@ from core.recordatorios.sucursales import (
     cargar_sucursales,
     sucursal_activa,
     nombre_clinica_activa,
-    sucursales_activas,
-    cambiar_sucursal_activa,
 )
 from core.recordatorios.procesar_excel import (
     procesar_excel,
@@ -31,6 +36,10 @@ from core.recordatorios import envio
 
 CITAS_CACHE = CARPETA_DATOS / "agenda_importada.json"
 VACUNAS_CACHE = CARPETA_DATOS / "vacunas_importada.json"
+
+# Estructura del caché:
+#   {"sucursal": "BAALAK_CENTRAL", "clientes": [...]}
+# Si se encuentra una lista plana (formato viejo), se migra automáticamente.
 
 
 class AppRecordatorios(ttk.Toplevel):
@@ -48,13 +57,73 @@ class AppRecordatorios(ttk.Toplevel):
         )
 
         self.sucursales = cargar_sucursales()
-        self.clientes_citas = _cargar_json(CITAS_CACHE, [])
-        self.clientes_vacunas = _cargar_json(VACUNAS_CACHE, [])
+
+        # ---- Cargar caché (con migración de formato viejo) ----
+        cache_citas = _cargar_json(CITAS_CACHE, None)
+        cache_vacunas = _cargar_json(VACUNAS_CACHE, None)
+
+        cache_citas = self._normalizar_cache(cache_citas)
+        cache_vacunas = self._normalizar_cache(cache_vacunas)
+
+        self.clientes_citas = cache_citas["clientes"]
+        self.clientes_vacunas = cache_vacunas["clientes"]
+
+        # Sucursal con la que se generaron los mensajes actualmente en caché.
+        # Si los dos cachés tienen sucursales distintas, priorizamos citas.
+        # (En la práctica, se guardan igual porque ambas se regeneran juntas.)
+        self._sucursal_guardada = (
+            cache_citas["sucursal"] or cache_vacunas["sucursal"] or ""
+        )
+
         self.tab_activo = "citas"
 
         self._construir_ui()
         self._refrescar_tabs()
         self._actualizar_estadisticas()
+
+        # Refrescar al recibir foco (por si cambiaron la sucursal en Config)
+        self.bind("<FocusIn>", self._al_recibir_foco)
+
+        # Al abrir: si la sucursal activa cambió desde la última generación,
+        # regenerar los mensajes no enviados.
+        activa_actual = sucursal_activa().get("id", "")
+        if self._sucursal_guardada and self._sucursal_guardada != activa_actual:
+            self.after(100, self._regenerar_mensajes_por_sucursal)
+
+    # ============================================================
+    # Caché
+    # ============================================================
+
+    @staticmethod
+    def _normalizar_cache(data) -> dict:
+        """
+        Acepta tanto el formato viejo (lista plana) como el nuevo
+        ({"sucursal": str, "clientes": list}).
+        Devuelve siempre un dict con las dos claves.
+        """
+        if data is None:
+            return {"sucursal": "", "clientes": []}
+        if isinstance(data, list):
+            return {"sucursal": "", "clientes": data}
+        if isinstance(data, dict):
+            return {
+                "sucursal": data.get("sucursal", ""),
+                "clientes": data.get("clientes", []) or [],
+            }
+        return {"sucursal": "", "clientes": []}
+
+    def _guardar_cache(self):
+        """Guarda ambos cachés con la sucursal activa actual."""
+        activa = sucursal_activa().get("id", "")
+        _guardar_json(CITAS_CACHE, {
+            "sucursal": activa,
+            "clientes": self.clientes_citas,
+        })
+        _guardar_json(VACUNAS_CACHE, {
+            "sucursal": activa,
+            "clientes": self.clientes_vacunas,
+        })
+        self._sucursal_guardada = activa
 
     # ============================================================
     # UI
@@ -62,33 +131,28 @@ class AppRecordatorios(ttk.Toplevel):
 
     def _construir_ui(self):
         # ---- Barra superior ----
-        top = ttk.LabelFrame(self, text="Configuración", padding=10)
-        top.pack(fill=X, padx=10, pady=5)
+        btn = ttk.Frame(self, padding=(10, 5))
+        btn.pack(fill="x", padx=10)
 
-        ttk.Label(top, text="Sucursal:").pack(side=LEFT, padx=(0, 6))
-        self.var_sucursal = tk.StringVar(value=sucursal_activa()["nombre"])
-        self.combo_sucursal = ttk.Combobox(
-            top, textvariable=self.var_sucursal,
-            values=[s["nombre"] for s in sucursales_activas()],
-            width=40, state="readonly", bootstyle="primary",
-        )
-        self.combo_sucursal.pack(side=LEFT, padx=(0, 8))
-        self.combo_sucursal.bind("<<ComboboxSelected>>", self._al_cambiar_sucursal)
-
-        ttk.Button(
-            top, text="⚙️ Sucursales",
-            command=self._abrir_sucursales,
-            bootstyle="secondary-outline",
-        ).pack(side=LEFT, padx=4)
+        botones = [
+            ("📤 Enviar por WhatsApp", lambda: self._enviar("citas"), "success"),
+            ("✅ Marcar como enviado", lambda: self._marcar("citas"), "primary-outline"),
+            ("↩️ Desmarcar", lambda: self._desmarcar("citas"), "secondary-outline"),
+        ]
+        for txt, cmd, estilo in botones:
+            ttk.Button(btn, text=txt, command=cmd,
+                        bootstyle=estilo).pack(side=LEFT, padx=4)
 
         ttk.Button(
-            top, text="📥 Importar Excel",
+            btn,
+            text="📥 Importar Excel",
             command=self._importar_excel,
             bootstyle="info-outline",
         ).pack(side=LEFT, padx=4)
 
         ttk.Button(
-            top, text="🧹 Limpiar todo",
+            btn,
+            text="🧹 Limpiar todo",
             command=self._limpiar_todo,
             bootstyle="danger-outline",
         ).pack(side=LEFT, padx=4)
@@ -114,7 +178,6 @@ class AppRecordatorios(ttk.Toplevel):
         self.lbl_stats.pack(fill=X, padx=15, pady=(0, 8))
 
     def _construir_tab_citas(self, parent):
-        # ---- Tabla de clientes ----
         frame_clientes = ttk.LabelFrame(parent, text="Clientes", padding=5)
         frame_clientes.pack(fill=BOTH, expand=True, pady=(0, 6))
 
@@ -150,7 +213,6 @@ class AppRecordatorios(ttk.Toplevel):
         self.tabla_citas = tabla
         tabla.bind("<<TreeviewSelect>>", lambda e: self._al_seleccionar("citas"))
 
-        # ---- Panel de mensaje (reducido) ----
         frame_msg = ttk.LabelFrame(parent, text="Mensaje", padding=5)
         frame_msg.pack(fill=X, expand=False)
 
@@ -165,21 +227,7 @@ class AppRecordatorios(ttk.Toplevel):
 
         self.txt_msg_citas = txt_msg
 
-        # ---- Botones ----
-        frame_btn = ttk.Frame(parent)
-        frame_btn.pack(fill=X, pady=(6, 0))
-
-        botones = [
-            ("📤 Enviar por WhatsApp", lambda: self._enviar("citas"), "success"),
-            ("✅ Marcar como enviado", lambda: self._marcar("citas"), "primary-outline"),
-            ("↩️ Desmarcar", lambda: self._desmarcar("citas"), "secondary-outline"),
-        ]
-        for txt, cmd, estilo in botones:
-            ttk.Button(frame_btn, text=txt, command=cmd,
-                       bootstyle=estilo).pack(side=LEFT, padx=4)
-
     def _construir_tab_vacunas(self, parent):
-        # ---- Tabla de clientes ----
         frame_clientes = ttk.LabelFrame(parent, text="Clientes", padding=5)
         frame_clientes.pack(fill=BOTH, expand=True, pady=(0, 6))
 
@@ -213,7 +261,6 @@ class AppRecordatorios(ttk.Toplevel):
         self.tabla_vacunas = tabla
         tabla.bind("<<TreeviewSelect>>", lambda e: self._al_seleccionar("vacunas"))
 
-        # ---- Panel de mensaje (reducido) ----
         frame_msg = ttk.LabelFrame(parent, text="Mensaje", padding=5)
         frame_msg.pack(fill=X, expand=False)
 
@@ -228,7 +275,6 @@ class AppRecordatorios(ttk.Toplevel):
 
         self.txt_msg_vacunas = txt_msg
 
-        # ---- Botones ----
         frame_btn = ttk.Frame(parent)
         frame_btn.pack(fill=X, pady=(6, 0))
 
@@ -242,53 +288,58 @@ class AppRecordatorios(ttk.Toplevel):
                        bootstyle=estilo).pack(side=LEFT, padx=4)
 
     # ============================================================
-    # Navegación
+    # Navegación / foco
     # ============================================================
 
     def _al_cambiar_tab(self, event=None):
         idx = self.notebook.index(self.notebook.select())
         self.tab_activo = "citas" if idx == 0 else "vacunas"
 
-    def _al_cambiar_sucursal(self, event=None):
-        """Al cambiar sucursal, regenera mensajes de los clientes NO enviados."""
-        nombre = self.var_sucursal.get()
+    def _al_recibir_foco(self, event=None):
+        """Con debounce: si la sucursal activa cambió, regenerar."""
+        if getattr(self, "_focus_after_id", None):
+            try:
+                self.after_cancel(self._focus_after_id)
+            except Exception:
+                pass
+        self._focus_after_id = self.after(200, self._verificar_sucursal)
 
-        for s in self.sucursales["sucursales"]:
-            if s["nombre"] == nombre:
-                cambiar_sucursal_activa(s["id"])
-                break
+    def _verificar_sucursal(self):
+        activa_actual = sucursal_activa().get("id", "")
+        if activa_actual and activa_actual != self._sucursal_guardada:
+            self.sucursales = cargar_sucursales()
+            self._regenerar_mensajes_por_sucursal()
 
+    # ============================================================
+    # Regeneración de mensajes
+    # ============================================================
+
+    def _regenerar_mensajes_por_sucursal(self):
+        """Regenera los mensajes de clientes NO enviados con la sucursal activa."""
         nombre_clinica = nombre_clinica_activa()
-        regenerados = 0
 
-        # Regenerar mensajes de clientes no enviados
         for lista, tipo in ((self.clientes_citas, "citas"),
                             (self.clientes_vacunas, "vacunas")):
             for c in lista:
                 if historial.ya_fue_enviado(c["telefono"], tipo, self._mensaje_de(c)):
                     continue  # Ya enviado → no tocar
                 regenerar_mensajes_cliente(c, nombre_clinica)
-                regenerados += 1
 
-        # Guardar caché actualizado
-        _guardar_json(CITAS_CACHE, self.clientes_citas)
-        _guardar_json(VACUNAS_CACHE, self.clientes_vacunas)
-
+        self._guardar_cache()
         self._refrescar_tabs()
+        self._actualizar_estadisticas()
 
-        # Limpiar panel de mensaje si el cliente seleccionado cambió
-        self.txt_msg_citas.delete("1.0", END)
-        self.txt_msg_vacunas.delete("1.0", END)
+        # Refrescar panel del cliente seleccionado (si lo hay)
+        self._refrescar_panel_mensaje("citas")
+        self._refrescar_panel_mensaje("vacunas")
 
-    def _abrir_sucursales(self):
-        from dialogos.sucursal_editor import DialogoSucursalEditor
-        DialogoSucursalEditor(self, on_guardar=self._recargar_sucursales)
-
-    def _recargar_sucursales(self):
-        self.sucursales = cargar_sucursales()
-        activas = [s["nombre"] for s in sucursales_activas()]
-        self.combo_sucursal["values"] = activas
-        self.var_sucursal.set(sucursal_activa()["nombre"])
+    def _refrescar_panel_mensaje(self, tipo: str):
+        """Vuelve a pintar el panel de mensaje con el cliente seleccionado actual."""
+        txt = self.txt_msg_citas if tipo == "citas" else self.txt_msg_vacunas
+        txt.delete("1.0", END)
+        cliente = self._cliente_seleccionado(tipo)
+        if cliente:
+            txt.insert("1.0", self._mensaje_de(cliente))
 
     # ============================================================
     # Importar / Limpiar
@@ -336,9 +387,7 @@ class AppRecordatorios(ttk.Toplevel):
             except Exception as e:
                 resumen.append(f"❌ {nombre}: {e}")
 
-        _guardar_json(CITAS_CACHE, self.clientes_citas)
-        _guardar_json(VACUNAS_CACHE, self.clientes_vacunas)
-
+        self._guardar_cache()
         self._refrescar_tabs()
         self._actualizar_estadisticas()
         messagebox.showinfo("Importación", "\n".join(resumen), parent=self)
@@ -352,11 +401,9 @@ class AppRecordatorios(ttk.Toplevel):
             return
         self.clientes_citas = []
         self.clientes_vacunas = []
-        _guardar_json(CITAS_CACHE, [])
-        _guardar_json(VACUNAS_CACHE, [])
+        self._guardar_cache()
         self._refrescar_tabs()
         self._actualizar_estadisticas()
-        # Limpiar cuadros de mensaje
         self.txt_msg_citas.delete("1.0", END)
         self.txt_msg_vacunas.delete("1.0", END)
 
@@ -401,7 +448,6 @@ class AppRecordatorios(ttk.Toplevel):
                     primera_cita.get("estado", ""),
                 ))
             else:
-                # Vacunas: concatenar tipo recordatorio + vacuna + fecha de todas
                 tipos_record = []
                 vacunas = []
                 fechas = []
@@ -439,13 +485,7 @@ class AppRecordatorios(ttk.Toplevel):
         return ", ".join(n for n in nombres if n)
 
     def _al_seleccionar(self, tipo: str):
-        cliente = self._cliente_seleccionado(tipo)
-        if not cliente:
-            return
-        mensaje = self._mensaje_de(cliente)
-        txt = self.txt_msg_citas if tipo == "citas" else self.txt_msg_vacunas
-        txt.delete("1.0", END)
-        txt.insert("1.0", mensaje)
+        self._refrescar_panel_mensaje(tipo)
 
     # ============================================================
     # Acciones
@@ -477,9 +517,8 @@ class AppRecordatorios(ttk.Toplevel):
             messagebox.showinfo("Selecciona", "Selecciona un cliente.", parent=self)
             return
 
-        mensaje = self._mensaje_de(cliente)  # CON emojis
+        mensaje = self._mensaje_de(cliente)
 
-        # 1. Copiar al portapapeles
         if not envio.copiar_al_portapapeles(mensaje):
             messagebox.showerror(
                 "Error",
@@ -488,14 +527,12 @@ class AppRecordatorios(ttk.Toplevel):
             )
             return
 
-        # 2. Abrir WhatsApp SIN texto (para que el usuario pegue)
         ok = envio.abrir_whatsapp_solo_chat(cliente["telefono"])
 
         if not ok:
             messagebox.showerror("Error", "No se pudo abrir WhatsApp.", parent=self)
             return
 
-        # 3. Confirmar
         self.after(500, lambda: self._confirmar_envio(tipo, cliente, mensaje))
 
     def _confirmar_envio(self, tipo: str, cliente: dict, mensaje: str):

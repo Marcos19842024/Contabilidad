@@ -69,3 +69,7 @@ def ruta_deposito(anio=None, mes=None):
 
 # Archivo de configuración de Gmail (usado por el módulo de Ingresos)
 GMAIL_CONFIG_FILE = _CARPETA_DATOS / "gmail_config.json"
+
+# core/rutas.py (agregar al final)
+# Re-export de la ruta de config UI para quien la busque aquí
+from core.config_ui import CONFIG_UI_FILE  # noqa: E402,F401

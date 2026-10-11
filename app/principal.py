@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 app/principal.py
-Pantalla de inicio del Sistema de Contabilidad QVET.
+Pantalla de inicio del Sistema de Contabilidad.
 Permite elegir entre:
   - Reporte de Ingresos
   - Reporte de Egresos
@@ -22,16 +22,21 @@ import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
-from config.ajustes import TEMA
+from config.temas import obtener_tema
 
 
 class AppPrincipal(ttk.Window):
     """Pantalla de inicio del sistema."""
 
     def __init__(self):
-        super().__init__(themename=TEMA)
+        super().__init__(themename=obtener_tema())
+        # Asegurar que config_ui.json exista con defaults completos
+        from config.temas import guardar_tema
+        from config.veterinaria import obtener_veterinaria, guardar_veterinaria
+        guardar_tema(obtener_tema())
+        guardar_veterinaria(obtener_veterinaria())
         self.title("Vet Suite")
-        self.geometry("720x820")
+        self.geometry("650x700")
         self.minsize(680, 760)
 
         self._construir_ui()
@@ -265,8 +270,8 @@ class AppPrincipal(ttk.Window):
 
     def _centrar_ventana(self):
         self.update_idletasks()
-        ancho = 720
-        alto = 820
+        ancho = 650
+        alto = 700
         x = (self.winfo_screenwidth() - ancho) // 2
         y = (self.winfo_screenheight() - alto) // 2
         self.geometry(f"{ancho}x{alto}+{x}+{y}")

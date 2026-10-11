@@ -1,27 +1,22 @@
-# -*- coding: utf-8 -*-
-"""
-dialogos/temas.py
-Diálogo para elegir el tema visual de la aplicación.
-"""
-
+# dialogos/temas.py
 import sys
 import tkinter as tk
 import ttkbootstrap as ttk
 
 from tkinter import messagebox
 
-from config.ajustes import CONFIG, TEMA, guardar_config, obtener_tema_actual
-from config.temas import refrescar_colores
+# ✅ Ahora el tema vive en config.temas, no en ajustes
+from config.temas import (
+    obtener_tema as obtener_tema_actual,
+    guardar_tema,
+    refrescar_colores,
+)
 
 
 def abrir_dialogo_temas(app):
-    """
-    Abre el diálogo para elegir el tema visual.
-    """
     import ttkbootstrap as _ttk
     from config import temas as cfg_temas
 
-    # Leer el tema ACTUAL desde el archivo (no desde la constante)
     tema_actual = obtener_tema_actual()
 
     try:
@@ -36,7 +31,6 @@ def abrir_dialogo_temas(app):
     configurar_ventana(app, ventana, ancho=360, alto=480,
                        min_ancho=320, min_alto=420)
 
-    # Encabezado
     ttk.Label(ventana, text="Selecciona un tema:",
               font=("Segoe UI", 13, "bold")).pack(pady=(15, 5))
     ttk.Label(ventana,
@@ -46,7 +40,6 @@ def abrir_dialogo_temas(app):
               foreground="gray",
               justify="center").pack(pady=(0, 10))
 
-    # Contenedor con scroll
     cont = ttk.Frame(ventana)
     cont.pack(fill="both", expand=True, padx=15, pady=5)
 
@@ -67,7 +60,6 @@ def abrir_dialogo_temas(app):
         tree.selection_set(tema_actual)
         tree.see(tema_actual)
 
-    # Scroll con la rueda
     def _on_mousewheel(event):
         if sys.platform == "darwin":
             delta = -1 * event.delta
@@ -91,14 +83,9 @@ def abrir_dialogo_temas(app):
     def _preview(tema):
         try:
             _ttk.Style().theme_use(tema)
-            # Actualizamos la variable global TEMA en config.ajustes
-            from config import ajustes as cfg_ajustes
-            cfg_ajustes.TEMA = tema
-            # Y también en config.temas (por si lo consulta)
+            # Actualizamos la constante TEMA en config.temas
             cfg_temas.TEMA = tema
-
             refrescar_colores()
-            # Solo llamar si el padre tiene esos métodos (defensivo)
             if hasattr(app, "_configurar_estilos"):
                 app._configurar_estilos()
             if hasattr(app, "_repintar_todo"):
@@ -126,8 +113,7 @@ def abrir_dialogo_temas(app):
 
     def _confirmar():
         nuevo_tema = var_tema.get()
-        CONFIG["tema"] = nuevo_tema
-        guardar_config(CONFIG)
+        guardar_tema(nuevo_tema)  # ✅ ahora usa config.temas
         messagebox.showinfo(
             "Tema guardado",
             f"Tema cambiado a: {nuevo_tema}\n\n"

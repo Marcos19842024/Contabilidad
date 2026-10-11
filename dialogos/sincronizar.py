@@ -21,7 +21,7 @@ from tkinter import messagebox
 from pathlib import Path
 from datetime import datetime
 
-from config.ajustes import cargar_config_correo
+from config.config_ingresos import cargar_config_correo
 from core.rutas import _CARPETA_DATOS
 from core.persistencia import cargar_db, existe_valor_unico
 from modulos.lector_facturas import procesar_factura
@@ -472,6 +472,8 @@ def sincronizar_facturas(app):
         except Exception as e:
             log(f"  ❌ Error: {e}")
             facturas_con_error.append((no_factura, str(e)))
+
+    app._refrescar_tabla()
 
     # ---- 9. Resumen final ----
     log("\n" + "=" * 80)

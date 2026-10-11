@@ -23,7 +23,7 @@ class DialogoMascota(ttk.Toplevel):
                  on_guardar=None, on_eliminar=None):
         super().__init__(master)
         self.title("Mascota")
-        configurar_ventana(master, self, ancho=560, alto=520, centrar_en_padre=True)
+        configurar_ventana(master, self, ancho=560, alto=350, centrar_en_padre=True)
 
         self.mascota = dict(mascota or {})
         self.existentes = existentes or []

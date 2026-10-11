@@ -32,11 +32,7 @@ from core.rutas_estetica import (
 )
 from core.geocoding import geocodificar
 from ui.utils import configurar_ventana
-
-
-# Coordenadas de QVET (placeholder, ajustar con las reales)
-LAT = 19.8450
-LNG = -90.5230
+from config.veterinaria import sucursal_activa as _sucursal_activa
 
 
 # ---------------------------------------------------------------
@@ -200,19 +196,50 @@ def haversine_km(lat1, lon1, lat2, lon2):
     return R * 2 * math.asin(math.sqrt(a))
 
 
-def calcular_ruta_haversine(lat_cliente, lon_cliente,
-                            lat_qvet=LAT, lon_qvet=LNG):
-    if None in (lat_cliente, lon_cliente, lat_qvet, lon_qvet):
-        return None, None
-    distancia_recta = haversine_km(lat_qvet, lon_qvet, lat_cliente, lon_cliente)
-    distancia_km = round(distancia_recta * 1.3, 2)
-    tiempo_min = round((distancia_km / 25.0) * 60)
-    return distancia_km, tiempo_min
+# ---------------------------------------------------------------
+# Cálculo de ruta completa (ida + vuelta + recolección)
+# ---------------------------------------------------------------
+
+# Ajustar con pruebas reales (ver README del módulo)
+FACTOR_RUTA = 1.4
+VELOCIDAD_KMH = 22.0
+MINUTOS_RECOLECCION = 5
+
+
+def calcular_ruta_completa(lat_cliente, lng_cliente):
+    """
+    Calcula la ruta desde la sucursal activa hasta el cliente.
+    """
+    suc = _sucursal_activa()
+    coords = suc.get("coordenadas", {})
+    lat = coords.get("lat")
+    lng = coords.get("lng")
+
+    if None in (lat_cliente, lng_cliente, lat, lng):
+        return None, None, None
+
+    distancia_recta = haversine_km(lat, lng, lat_cliente, lng_cliente)
+    distancia_km = round(distancia_recta * FACTOR_RUTA, 2)
+
+    tiempo_ida_min = max(1, round((distancia_km / VELOCIDAD_KMH) * 60))
+    tiempo_total_min = tiempo_ida_min * 2 + MINUTOS_RECOLECCION
+
+    return distancia_km, tiempo_ida_min, tiempo_total_min
 
 
 # ---------------------------------------------------------------
 # Detección de tipo de Excel por contenido
 # ---------------------------------------------------------------
+
+COLS_CLIENTES_MASCOTAS = {
+    "CLIENTE", "MASCOTA", "ESPECIE", "RAZA",
+    "COMUNICACION_IDCLIENTE", "COMUNICACION_IDANIMAL",
+}
+
+
+def _detectar_clientes_mascotas(encabezados: dict) -> bool:
+    """True si el Excel trae cliente + mascota en la misma hoja."""
+    return COLS_CLIENTES_MASCOTAS.issubset(encabezados.keys())
 
 def _leer_encabezados(ws):
     """Devuelve dict {NOMBRE_COLUMNA: índice} normalizado."""
@@ -234,8 +261,8 @@ def _detectar_tipo_excel(ruta_excel: str):
         ws = wb.active
         encabezados = _leer_encabezados(ws)
 
-        # Clientes: CLIENTE + POBLACION + DIRECCION
-        if all(c in encabezados for c in ("CLIENTE", "POBLACION", "DIRECCION")):
+        # Clientes + mascotas (una fila por mascota)
+        if _detectar_clientes_mascotas(encabezados):
             wb.close()
             return "clientes"
 
@@ -274,58 +301,143 @@ def _preview_excel(ruta_excel: str) -> dict:
 # Importadores con merge (solo añaden nuevos)
 # ---------------------------------------------------------------
 
-def importar_clientes_excel(ruta_excel: str) -> dict:
+def importar_clientes_mascotas_excel(ruta_excel: str) -> dict:
     """
-    Lee Excel de clientes. Si el maestro ya existe, solo añade los
-    clientes cuyo nombre normalizado no esté ya registrado.
+    Importa Excel con una fila por mascota.
+
+    - Cliente: identifica por COMUNICACION_IDCLIENTE.
+      * Si ya existe, fusiona datos faltantes (id_cliente, telefono, cp).
+      * Si no existe, lo crea.
+    - Mascota: identifica por COMUNICACION_IDANIMAL dentro del cliente.
+      * Si ya existe, se salta.
+      * Si no existe, se agrega (aunque se llame igual que otra).
     """
     wb = load_workbook(ruta_excel, data_only=True)
     ws = wb.active
-    encabezados = _leer_encabezados(ws)
+    enc = _leer_encabezados(ws)
 
-    idx_cli = encabezados.get("CLIENTE", 0)
-    idx_pob = encabezados.get("POBLACION",
-                              encabezados.get("POBLACIÓN", 1))
-    idx_dir = encabezados.get("DIRECCION",
-                              encabezados.get("DIRECCIÓN", 2))
+    idx_cli   = enc["CLIENTE"]
+    idx_mas   = enc["MASCOTA"]
+    idx_dir   = enc.get("DIRECCIÓN", enc.get("DIRECCION"))
+    idx_pob   = enc.get("POBLACIÓN", enc.get("POBLACION"))
+    idx_cp    = enc.get("CP")
+    idx_tel   = enc.get("TELÉFONO1", enc.get("TELEFONO1"))
+    idx_esp   = enc.get("ESPECIE")
+    idx_raza  = enc.get("RAZA")
+    idx_idcli = enc["COMUNICACION_IDCLIENTE"]
+    idx_idani = enc["COMUNICACION_IDANIMAL"]
 
-    maestro = _cargar_json(CLIENTES_MAESTRO, [])
-    claves_existentes = {clave_busqueda(c.get("cliente", "")) for c in maestro}
+    maestro  = _cargar_json(CLIENTES_MAESTRO, [])
+    mascotas = _cargar_json(MASCOTAS_FILE, {})
+
+    # Índice por id_cliente (solo los que ya lo tengan)
+    por_id_cli = {
+        str(c.get("id_cliente")).strip(): c
+        for c in maestro if c.get("id_cliente")
+    }
     max_id = max((c.get("id", 0) for c in maestro), default=0)
 
-    nuevos = 0
-    existentes = 0
+    # Índice por nombre normalizado (para fusionar con clientes viejos sin id_cliente)
+    por_nombre = {
+        clave_busqueda(c.get("cliente", "")): c
+        for c in maestro
+    }
+
+    stats = {
+        "clientes_nuevos": 0,
+        "clientes_fusionados": 0,
+        "mascotas_nuevas": 0,
+        "mascotas_existentes": 0,
+    }
 
     for fila in ws.iter_rows(min_row=2, values_only=True):
-        if not fila or len(fila) <= idx_cli or not fila[idx_cli]:
+        if not fila or len(fila) <= max(idx_idcli, idx_idani, idx_cli, idx_mas):
             continue
-        nombre_raw = str(fila[idx_cli]).strip()
-        if not nombre_raw:
-            continue
-        clave = clave_busqueda(nombre_raw)
-        if clave in claves_existentes:
-            existentes += 1
-            continue
-        max_id += 1
-        maestro.append({
-            "id": max_id,
-            "cliente": normalizar_nombre(nombre_raw),
-            "cliente_raw": nombre_raw,
-            "poblacion": str(fila[idx_pob] or "").strip() if len(fila) > idx_pob else "",
-            "direccion": str(fila[idx_dir] or "").strip() if len(fila) > idx_dir else "",
-            "notas_cliente": "",
-            "duplicado": False,
-        })
-        claves_existentes.add(clave)
-        nuevos += 1
 
+        id_cli = str(fila[idx_idcli] or "").strip()
+        nombre_raw = str(fila[idx_cli] or "").strip()
+        if not id_cli or not nombre_raw:
+            continue
+
+        nombre_norm = normalizar_nombre(nombre_raw)
+        clave_norm  = clave_busqueda(nombre_raw)
+
+        # ---- Cliente: buscar por ID, luego por nombre ----
+        cliente = por_id_cli.get(id_cli) or por_nombre.get(clave_norm)
+
+        if cliente is None:
+            # Cliente nuevo
+            max_id += 1
+            cliente = {
+                "id": max_id,
+                "id_cliente": id_cli,
+                "cliente": nombre_norm,
+                "cliente_raw": nombre_raw,
+                "poblacion": "",
+                "direccion": "",
+                "cp": "",
+                "telefono": "",
+                "notas_cliente": "",
+                "duplicado": False,
+            }
+            maestro.append(cliente)
+            stats["clientes_nuevos"] += 1
+        else:
+            # Fusionar datos faltantes
+            if not cliente.get("id_cliente"):
+                cliente["id_cliente"] = id_cli
+            stats["clientes_fusionados"] += 1
+
+        # Registrar en índices
+        por_id_cli[id_cli] = cliente
+        por_nombre[clave_norm] = cliente
+
+        # ---- Completar campos que falten ----
+        dir_val = str(fila[idx_dir] or "").strip() if idx_dir is not None else ""
+        cp_val  = str(fila[idx_cp]  or "").strip() if idx_cp  is not None else ""
+        tel_val = str(fila[idx_tel] or "").strip() if idx_tel is not None else ""
+        pob_val = str(fila[idx_pob] or "").strip() if idx_pob is not None else ""
+
+        if dir_val and not cliente.get("direccion"):
+            cliente["direccion"] = dir_val
+        if cp_val and not cliente.get("cp"):
+            cliente["cp"] = cp_val
+        if tel_val and not cliente.get("telefono"):
+            cliente["telefono"] = tel_val
+        if pob_val and not cliente.get("poblacion"):
+            cliente["poblacion"] = pob_val
+        # ---- Mascota ----
+        nombre_cli = cliente["cliente"]
+        lista = mascotas.setdefault(nombre_cli, [])
+
+        id_ani = str(fila[idx_idani] or "").strip()
+        nombre_mas = str(fila[idx_mas] or "").strip() or "[sin nombre]"
+
+        # Dedupe por id_animal (si ya existe ese ID en la lista, skip)
+        if id_ani and any(
+            str(m.get("id_animal", "")).strip() == id_ani for m in lista
+        ):
+            stats["mascotas_existentes"] += 1
+            continue
+
+        lista.append({
+            "nombre": nombre_mas,
+            "especie": str(fila[idx_esp] or "").strip() if idx_esp is not None else "",
+            "raza":    str(fila[idx_raza] or "").strip() if idx_raza is not None else "",
+            "id_animal": id_ani,
+            "caracter": "",
+            "precauciones": "",
+            "notas": "",
+        })
+        stats["mascotas_nuevas"] += 1
+
+    wb.close()
     _guardar_json(CLIENTES_MAESTRO, maestro)
-    return {
-        "nuevos": nuevos,
-        "existentes": existentes,
-        "total_excel": nuevos + existentes,
-        "total_maestro": len(maestro),
-    }
+    _guardar_json(MASCOTAS_FILE, mascotas)
+
+    stats["total_maestro"] = len(maestro)
+    stats["total_mascotas"] = sum(len(v) for v in mascotas.values())
+    return stats
 
 
 def importar_servicios_estetica(ruta_excel: str) -> dict:
@@ -514,22 +626,24 @@ class AppEsteticaTransportes(ttk.Toplevel):
         contenedor = ttk.Frame(frame_tabla)
         contenedor.pack(fill="both", expand=True)
 
-        cols = ("alerta", "cliente", "poblacion", "direccion", "mascotas", "transporte")
+        cols = ("alerta", "cliente", "poblacion", "telefono", "direccion", "mascotas", "transporte")
         encabezados = {
             "alerta": "⚠️",
             "cliente": "CLIENTE",
             "poblacion": "POBLACIÓN",
+            "telefono": "TELÉFONO",
             "direccion": "DIRECCIÓN",
             "mascotas": "MASCOTAS",
             "transporte": "TRANSPORTE",
         }
         anchos = {
             "alerta": 40,
-            "cliente": 250,
-            "poblacion": 170,
-            "direccion": 380,
+            "cliente": 230,
+            "poblacion": 150,
+            "telefono": 110,
+            "direccion": 300,
             "mascotas": 200,
-            "transporte": 150,
+            "transporte": 130,
         }
 
         self.tabla = ttk.Treeview(contenedor, columns=cols, show="headings",
@@ -612,8 +726,10 @@ class AppEsteticaTransportes(ttk.Toplevel):
             mascotas_txt = ", ".join(m.get("nombre", "") for m in mascotas_cli) or "—"
             if trans:
                 dist = trans.get("distancia_km", "")
-                tiempo = trans.get("tiempo_min", "")
-                trans_txt = f"{dist} km / {tiempo} min" if dist or tiempo else "sin datos"
+                # Preferimos tiempo_total_min si existe, si no tiempo_min
+                tiempo_total = trans.get("tiempo_total_min",
+                                          trans.get("tiempo_min", ""))
+                trans_txt = f"{dist} km / {tiempo_total} min" if dist else "sin datos"
             else:
                 trans_txt = "sin datos"
 
@@ -622,6 +738,7 @@ class AppEsteticaTransportes(ttk.Toplevel):
                 nombre,
                 c.get("poblacion", ""),
                 c.get("direccion", ""),
+                c.get("telefono", ""),
                 mascotas_txt,
                 trans_txt,
             ))
@@ -658,14 +775,16 @@ class AppEsteticaTransportes(ttk.Toplevel):
             })
 
         # Preview
+        etiquetas_tipo = {
+            "clientes": "Clientes",
+            "servicios_estetica": "Servicios de estética",
+            "tarifas_transporte": "Tarifas de transporte",
+        }
+
         lineas = ["Archivos detectados:\n"]
         for a in analisis:
             if a["tipo"]:
-                etiqueta = {
-                    "clientes": "Clientes",
-                    "servicios_estetica": "Servicios de estética",
-                    "tarifas_transporte": "Tarifas de transporte",
-                }.get(a["tipo"], a["tipo"])
+                etiqueta = etiquetas_tipo.get(a["tipo"], a["tipo"])
                 lineas.append(f"  • {a['nombre']} → {etiqueta} ({a['total']} filas)")
             else:
                 lineas.append(f"  • {a['nombre']} → ❌ NO RECONOCIDO")
@@ -684,10 +803,15 @@ class AppEsteticaTransportes(ttk.Toplevel):
                 continue
             try:
                 if a["tipo"] == "clientes":
-                    r = importar_clientes_excel(a["ruta"])
+                    r = importar_clientes_mascotas_excel(a["ruta"])
                     resumen.append(
-                        f"✅ Clientes: +{r['nuevos']} nuevos "
-                        f"({r['existentes']} ya existían) → total {r['total_maestro']}"
+                        f"✅ Clientes + mascotas:\n"
+                        f"   • {r['clientes_nuevos']} clientes nuevos, "
+                        f"{r['clientes_fusionados']} fusionados\n"
+                        f"   • {r['mascotas_nuevas']} mascotas nuevas, "
+                        f"{r['mascotas_existentes']} ya existían\n"
+                        f"   • Total: {r['total_maestro']} clientes, "
+                        f"{r['total_mascotas']} mascotas"
                     )
                 elif a["tipo"] == "servicios_estetica":
                     r = importar_servicios_estetica(a["ruta"])

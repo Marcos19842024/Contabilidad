@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """
 dialogos/clasificar_sucursal.py
-Diálogo para clasificar facturas entre Animalia y Baalak.
-Muestra una lista de facturas con checkboxes.
+Diálogo para clasificar facturas por sucursal.
+Muestra una lista de facturas con combobox por fila.
+
+Las sucursales se leen de config/veterinaria.py (config_ui.json).
+El valor guardado en reg["sucursal"] es el nombre_corto.
 """
 
 import tkinter as tk
@@ -13,12 +16,16 @@ from pathlib import Path
 
 from sat.guardar_egresos import cargar_db_egresos, guardar_db_egresos
 from ui.utils import configurar_ventana
+from config.veterinaria import (
+    sucursales as _sucursales_cfg,
+    nombre_corto_activo as _nombre_corto_activo,
+)
 
 
 def abrir_dialogo_clasificar_sucursal(app, anio=2026):
     """
-    Abre el diálogo para clasificar facturas entre Animalia y Baalak.
-    
+    Abre el diálogo para clasificar facturas por sucursal.
+
     Parámetros:
       - app: instancia de AppEgresos.
       - anio: año de las facturas a clasificar.
@@ -34,6 +41,17 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
             parent=app
         )
         return
+
+    # ---- Sucursales desde config ----
+    _sucs = _sucursales_cfg()
+    _nombres_cortos = [
+        s.get("nombre_corto") or s.get("nombre", "")
+        for s in _sucs if s.get("activa", True)
+    ]
+    if not _nombres_cortos:
+        _nombres_cortos = ["Baalak", "Animalia"]  # fallback
+
+    _default_suc = _nombre_corto_activo() or _nombres_cortos[0]
 
     # Crear ventana
     ventana = ttk.Toplevel(app)
@@ -51,7 +69,7 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
     ttk.Label(
         ventana,
         text=f"Total de facturas: {len(registros)}\n"
-             "Marca las que son de Animalia. Las demás se quedan en Baalak.",
+             f"Sucursal por defecto: {_default_suc}",
         font=("Segoe UI", 9),
         foreground="gray"
     ).pack(pady=(0, 15))
@@ -65,7 +83,7 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
     ttk.Combobox(
         frame_filtros,
         textvariable=var_filtro,
-        values=["TODAS", "SOLO ANIMALIA", "SOLO BAALAK"],
+        values=["TODAS"] + [f"SOLO {n.upper()}" for n in _nombres_cortos],
         width=20,
         state="readonly"
     ).pack(side="left", padx=5)
@@ -112,7 +130,7 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
               width=15, anchor="center").pack(side="left", padx=3)
 
     # Lista de facturas
-    vars_sucursal = {}  # id → StringVar ("Animalia" o "Baalak")
+    vars_sucursal = {}  # id → StringVar
 
     frame_filas = ttk.Frame(frame_interno)
     frame_filas.pack(fill="both", expand=True)
@@ -130,16 +148,16 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
         busqueda = var_buscar.get().strip().lower()
 
         for reg in registros:
-            sucursal_actual = reg.get("sucursal", "Baalak")
+            sucursal_actual = reg.get("sucursal") or _default_suc
             emisor = reg.get("nombre_emisor", "").lower()
             rfc = reg.get("rfc_emisor", "").lower()
             folio = reg.get("folio", "").lower()
 
             # Aplicar filtro
-            if filtro == "SOLO ANIMALIA" and sucursal_actual != "Animalia":
-                continue
-            if filtro == "SOLO BAALAK" and sucursal_actual != "Baalak":
-                continue
+            if filtro.startswith("SOLO "):
+                esperada = filtro[5:].strip().lower()
+                if sucursal_actual.lower() != esperada:
+                    continue
             if busqueda and busqueda not in emisor and busqueda not in rfc and busqueda not in folio:
                 continue
 
@@ -168,14 +186,13 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
             combo = ttk.Combobox(
                 fila,
                 textvariable=var,
-                values=["Baalak", "Animalia"],
+                values=_nombres_cortos,
                 width=12,
                 state="readonly"
             )
             combo.pack(side="left", padx=3)
 
-            # Botón "Guardar como regla" (marca el proveedor como
-            # siempre de esa sucursal)
+            # Botón "Guardar como regla"
             def _guardar_regla(r=reg, v=var):
                 rfc = r.get("rfc_emisor", "").strip()
                 nombre = r.get("nombre_emisor", "").strip()
@@ -222,12 +239,12 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
             fila_dict = {"id": reg["id"], "var": var, "combo": combo}
             filas_widgets.append(fila_dict)
 
-            # Colorear si es Animalia
+            # Colorear según si es la sucursal default o no
             def _actualizar_color(v=var, c=combo):
-                if v.get() == "Animalia":
-                    c.configure(bootstyle="warning")
-                else:
+                if v.get() == _default_suc:
                     c.configure(bootstyle="default")
+                else:
+                    c.configure(bootstyle="warning")
 
             var.trace_add("write", lambda *a, v=var, c=combo: _actualizar_color(v, c))
             _actualizar_color()
@@ -254,17 +271,20 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
         # Guardar en JSON
         guardar_db_egresos(registros, anio)
 
-        # Contar
-        animalia = sum(1 for r in registros if r.get("sucursal") == "Animalia")
-        baalak = sum(1 for r in registros if r.get("sucursal") == "Baalak")
+        # Contar por sucursal
+        conteo = {}
+        for r in registros:
+            s = r.get("sucursal") or _default_suc
+            conteo[s] = conteo.get(s, 0) + 1
+
+        resumen = "\n".join(f"• {k}: {v} facturas" for k, v in conteo.items())
 
         # Si hay cambios, preguntar si mover archivos
         if cambios:
             mover = messagebox.askyesno(
                 "Mover archivos",
                 f"✅ Clasificación guardada\n\n"
-                f"• Animalia: {animalia} facturas\n"
-                f"• Baalak:   {baalak} facturas\n\n"
+                f"{resumen}\n\n"
                 f"Se cambiaron {len(cambios)} facturas de sucursal.\n\n"
                 f"¿Quieres mover los archivos a sus nuevas carpetas?",
                 parent=ventana,
@@ -275,9 +295,7 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
         else:
             messagebox.showinfo(
                 "Clasificación guardada",
-                f"✅ Clasificación guardada\n\n"
-                f"• Animalia: {animalia} facturas\n"
-                f"• Baalak:   {baalak} facturas",
+                f"✅ Clasificación guardada\n\n{resumen}",
                 parent=ventana,
             )
 
@@ -286,16 +304,14 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
     def _mover_archivos(cambios, anio):
         """Mueve físicamente los XMLs de los registros que cambiaron."""
         from sat.mover_egresos import mover_un_registro
-
-        # Obtener el mes_idx promedio (por si hay varios)
         from config.campos import MESES_ES
+
         mes_idx_por_defecto = 9  # default septiembre
 
         movidos = 0
         errores = []
 
         for reg, nueva_sucursal in cambios:
-            # Determinar mes del registro
             try:
                 mes_nombre = reg.get("mes", "septiembre")
                 mes_idx = MESES_ES.index(mes_nombre) + 1
@@ -308,10 +324,8 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
             else:
                 errores.append(f"{reg.get('folio', '?')}: {msg}")
 
-        # Guardar de nuevo (con las rutas actualizadas)
         guardar_db_egresos(registros, anio)
 
-        # Resumen
         lineas = [f"✅ {movidos} archivos movidos"]
         if errores:
             lineas.append(f"\n⚠️ Errores ({len(errores)}):")
@@ -329,13 +343,12 @@ def abrir_dialogo_clasificar_sucursal(app, anio=2026):
                command=_guardar,
                bootstyle="info-outline").pack(side="right", padx=5)
 
-    # Botones rápidos
-    def _marcar_todas_baalak():
+    def _marcar_todas_default():
         for v in vars_sucursal.values():
-            v.set("Baalak")
+            v.set(_default_suc)
 
-    ttk.Button(fr_btn, text="🏢 Todas Baalak",
-               command=_marcar_todas_baalak,
+    ttk.Button(fr_btn, text=f"🏢 Todas {_default_suc}",
+               command=_marcar_todas_default,
                bootstyle="secondary-outline").pack(side="left", padx=5)
 
     ventana.protocol("WM_DELETE_WINDOW", _cancelar)

@@ -247,19 +247,28 @@ def escribir_fila(ws, r, fila, carpeta_adjuntos=None):
 
 
 def _calcular_total_remisiones(r):
-    """Suma las categorías + IVAs de un registro."""
+    """
+    Suma las categorías + IVAs/IEPS de un registro.
+    Se usa para el check rojo contra Total Factura.
+
+    Importante: NO sumar `med_importe` + `med_sin_iva` (son excluyentes).
+    """
     claves = [
+        # Categorías simples (importe + iva)
         "u_importe", "u_iva",
         "ac_importe", "ac_iva",
-        "med_importe", "med_sin_iva", "med_iva",
-        "hig_importe", "hig_sin_iva", "hig_iva",
-        "hig_sin_ieps_6", "hig_ieps_6",
-        "hig_sin_ieps_7", "hig_ieps_7",
         "est_importe", "est_iva",
         "tra_importe", "tra_iva",
         "pen_importe", "pen_iva",
+        # VACUNA y CLINICA (sin IVA)
         "vac_importe",
         "cli_importe",
+        # MEDICAMENTOS (importe = exentos; sin_iva = base gravados; iva)
+        "med_importe", "med_sin_iva", "med_iva",
+        # HIGIENE
+        "hig_importe", "hig_sin_iva", "hig_iva",
+        "hig_sin_ieps_6", "hig_ieps_6",
+        "hig_sin_ieps_7", "hig_ieps_7",
     ]
     total = 0.0
     for k in claves:
