@@ -3,7 +3,7 @@
 ## Stack
 - Python 3.13 (dev en 3.14)
 - tkinter + ttkbootstrap
-- openpyxl, cfdiclient, pyinstaller, openpyxl, pdfplumber
+- openpyxl, cfdiclient, pdfplumber, lxml
 - Empaquetado automático con GitHub Actions (tags `v*`)
 
 ## Módulos
@@ -12,16 +12,59 @@
 - **ESTÉTICA Y TRANSPORTES**: clientes, mascotas, rutas, tarifas
 - **RECORDATORIOS**: citas y vacunas, envío por WhatsApp (wa.me)
 
-## Estructura de datos
+---
 
-### Datos internos (JSON, invisibles para el usuario)
+## Arquitectura de configuración
 
-**Dev:** `<raíz proyecto>/{ingresos,egresos,estetica_transportes,recordatorios}/`
-**Prod:** `~/Documents/Vet Suite/{ingresos,egresos,estetica_transportes,recordatorios}/`
+### Configuración COMPARTIDA (los 4 módulos)
 
-### Reportes y facturas visibles (iguales en dev y prod)
+Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
+`core/config_ui.py`.
 
-Documents/
+**Claves:**
+- `"tema"` → nombre del tema ttkbootstrap (ej. `"darkly"`)
+- `"veterinaria"` → `{nombre, sucursal_activa, sucursales: [...]}`
+
+**Sucursales (fuente de verdad única):**
+- Definidas en `config/veterinaria.py` (`SUCURSALES_DEFAULT`).
+- Se editan SOLO desde **Configuración General → tab 🏥 Veterinaria**.
+- Cada sucursal: `{id, nombre, nombre_corto, direccion, telefono, activa, coordenadas}`
+- `nombre_corto` es el identificador estable que usan los módulos
+  (ej. Egresos guarda `reg["sucursal"] = "Baalak"`).
+- Los `nombre_corto` actuales: `"Baalak"`, `"Prado"`, `"Animalia"`.
+- La activa se marca con el botón **● Marcar como activa** (no hay checkbox).
+- El diálogo de detalle NO tiene checkbox "activa" — se maneja desde la tabla.
+
+**Módulo compartido de acceso:**
+- `core/config_ui.py` → única API para leer/escribir `config_ui.json`.
+- `core/config_ui.leer()` crea el archivo con `{}` si no existe.
+- `core/config_ui.set_seccion(nombre, valor)` → merge no destructivo.
+- `AppPrincipal.__init__` fuerza un guardado inicial de defaults para que
+  el archivo exista desde el primer arranque.
+
+### Configuración POR MÓDULO
+
+| Módulo | Carpeta datos | Archivos clave |
+|--------|---------------|----------------|
+| Ingresos | `<raíz>/ingresos/` (dev) o `~/Documents/Vet Suite/ingresos/` (prod) | `gmail_config.json`, `historial_autocompletado.json`, `registros_ingresos_YYYY.json`, `catalogo_qvet.json`, `categorias_manuales.json` |
+| Egresos | `<raíz>/egresos/` o `~/Documents/Vet Suite/egresos/` | `config_egresos.json` (SAT), `proveedores_tc.json`, `proveedores_sucursal.json`, `observaciones_egresos.json`, `solicitud_sat_activa.json` |
+| Estética y Transportes | `<raíz>/estetica_transportes/` o `~/Documents/Vet Suite/estetica_transportes/` | `clientes_maestro.json`, `mascotas.json`, `servicios_estetica.json`, `tarifas_transporte.json`, `transportes_cliente.json` |
+| Recordatorios | `<raíz>/recordatorios/` o `~/Documents/Vet Suite/recordatorios/` | `agenda_importada.json`, `vacunas_importada.json`, `historial_envios.json` |
+
+**Reglas de configuración por módulo:**
+- Cada módulo lee/escribe SU carpeta de datos.
+- NO acceder a archivos de otros módulos.
+- La sucursal activa se lee SIEMPRE de `config.veterinaria.sucursal_activa()`,
+  nunca se cachea en el módulo.
+
+### Estructura de datos en disco
+
+**Dev:** `<raíz proyecto>/{ingresos,egresos,estetica_transportes,recordatorios}/` + `config_ui.json`
+**Prod:** `~/Documents/Vet Suite/{ingresos,egresos,estetica_transportes,recordatorios}/` + `config_ui.json`
+
+**Reportes y facturas visibles** (iguales en dev y prod):
+
+/Documents/
 ├── Contabilidad 2025/
 │ └── Contabilidad enero/
 │ ├── Ingreso/
@@ -37,23 +80,62 @@ Documents/
 └── Vet Suite/
 └── Reportes Recordatorios/
 
+### Migraciones implementadas (v2.1.1)
+
+- `recordatorios/sucursales.json` → `config_ui.json#veterinaria`
+  - Se ejecuta al importar `config/veterinaria.py` por primera vez.
+  - El archivo viejo se renombra a `.json.bak`.
+- `config/temas.py#TEMA` (constante global) → `obtener_tema()` (función).
+  - Se mantiene `__getattr__` para retrocompatibilidad.
+- `config/ajustes.py` → **ELIMINADO**. Todos los imports migrados a
+  `config/config_ingresos.py`.
+- Cachés de Recordatorios: formato lista → `{sucursal, clientes}`.
+  - Migración automática en `AppRecordatorios._normalizar_cache`.
+- `dialogos/sucursal_editor.py` → **ELIMINADO**. El único editor de
+  sucursales es Config General → tab Veterinaria.
+
+---
 
 ## Archivos clave
+
+### Compartido / infraestructura
+| Archivo | Propósito |
+|---------|-----------|
+| `main.py` | Entry point |
+| `app/principal.py` | Pantalla de inicio (fuerza escritura inicial de `config_ui.json`) |
+| `core/config_ui.py` | Única API de acceso a `config_ui.json` |
+| `core/rutas.py` | Rutas de Ingresos + `CONFIG_UI_FILE` re-exportado |
+| `core/rutas_egresos.py` | Rutas de Egresos |
+| `core/rutas_estetica.py` | Rutas de Estética |
+| `core/rutas_recordatorios.py` | Rutas de Recordatorios + `_cargar_json` / `_guardar_json` |
+| `ui/utils.py` | `configurar_ventana()` |
+| `ui/widgets.py` | Widgets custom |
+| `config/temas.py` | Tema visual (`obtener_tema`, `guardar_tema`, colores) |
+| `config/veterinaria.py` | Sucursales y datos del negocio (fuente de verdad) |
+| `config/campos.py` | Definiciones de campos (MESES_ES, etc.) |
+| `config/config_ingresos.py` | Config de Gmail (ex `ajustes.py`) |
+| `config/config_egresos.py` | Config del módulo de Egresos |
+| `dialogos/config_general.py` | Config General (Apariencia + Veterinaria) |
+| `dialogos/temas.py` | Selector de tema |
+| `dialogos/manual.py` | Visor del manual |
+| `dialogos/gmail_config.py` | Config de Gmail |
 
 ### Ingresos
 | Archivo | Propósito |
 |---------|-----------|
 | `modulos/ingresos.py` | Módulo Ingresos |
-| `modulos/lector_facturas.py` | Parser PDF/XML + agrupado |
+| `modulos/lector_facturas.py` | Parser PDF (prioridad) + XML + agrupado |
 | `modulos/correo_facturas.py` | Descarga de Gmail |
 | `dialogos/adjuntos.py` | Ver adjuntos |
 | `dialogos/sincronizar.py` | Sincronización Gmail |
 | `dialogos/registrar_productos.py` | Reclasificar productos |
 | `dialogos/reclasificador.py` | Reclasificador masivo |
 | `core/persistencia.py` | Carga/guarda JSONs |
-| `core/rutas.py` | Rutas de Ingresos |
 | `core/correo_utils.py` | Utilidades de correo |
-| `excel/generador.py` | Escribe Excel de resumen |
+| `excel/generador.py` | Orquestación de Excel (crear/anexar) |
+| `excel/escritor.py` | Escritura de filas/encabezados/totales |
+| `excel/constantes.py` | Columnas, fórmulas, colores |
+| `excel/estilos.py` | Estilos openpyxl |
 
 ### Egresos
 | Archivo | Propósito |
@@ -67,12 +149,10 @@ Documents/
 | `dialogos/descargar_sat.py` | Diálogo de descarga |
 | `dialogos/egresos_config.py` | Config del SAT |
 | `dialogos/egresos_editar.py` | Edita registro + adjuntos |
-| `dialogos/clasificar_sucursal.py` | Clasifica proveedor → sucursal |
+| `dialogos/clasificar_sucursal.py` | Clasifica proveedor → sucursal (usa `config.veterinaria`) |
 | `dialogos/reportes_egresos.py` | Reportes |
 | `dialogos/espera_sat.py` | Ventana de espera del SAT |
 | `core/persistencia_egresos.py` | Carga/guarda JSONs |
-| `core/rutas_egresos.py` | Rutas de Egresos |
-| `config/config_egresos.py` | Config global del módulo |
 | `excel/egresos.py` | Genera Excel PUE/PPD |
 
 ### Estética y Transportes
@@ -83,38 +163,21 @@ Documents/
 | `dialogos/mascota_editar.py` | Alta/edición de mascota |
 | `dialogos/catalogo_editor.py` | Ver/eliminar servicios y tarifas |
 | `dialogos/duplicados_basura.py` | Duplicados + basura |
-| `core/rutas_estetica.py` | Rutas de datos |
 | `core/geocoding.py` | Geocodificación con Nominatim |
 
 ### Recordatorios
 | Archivo | Propósito |
 |---------|-----------|
 | `modulos/recordatorios.py` | Ventana principal |
-| `dialogos/sucursal_editor.py` | Editor de sucursales |
-| `core/rutas_recordatorios.py` | Rutas de datos |
-| `core/recordatorios/__init__.py` | Paquete |
+| `core/recordatorios/sucursales.py` | Adaptador → `config.veterinaria` |
 | `core/recordatorios/formatear.py` | Formateo fechas/teléfonos/strings |
 | `core/recordatorios/servicios.py` | Diccionario + procesarServicio |
-| `core/recordatorios/sucursales.py` | Catálogo configurable |
-| `core/recordatorios/plantillas.py` | Plantillas de citas/vacunas |
+| `core/recordatorios/plantillas.py` | Encabezados de citas/vacunas |
 | `core/recordatorios/procesar_excel.py` | Importación + agrupación + mensajes |
 | `core/recordatorios/envio.py` | WhatsApp (wa.me) + portapapeles |
 | `core/recordatorios/historial.py` | Historial de envíos |
 
-### Compartido
-| Archivo | Propósito |
-|---------|-----------|
-| `app/principal.py` | Pantalla de inicio |
-| `main.py` | Entry point |
-| `ui/utils.py` | `configurar_ventana()` |
-| `ui/widgets.py` | Widgets custom |
-| `config/ajustes.py` | Config global (tema) |
-| `config/campos.py` | Definiciones de campos |
-| `config/temas.py` | Temas y colores |
-| `dialogos/config_general.py` | Config desde la app |
-| `dialogos/temas.py` | Selector de tema |
-| `dialogos/manual.py` | Ver manual |
-| `dialogos/gmail_config.py` | Config de Gmail |
+---
 
 ## Reglas importantes
 
@@ -125,8 +188,95 @@ Documents/
 5. **Los archivos se nombran `<serie>-<folio>.xml`** (sin número de línea)
 6. **La numeración de línea se calcula al vuelo** en tabla y Excel
 7. **Dev y prod usan la MISMA estructura de carpetas** — solo cambia la base
-8. **En dev los JSON internos van a la raíz del proyecto**, en prod a `~/Documents/Vet Suite/`
-9. **Los reportes visibles van SIEMPRE a `~/Documents/Contabilidad AAAA/`** (excepto Recordatorios que va a `~/Documents/Vet Suite/Reportes Recordatorios/`)
+8. **`config_ui.json` es COMPARTIDO por los 4 módulos** — acceso único vía `core/config_ui.py`
+9. **Las sucursales SOLO se editan desde Config General → tab 🏥 Veterinaria**
+10. **`nombre_corto` de sucursal es el identificador estable** entre módulos
+11. **Los reportes visibles van SIEMPRE a `~/Documents/Contabilidad AAAA/`** (excepto Recordatorios que va a `~/Documents/Vet Suite/Reportes Recordatorios/`)
+12. **Los mensajes de Recordatorios se cachean con la sucursal activa** (`{"sucursal": id, "clientes": [...]}`). Al abrir, si la sucursal cambió, se regeneran los NO enviados.
+13. **El Excel de Ingresos solo anexa registros nuevos.** Si modificas un registro existente, debes elegir "No" (reordenar todo) al generar el Excel. El anexado compara por folio fiscal y no. de factura.
+14. **Las fórmulas del Excel de Ingresos reflejan el desglose por remisión.** Ej.: `=(228+115+125)/1.16`. Cada paréntesis es una remisión.
+15. **El importe del PDF ya viene con IVA incluido.** No dividir dos veces. El divisor solo se aplica en la fórmula y en el cálculo numérico interno.
+
+---
+
+## Módulo Ingresos — procesamiento de facturas
+
+### Prioridad de lectura
+- **SIEMPRE** deben venir XML + PDF. Si falta uno → `ValueError` y se informa.
+- **Los productos** se leen del **PDF** por remisión. El XML solo aporta cabecera
+  (RFC, nombre, folio fiscal, total, fecha, pagos).
+- **NO hay fallback a conceptos del XML.** Si el PDF no trae productos → error.
+- El **total del XML NUNCA se pisa con el del PDF**. Si difieren > $0.01, se
+  loguea pero se usa el XML.
+- Pagos: del PDF si están; si no, `FormaPago` del XML.
+
+### Clasificación por categoría
+- Catálogo QVET (`catalogo_qvet.json`) + excepciones manuales (`categorias_manuales.json`).
+- **Categorías válidas:** `U`, `ACCESORIOS`, `MEDICAMENTOS`, `HIGIENE`,
+  `ESTETICA`, `TRANSPORTE`, `PENSION`, `VACUNA`, `CLINICA`.
+- Categoría no encontrada → `U` + aviso de reclasificación.
+- Producto con IVA/IEPS en categoría `SIN_IVA` (VACUNA, CLINICA) → `U` + aviso.
+
+### Separación por tipo fiscal
+
+**Regla clave:** cada columna del Excel tiene **un único tratamiento fiscal**.
+Ninguna columna mezcla IVA con IEPS ni con exentos.
+
+| Categoría | Columnas del Excel | Contenido |
+|---|---|---|
+| U, ACCESORIOS, ESTETICA, TRANSPORTE, PENSION | IMPORTE + IVA (16%) | Base sin IVA + fórmula `=base*0.16` |
+| VACUNA, CLINICA | IMPORTE | Base tal cual (sin IVA) |
+| MEDICAMENTOS | IMPORTE (sin IVA) + SIN IVA + IVA (16%) | Exentos / base gravados / IVA de gravados |
+| HIGIENE | IMPORTE (sin IVA) + SIN IVA + IVA (16%) + SIN IEPS 6% + IEPS (6%) + SIN IEPS 7% + IEPS (7%) | Igual pero con 3 impuestos |
+
+**Nota:** los títulos `IMPORTE (sin IVA)` son confusos — no significa "base de gravados"
+sino "productos que por ley no llevan IVA". Lo decide el usuario y no se cambia.
+
+### Fórmulas en el Excel
+
+Cada columna construye una fórmula que refleja el desglose por remisión:
+
+- **1 producto en la remisión** → `114`
+- **2+ productos en la misma remisión** → `(114+100)`
+- **Varias remisiones** → `(114+100)+(200)+(58)`
+- **Si la columna tiene divisor (IVA/IEPS):** se saca al final: =((114+100)+(200)+(58))/1.16
+- **Si la columna no tiene divisor (exentos):** se mantienen los grupos: =(50+30)+(80)
+- **1 solo producto en la columna con divisor:** `=58/1.16`
+- **1 solo producto sin divisor:** `=58`
+
+**Divisores:**
+- IVA 16% → `/1.16`
+- IEPS 6% → `/1.06`
+- IEPS 7% → `/1.07`
+- Sin impuesto → sin división
+
+### Valores guardados en el registro
+
+- `datos_completos["X_importe"]` → número plano (base sin IVA para gravados).
+- `datos_completos["X_iva"]` → número plano (para validación interna).
+- `datos_completos["X_importe__expr"]` → string con la fórmula sin el `=`.
+
+En el Excel, la columna base usa `={X_importe__expr}`. La columna IVA usa
+siempre `=X_base{r}*0.16` (fórmula viva, NO expresión).
+
+### Validaciones
+
+- **Ajuste de centavos:** si `suma_bases + suma_impuestos` difiere del total XML
+por ±$0.01, se ajusta a la **base más grande** (no al IVA).
+- **Deduplicación:** productos con mismo nombre + cantidad + remisión → se omite
+el segundo (con log).
+- **Check rojo en Excel:** `Total Remisiones` vs `Total Factura`. Si difieren
+> $0.01, la celda va en rojo.
+
+### Sincronización de filtros al leer factura
+
+`_leer_factura` **sincroniza los filtros del UI** (año/mes/centro) con los del
+registro guardado, para que la factura aparezca en la tabla.
+
+`_guardar_silencioso` **siempre actualiza** `self.registros` y
+`self._anio_cargado`, incluso cuando la factura es de otro año.
+
+---
 
 ## Módulo Estética y Transportes
 
@@ -148,6 +298,9 @@ Documents/
 - Notas separadas: cliente, transporte, estética
 - ⚠️ en la tabla si hay notas en cualquier pestaña
 - Cálculo de ruta con Haversine × 1.3 y velocidad 25 km/h
+- Origen de rutas = sucursal activa (`config.veterinaria.sucursal_activa()`)
+
+---
 
 ## Módulo Recordatorios
 
@@ -173,77 +326,121 @@ Documents/
 **Vacunas:** `CLIENTE | TELÉFONO 1 | MASCOTA | TIPO DE RECORDATORIO | VACUNA | PRÓXIMA FECHA`
 
 ### Datos en `/recordatorios/`
-- `agenda_importada.json` — caché de citas
-- `vacunas_importada.json` — caché de vacunas
+- `agenda_importada.json` — `{"sucursal": "BAALAK_CENTRAL", "clientes": [...]}`
+- `vacunas_importada.json` — `{"sucursal": "BAALAK_CENTRAL", "clientes": [...]}`
 - `historial_envios.json` — envíos por fecha
-- `sucursales.json` — catálogo configurable
 - `plantillas.json` — (futuro)
 
 ### Reglas
 - Detección de tipo por columnas (no por nombre de archivo)
 - Los emojis se preservan al copiar (van al portapapeles)
 - Los emojis NO se muestran en Tk (se reemplazan por texto)
-- El mensaje se regenera al cambiar de sucursal (solo los no enviados)
+- **Los mensajes se regeneran al cambiar la sucursal activa** (solo clientes no enviados)
+- **Al recibir foco, con debounce de 200 ms, verifica si la sucursal cambió**
+- **Al abrir, si la sucursal guardada ≠ sucursal activa, regenera**
+- La sucursal activa se lee SIEMPRE de `config.veterinaria`
+- **NO hay botón de sucursales dentro del módulo** (solo en Config General)
+
+---
 
 ## Empaquetado
+
 - Push de tag `v*` → GitHub Actions compila para Windows y macOS
 - `requirements.txt` debe tener cada dependencia en línea separada
 - `--collect-all cfdiclient` y `--collect-all lxml` en build.yml
+- `--add-data "MANUAL.md:."` para el manual integrado
+- `config_ui.json` NO va en el bundle (se genera en runtime)
+- `MANUAL.md` sí va en el bundle (se busca en `sys._MEIPASS`)
+
+---
 
 ## Estado actual
-- ✅ Ingresos funcional
+
+- ✅ Ingresos funcional (con fórmulas por remisión)
 - ✅ Egresos: descarga, procesa, mueve, Excel
-- ✅ Auto-clasificación de proveedores
+- ✅ Auto-clasificación de proveedores (usa `config.veterinaria`)
 - ✅ Manual integrado
 - ✅ Empaquetado automático
 - ✅ Estética y Transportes completo
-- ✅ Recordatorios completo
+- ✅ Recordatorios completo (con regeneración por sucursal)
+- ✅ `config_ui.json` unificado (tema + veterinaria)
+- ✅ Migración automática de sucursales viejas
+- ✅ Editor único de sucursales (Config General → Veterinaria)
+- ✅ Shim `config/ajustes.py` eliminado
+- ✅ `dialogos/sucursal_editor.py` eliminado
 - ⏳ Pendiente: pruebas con SAT real y cliente final
+
+---
 
 ## Historial de versiones
 
-### v2.1.0 (actual)
+### v2.1.1 (actual)
+- **Refactor de configuración compartida:**
+- `core/config_ui.py` como única API de `config_ui.json`
+- `config/temas.py` y `config/veterinaria.py` usan `config_ui`
+- Bug del `TEMA` global arreglado (`obtener_tema()`)
+- `config_ui.json` se autocrea al arrancar la app
+- **Renombrado `config/ajustes.py` → `config/config_ingresos.py`:**
+- Shim eliminado, imports migrados (`sincronizar.py`, `gmail_config.py`)
+- **Renombrado `config.temas.TEMA` (constante) → `obtener_tema()` (función)**
+- **`dialogos/clasificar_sucursal.py`:** usa sucursales dinámicas de `config.veterinaria`
+- **`dialogos/config_general.py`:**
+- Editor único de sucursales (tab Veterinaria)
+- Eliminado checkbox "activa" (solo desde la tabla)
+- Eliminado `destroy()` roto que referenciaba `var_nombre`
+- **`config/veterinaria.py`:**
+- `nombre_corto` simplificado: `"Baalak"`, `"Prado"`, `"Animalia"`
+- `set_seccion` con merge no destructivo
+- **`modulos/recordatorios.py`:**
+- Caché con formato `{sucursal, clientes}`
+- Regeneración al abrir si cambió la sucursal
+- Regeneración al recibir foco (con debounce)
+- Refresco del panel de mensaje tras regenerar
+- Eliminado `_abrir_sucursales` (sucursal solo desde Config)
+- **`modulos/ingresos.py`:**
+- Eliminado import roto de `config.ajustes`
+- `_leer_factura` sincroniza filtros del UI con el registro guardado
+- `_guardar_silencioso` siempre actualiza `self.registros` y `_anio_cargado`
+- Nuevo `mapa_campos` (opción B: MEDICAMENTOS/HIGIENE separan exentos de gravados)
+- Guarda `{campo}__expr` desde `detalle`
+- IVA calculado en Python para validación interna (el Excel usa fórmula viva)
+- **`modulos/lector_facturas.py`:**
+- **Rechaza factura si falta XML o PDF** (`ValueError`)
+- **No pisa el total del XML con el del PDF**
+- **No hay fallback a conceptos del XML** (siempre PDF)
+- Nuevo `agrupar_por_categoria`: separa por tipo fiscal (`sin_imp`, `iva`, `ieps_6`, `ieps_7`)
+- **Guarda el importe CON impuesto** en buckets (no la base)
+- **Ajuste de centavos a la base** (no al IVA)
+- **Fórmulas construidas por remisión** (`(v1+v2)+(v3)`) con divisor al final
+- Deduplicación por `(remisión, nombre, cantidad)`
+- **`excel/escritor.py`:**
+- `_calcular_total_remisiones` con claves correctas (sin duplicar MED/HIG)
+- **`app/principal.py`:** usa `obtener_tema()` en vez de `TEMA`
+- **`dialogos/manual.py`:** usa `core.rutas.GMAIL_CONFIG_FILE`
+
+### v2.1.0
 - Módulo **Recordatorios** completo
-  - Importación de Excel de agenda y vacunas
-  - Agrupación por cliente + teléfono
-  - Generación de mensajes con formato profesional
-  - Envío por WhatsApp (wa.me + portapapeles)
-  - Historial de envíos
-  - Catálogo de sucursales configurable
 - Fix crash `espera_sat.py` (bad window path name)
-- Fix de rutas: ingreso, egreso, estética y recordatorios separados por dominio
-- Separación de `config_ui.json` (tema) y `ingresos/gmail_config.json` (correo)
+- Separación de `config_ui.json` (tema) e `ingresos/gmail_config.json` (correo)
 
 ### v2.0.0
-- Renombrado a **Vet Suite** (antes "Sistema de Contabilidad QVET")
-- Nueva arquitectura de rutas de datos en dev y prod:
-  - Dev:  `<raíz proyecto>/{ingresos,egresos,estetica_transportes,recordatorios}/`
-  - Prod: `~/Documents/Vet Suite/{ingresos,egresos,estetica_transportes,recordatorios}/`
-- `lector_facturas.py` y `correo_facturas.py` movidos a `modulos/`
-- Migración automática de config de Gmail
-- Módulo **Estética y Transportes** funcional:
-  - Importador inteligente con detección por contenido + preview + merge
-  - Duplicados/basura con resolución interactiva
-  - Catálogos editables
-  - Notas separadas (cliente, transporte, estética)
-  - Alertas ⚠️ cuando hay notas
+- Renombrado a **Vet Suite**
+- Nueva arquitectura de rutas de datos en dev y prod
+- Módulo **Estética y Transportes** funcional
 
 ### v1.0.1
 - Ingresos y Egresos funcionales
 - Empaquetado automático con GitHub Actions
 
+---
+
 ## Pendientes / Deuda técnica
 
 - [ ] **Refactor de estructura** (v3.0.0)
-  - Separar por dominio funcional: `ingresos/`, `egresos/`, `estetica_transportes/`, `recordatorios/`
-  - Cada dominio autocontenido (módulo + lógica + rutas + diálogos + tests)
-  - `shared/` para código transversal
-  - No hacer hasta que Recordatorios esté estable
-
+- Separar por dominio funcional: `ingresos/`, `egresos/`, `estetica_transportes/`, `recordatorios/`
+- Cada dominio autocontenido (módulo + lógica + rutas + diálogos + tests)
+- `shared/` para código transversal
+- [ ] **Tests automatizados** de `core/config_ui.py` y pipeline de facturas
 - [ ] **Informe de recordatorios** (PDF/Excel)
-  - Historial visual
-  - Métricas de envío
-
 - [ ] **Autocompletado en Estética**
-  - Lista de nombres de clientes
-  - Lista de razas
+- [ ] **Reprocesar duplicadas en sincronizar** para regenerar `__expr` si faltan
