@@ -191,7 +191,7 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 8. **`config_ui.json` es COMPARTIDO por los 4 módulos** — acceso único vía `core/config_ui.py`
 9. **Las sucursales SOLO se editan desde Config General → tab 🏥 Veterinaria**
 10. **`nombre_corto` de sucursal es el identificador estable** entre módulos
-11. **Los reportes visibles van SIEMPRE a `~/Documents/Contabilidad AAAA/`** (excepto Recordatorios que va a `~/Documents/Vet Suite/Reportes Recordatorios/`)
+11. **Los reportes visibles van SIEMPRE a `~/Documents/Contabilidad AAAA/`** (excepto Recordatorios que va a `~/Documents/Reportes Recordatorios/`)
 12. **Los mensajes de Recordatorios se cachean con la sucursal activa** (`{"sucursal": id, "clientes": [...]}`). Al abrir, si la sucursal cambió, se regeneran los NO enviados.
 13. **El Excel de Ingresos solo anexa registros nuevos.** Si modificas un registro existente, debes elegir "No" (reordenar todo) al generar el Excel. El anexado compara por folio fiscal y no. de factura.
 14. **Las fórmulas del Excel de Ingresos reflejan el desglose por remisión.** Ej.: `=(228+115+125)/1.16`. Cada paréntesis es una remisión.

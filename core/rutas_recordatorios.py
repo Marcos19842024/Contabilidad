@@ -19,7 +19,7 @@ def _carpeta_datos():
 
 def _carpeta_reportes():
     """Reportes de recordatorios van a ~/Documents/ (visibles)."""
-    carpeta = Path.home() / "Documents" / "Vet Suite" / "Reportes Recordatorios"
+    carpeta = Path.home() / "Documents" / "Reportes Recordatorios"
     carpeta.mkdir(parents=True, exist_ok=True)
     return carpeta
 

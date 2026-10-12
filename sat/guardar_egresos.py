@@ -2,26 +2,18 @@
 """
 sat/guardar_egresos.py
 Guarda las facturas de Egresos en un archivo JSON por año.
+
+Los JSON de Egresos viven SIEMPRE en la carpeta del módulo:
+  - Dev:  <raíz proyecto>/egresos/
+  - Prod: ~/Documents/Vet Suite/egresos/
+
+La ruta se delega a core.rutas_egresos (única fuente de verdad).
 """
 import json
 from datetime import datetime
 from pathlib import Path
 
-
-def _carpeta_datos():
-    """Carpeta de datos de la app."""
-    import sys
-    if getattr(sys, 'frozen', False):
-        carpeta = Path.home() / "Documents" / "Vet Suite"
-        carpeta.mkdir(parents=True, exist_ok=True)
-        return carpeta
-    else:
-        return Path(__file__).parent.parent
-
-
-def ruta_registros_egresos(anio):
-    """Ruta al archivo de registros de egresos del año."""
-    return _carpeta_datos() / f"registros_egresos_{anio}.json"
+from core.rutas_egresos import ruta_registros_egresos
 
 
 def cargar_db_egresos(anio):

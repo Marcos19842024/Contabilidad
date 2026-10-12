@@ -135,50 +135,6 @@ def actualizar_json(anio, mes_nombre):
 
 
 # ============================================================
-# PASO 5: Generar Excel PUE + PPD
-# ============================================================
-def generar_excels(anio, mes_idx, mes_nombre):
-    """
-    Genera los Excel PUE y PPD en la carpeta Deposito_Egreso/.
-
-    Devuelve: dict con las rutas de los archivos generados.
-    """
-    registros = cargar_db_egresos(anio)
-
-    # Separar por sucursal
-    baalak = [r for r in registros if r.get("sucursal") != "Animalia"]
-
-    # Separar PUE / PPD
-    pue = [r for r in baalak if r.get("metodo_pago") != "PPD"]
-    ppd = [r for r in baalak if r.get("metodo_pago") == "PPD"]
-
-    # Carpeta destino
-    carpeta_deposito = ruta_egreso(anio, mes_idx) / "Deposito_Egreso"
-    carpeta_deposito.mkdir(parents=True, exist_ok=True)
-
-    resultado = {
-        "carpeta": str(carpeta_deposito),
-        "pue": None,
-        "ppd": None,
-        "total_pue": len(pue),
-        "total_ppd": len(ppd),
-        "total_animalia": len(registros) - len(baalak),
-    }
-
-    if pue:
-        ruta_pue = carpeta_deposito / f"RELACION FACTURAS PUE - {mes_nombre} {anio}.xlsx"
-        generar_excel_pue(pue, ruta_pue, mes_nombre, anio)
-        resultado["pue"] = str(ruta_pue)
-
-    if ppd:
-        ruta_ppd = carpeta_deposito / f"RELACION FACTURAS PPD - {mes_nombre} {anio}.xlsx"
-        generar_excel_ppd(ppd, ruta_ppd, mes_nombre, anio)
-        resultado["ppd"] = str(ruta_ppd)
-
-    return resultado
-
-
-# ============================================================
 # ORQUESTADOR COMPLETO
 # ============================================================
 def procesar_todo(anio, mes_idx, carpeta_xml="/tmp/sat_descargas",
@@ -241,14 +197,12 @@ def procesar_todo(anio, mes_idx, carpeta_xml="/tmp/sat_descargas",
     resumen["no_encontrados"] = no_encontrados
     _log(f"   Actualizados: {actualizados} | No encontrados: {no_encontrados}")
 
-    # 5) Generar Excel
-    _log("→ Generando Excel PUE y PPD...")
-    excel = generar_excels(anio, mes_idx, mes_nombre)
-    resumen["excel"] = excel
-    _log(f"   PUE: {excel.get('total_pue', 0)} facturas")
-    _log(f"   PPD: {excel.get('total_ppd', 0)} facturas")
-    _log(f"   Animalia excluidas: {excel.get('total_animalia', 0)}")
-    _log(f"   Carpeta: {excel.get('carpeta')}")
+    # 5) Excel: NO se genera aquí.
+    # El usuario lo genera con el botón "Generar Excel" tras revisar.
+    resumen["excel"] = {
+        "carpeta": None, "pue": None, "ppd": None,
+        "total_pue": 0, "total_ppd": 0, "total_animalia": 0,
+    }
 
     return resumen
 

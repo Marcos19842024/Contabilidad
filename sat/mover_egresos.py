@@ -113,10 +113,31 @@ def _ordenar_facturas(facturas):
     return sorted(facturas, key=_orden)
 
 
+def _parsear_fecha_ddmmyyyy(fecha_str):
+    """
+    Parsea 'dd/mm/yyyy' → (anio, mes) o (None, None) si falla.
+    """
+    try:
+        partes = str(fecha_str).strip().split("/")
+        if len(partes) != 3:
+            return None, None
+        dia, mes, anio = int(partes[0]), int(partes[1]), int(partes[2])
+        if not (1 <= mes <= 12):
+            return None, None
+        return anio, mes
+    except Exception:
+        return None, None
+
+
 def mover_y_renombrar_egresos(registros, anio, mes_idx, carpeta_origen):
     """
     Renombra y mueve los XML de Egresos a sus carpetas según
-    sucursal, método y forma de pago.
+    la FECHA REAL de cada factura (no el mes de la solicitud),
+    más sucursal, método y forma de pago.
+
+    Los parámetros anio/mes_idx se mantienen por compatibilidad con
+    el llamador, pero se IGNORAN para calcular la carpeta destino.
+    La carpeta destino se deriva de reg["fecha"] (dd/mm/yyyy).
 
     Actualiza cada registro con:
       - ruta_xml / ruta_xml_destino
@@ -131,11 +152,17 @@ def mover_y_renombrar_egresos(registros, anio, mes_idx, carpeta_origen):
     movidos = []
     errores = []
 
-    # Agrupar por sucursal + metodo + forma
+    # Agrupar por (anio_real, mes_real, sucursal, metodo, forma)
     from collections import defaultdict
     por_grupo = defaultdict(list)
+    sin_fecha = []
 
     for reg in registros:
+        anio_real, mes_real = _parsear_fecha_ddmmyyyy(reg.get("fecha", ""))
+        if anio_real is None:
+            sin_fecha.append(reg)
+            continue
+
         sucursal = reg.get("sucursal", "Baalak")
         metodo = reg.get("metodo_pago", "PUE")
         forma = reg.get("forma_pago_texto", "Efectivo")
@@ -144,13 +171,17 @@ def mover_y_renombrar_egresos(registros, anio, mes_idx, carpeta_origen):
         elif forma not in FORMAS_PAGO_VALIDAS or forma == "PPD":
             forma = "Efectivo"
 
-        clave = (sucursal, metodo, forma)
+        clave = (anio_real, mes_real, sucursal, metodo, forma)
         por_grupo[clave].append(reg)
+
+    # Registros sin fecha válida: reportar pero no mover
+    for reg in sin_fecha:
+        errores.append((reg.get("folio", "?"), "Fecha inválida o vacía"))
 
     # Procesar cada grupo
     for clave, facturas in por_grupo.items():
-        sucursal, metodo, forma = clave
-        carpeta_destino = _ruta_carpeta(anio, mes_idx, sucursal, metodo, forma)
+        anio_real, mes_real, sucursal, metodo, forma = clave
+        carpeta_destino = _ruta_carpeta(anio_real, mes_real, sucursal, metodo, forma)
         carpeta_destino.mkdir(parents=True, exist_ok=True)
 
         for reg in facturas:
@@ -171,7 +202,6 @@ def mover_y_renombrar_egresos(registros, anio, mes_idx, carpeta_origen):
             ruta_origen = Path(ruta_origen_str) if ruta_origen_str else None
 
             if not ruta_origen or not ruta_origen.exists():
-                # Buscar en carpeta_origen
                 candidatos = list(carpeta_origen.glob(f"*{folio}*.xml"))
                 if not candidatos:
                     uuid_str = reg.get("uuid", "")
@@ -230,7 +260,6 @@ def mover_y_renombrar_egresos(registros, anio, mes_idx, carpeta_origen):
                 except Exception as e:
                     errores.append((folio, str(e)))
             else:
-                # Ya está en destino o no existe
                 if ruta_destino.exists():
                     reg["ruta_xml"] = str(ruta_destino)
                     reg["ruta_xml_destino"] = str(ruta_destino)

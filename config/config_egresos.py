@@ -29,6 +29,7 @@ CONFIG_EGRESOS_DEFAULT = {
     "certificado_key": "",
     "password_fiel": "",
     "ultima_descarga": "",
+    "guardar_historial_sat": False,   # ← NUEVO
 }
 
 
@@ -155,3 +156,21 @@ def horas_desde_solicitud(datos):
         return delta.total_seconds() / 3600
     except Exception:
         return None
+
+
+# ============================================================
+# HISTORIAL DEL SAT
+# ============================================================
+def historial_sat_activo() -> bool:
+    """Devuelve True si el historial del SAT está activado."""
+    import os
+    if os.getenv("VET_SUITE_HISTORIAL") == "1":
+        return True
+    return bool(cargar_config_egresos().get("guardar_historial_sat", False))
+
+
+def activar_historial_sat(activar: bool = True) -> None:
+    """Activa/desactiva el historial del SAT y guarda el JSON."""
+    cfg = cargar_config_egresos()
+    cfg["guardar_historial_sat"] = bool(activar)
+    guardar_config_egresos(cfg)

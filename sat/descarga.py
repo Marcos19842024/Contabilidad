@@ -10,6 +10,10 @@ Reutiliza la logica exacta de los test_*.py que ya funcionaron:
   - test_descarga.py     -> descargar paquetes y extraer XMLs
 
 NO modifica conversion.py ni la logica de la FIEL.
+
+Cambios v2.1.2:
+  - Engancha core.sat_historial para guardar todo lo que viene del SAT.
+  - Agrega probar_fiel() para validar credenciales sin gastar solicitud.
 """
 
 import base64
@@ -24,6 +28,9 @@ from cfdiclient import (
     SolicitaDescargaRecibidos,
     VerificaSolicitudDescarga,
 )
+
+# ← NUEVO
+from core import sat_historial
 
 
 # ============================================================
@@ -40,7 +47,6 @@ def _cargar_fiel(ruta_cer, ruta_key, password):
     with open(ruta_key_der, "rb") as f:
         key_der = f.read()
 
-    # Password vacio: el key ya viene desencriptado
     return Fiel(cer_der, key_der, "")
 
 
@@ -55,42 +61,92 @@ def obtener_token(ruta_cer, ruta_key, password):
 
 
 # ============================================================
-# SOLICITAR DESCARGA (igual que test_solicitud.py)
+# ← NUEVO: PROBAR FIEL (sin gastar solicitud)
+# ============================================================
+def probar_fiel(ruta_cer, ruta_key, password):
+    """
+    Valida la FIEL sin gastar solicitud.
+    Solo hace Autenticacion, que el SAT NO cuenta como solicitud.
+
+    Devuelve: {"ok": bool, "mensaje": str, "token_preview": str|None}
+    """
+    for etiqueta, ruta in (("certificado (.cer)", ruta_cer),
+                           ("llave (.key)", ruta_key)):
+        if not ruta or not Path(ruta).exists():
+            return {
+                "ok": False,
+                "mensaje": f"No se encuentra el {etiqueta}: {ruta}",
+                "token_preview": None,
+            }
+
+    try:
+        token = obtener_token(ruta_cer, ruta_key, password)
+        if not token:
+            return {
+                "ok": False,
+                "mensaje": "El SAT no devolvió token. Revisa tu FIEL y contraseña.",
+                "token_preview": None,
+            }
+        return {
+            "ok": True,
+            "mensaje": "FIEL válida. El SAT autenticó correctamente.",
+            "token_preview": token[:20] + "...",
+        }
+    except Exception as e:
+        return {
+            "ok": False,
+            "mensaje": f"Error al autenticar: {e}",
+            "token_preview": None,
+        }
+
+
+# ============================================================
+# SOLICITAR DESCARGA
 # ============================================================
 def solicitar_descarga(ruta_cer, ruta_key, password, rfc,
                        fecha_inicio, fecha_fin,
                        tipo_solicitud="CFDI"):
-    """
-    Solicita una descarga de CFDI recibidos.
-
-    Parametros:
-      - fecha_inicio, fecha_fin: datetime.datetime
-
-    Devuelve el dict de cfdiclient:
-      {"id_solicitud": "...", "cod_estatus": "5000", "mensaje": "..."}
-    """
+    """Solicita una descarga de CFDI recibidos."""
     fiel = _cargar_fiel(ruta_cer, ruta_key, password)
     token = Autenticacion(fiel).obtener_token()
 
     solicitud = SolicitaDescargaRecibidos(fiel)
-    resultado = solicitud.solicitar_descarga(
-        token=token,
-        rfc_solicitante=rfc,
-        fecha_inicial=fecha_inicio,
-        fecha_final=fecha_fin,
-        rfc_receptor=rfc,
-        tipo_solicitud=tipo_solicitud,
-    )
+    try:
+        resultado = solicitud.solicitar_descarga(
+            token=token,
+            rfc_solicitante=rfc,
+            fecha_inicial=fecha_inicio,
+            fecha_final=fecha_fin,
+            rfc_receptor=rfc,
+            tipo_solicitud=tipo_solicitud,
+        )
+    except Exception as e:
+        # ← NUEVO
+        sat_historial.guardar_error("solicitar_descarga", e, {
+            "rfc": rfc,
+            "fecha_inicio": str(fecha_inicio),
+            "fecha_fin": str(fecha_fin),
+            "tipo_solicitud": tipo_solicitud,
+        })
+        raise
+
+    # ← NUEVO
+    id_solicitud = resultado.get("id_solicitud", "")
+    sat_historial.guardar_solicitud(id_solicitud, resultado, {
+        "rfc": rfc,
+        "fecha_desde": str(fecha_inicio),
+        "fecha_hasta": str(fecha_fin),
+        "tipo_solicitud": tipo_solicitud,
+    })
+
     return resultado
 
 
 # ============================================================
-# VERIFICAR ESTADO (igual que test_verificacion.py)
+# VERIFICAR ESTADO
 # ============================================================
 def verificar_solicitud(ruta_cer, ruta_key, password, rfc, id_solicitud):
-    """
-    Verifica el estado de una solicitud (con reintentos por timeout).
-    """
+    """Verifica el estado de una solicitud (con reintentos por timeout)."""
     import time as _time
 
     fiel = _cargar_fiel(ruta_cer, ruta_key, password)
@@ -110,10 +166,8 @@ def verificar_solicitud(ruta_cer, ruta_key, password, rfc, id_solicitud):
             mensaje_sat = resultado.get("mensaje", "")
             codigo = str(resultado.get("codigo_estado_solicitud", ""))
 
-            # Interpretar mensajes confusos
             mensaje_mostrar = mensaje_sat
             if estado == "5":
-                # Rechazada - el SAT a veces no da motivo claro
                 if "aceptada" in mensaje_sat.lower():
                     mensaje_mostrar = (
                         "Solicitud rechazada. Posible causa: ya existe "
@@ -123,40 +177,49 @@ def verificar_solicitud(ruta_cer, ruta_key, password, rfc, id_solicitud):
                 else:
                     mensaje_mostrar = f"Solicitud rechazada: {mensaje_sat}"
 
-            return {
+            salida = {
                 "estado": estado,
                 "mensaje": mensaje_mostrar,
                 "numero_cfdis": str(resultado.get("numero_cfdis", "0")),
                 "paquetes": resultado.get("paquetes", []) or [],
                 "codigo": codigo,
             }
+
+            # ← NUEVO
+            sat_historial.guardar_verificacion(id_solicitud, salida)
+
+            return salida
         except Exception as e:
             ultimo_error = e
             msg = str(e).lower()
             if "timed out" in msg or "timeout" in msg:
                 _time.sleep(5)
                 continue
+            # ← NUEVO
+            sat_historial.guardar_error("verificar_solicitud", e, {
+                "id_solicitud": id_solicitud,
+            })
             raise
 
-    return {
+    # ← NUEVO: timeout persistente
+    salida = {
         "estado": "2",
         "mensaje": "El SAT no responde, reintentando...",
         "numero_cfdis": "0",
         "paquetes": [],
         "codigo": "",
     }
+    sat_historial.guardar_verificacion(id_solicitud, salida)
+    return salida
 
 
 # ============================================================
-# DESCARGAR PAQUETES (igual que test_descarga.py)
+# DESCARGAR PAQUETES
 # ============================================================
 def descargar_paquetes(ruta_cer, ruta_key, password, rfc,
-                       paquetes, carpeta_destino="/tmp/sat_descargas"):
-    """
-    Descarga los paquetes (ZIP) y extrae los XML.
-
-    Devuelve: lista de rutas a los XML extraidos.
-    """
+                       paquetes, carpeta_destino="/tmp/sat_descargas",
+                       id_solicitud=None):  # ← NUEVO
+    """Descarga los paquetes (ZIP) y extrae los XML."""
     fiel = _cargar_fiel(ruta_cer, ruta_key, password)
     token = Autenticacion(fiel).obtener_token()
     descarga = DescargaMasiva(fiel)
@@ -169,13 +232,20 @@ def descargar_paquetes(ruta_cer, ruta_key, password, rfc,
         if not paquete:
             continue
 
-        resultado = descarga.descargar_paquete(
-            token=token,
-            rfc_solicitante=rfc,
-            id_paquete=paquete,
-        )
+        try:
+            resultado = descarga.descargar_paquete(
+                token=token,
+                rfc_solicitante=rfc,
+                id_paquete=paquete,
+            )
+        except Exception as e:
+            # ← NUEVO
+            sat_historial.guardar_error("descargar_paquete", e, {
+                "id_solicitud": id_solicitud,
+                "id_paquete": paquete,
+            })
+            raise
 
-        # En test_descarga.py la clave era "paquete" (no "paquete_b64")
         contenido_b64 = ""
         if isinstance(resultado, dict):
             contenido_b64 = resultado.get("paquete", "")
@@ -185,6 +255,17 @@ def descargar_paquetes(ruta_cer, ruta_key, password, rfc,
             continue
 
         contenido_zip = base64.b64decode(contenido_b64)
+
+        # ← NUEVO
+        if id_solicitud:
+            sat_historial.guardar_descarga(
+                id_solicitud=id_solicitud,
+                id_paquete=paquete,
+                respuesta={"id_paquete": paquete,
+                           "bytes_zip": len(contenido_zip)},
+                zip_bytes=contenido_zip,
+            )
+
         ruta_zip = carpeta_destino / f"{paquete}.zip"
         ruta_zip.write_bytes(contenido_zip)
 
@@ -199,28 +280,14 @@ def descargar_paquetes(ruta_cer, ruta_key, password, rfc,
 
 
 # ============================================================
-# FLUJO COMPLETO (orquesta los 4 pasos)
+# FLUJO COMPLETO
 # ============================================================
 def flujo_completo(ruta_cer, ruta_key, password, rfc,
                    fecha_inicio, fecha_fin,
                    carpeta_destino="/tmp/sat_descargas",
                    tipo_solicitud="CFDI",
                    callback_estado=None):
-    """
-    Flujo completo: solicita -> (espera externa) -> descarga.
-
-    NOTA: Esta funcion SOLO hace solicitar + descargar.
-    La espera se maneja en la UI (dialogos/espera_sat.py)
-    usando verificar_solicitud() como verificador.
-
-    Devuelve:
-      {
-        "id_solicitud": "...",
-        "xmls": [Path, ...],
-        "total_cfdis": int,
-      }
-    """
-    # 1) Solicitar
+    """Flujo completo: solicita -> (espera externa) -> descarga."""
     resultado_sol = solicitar_descarga(
         ruta_cer, ruta_key, password, rfc,
         fecha_inicio, fecha_fin,
@@ -261,14 +328,13 @@ if __name__ == "__main__":
     print("  KEY:  " + str(cfg.get("certificado_key")))
     print()
     print("Probando autenticacion (NO toca la FIEL, solo usa preparar_fiel)...")
-    try:
-        token = obtener_token(
-            cfg["certificado_cer"],
-            cfg["certificado_key"],
-            cfg["password_fiel"],
-        )
-        print("OK Token: " + token[:60] + "...")
-    except Exception as e:
-        print("ERROR: " + str(e))
-        import traceback
-        traceback.print_exc()
+    res = probar_fiel(
+        cfg["certificado_cer"],
+        cfg["certificado_key"],
+        cfg["password_fiel"],
+    )
+    if res["ok"]:
+        print("OK " + res["mensaje"])
+        print("Token: " + str(res["token_preview"]))
+    else:
+        print("ERROR: " + res["mensaje"])

@@ -22,6 +22,8 @@ from tkinter import messagebox
 
 from config.campos import MESES_ES
 
+from sat.descarga import probar_fiel
+
 
 def abrir_dialogo_descargar_sat(app):
     """
@@ -96,6 +98,46 @@ def abrir_dialogo_descargar_sat(app):
         from dialogos.egresos_config import abrir_dialogo_config_egresos
         abrir_dialogo_config_egresos(app)
 
+    # ← NUEVO: probar FIEL sin gastar solicitud
+    def _probar_fiel():
+        from config.config_egresos import cargar_config_egresos
+        cfg = cargar_config_egresos()
+        cer = cfg.get("certificado_cer", "")
+        key = cfg.get("certificado_key", "")
+        pwd = cfg.get("password_fiel", "")
+
+        if not all([cer, key, pwd]):
+            lbl_estado.config(
+                text="✗ Falta configurar la e.firma.\n"
+                     "Usa ⚙️ Configurar e.firma (SAT).",
+                foreground="red",
+            )
+            return
+
+        btn_probar.config(state="disabled")
+        lbl_estado.config(text="Probando FIEL...", foreground="gray")
+        ventana.update_idletasks()
+
+        def _worker():
+            res = probar_fiel(cer, key, pwd)
+
+            def _mostrar():
+                if res["ok"]:
+                    lbl_estado.config(
+                        text=f"✓ {res['mensaje']}",
+                        foreground="green",
+                    )
+                else:
+                    lbl_estado.config(
+                        text=f"✗ {res['mensaje']}",
+                        foreground="red",
+                    )
+                btn_probar.config(state="normal")
+
+            ventana.after(0, _mostrar)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
     resultado = {"ok": False}
 
     def _descargar():
@@ -158,12 +200,32 @@ def abrir_dialogo_descargar_sat(app):
         bootstyle="secondary-outline",
     ).pack(side="left", padx=5)
 
+    # ← NUEVO: botón "Probar FIEL"
+    btn_probar = ttk.Button(
+        fr_btn,
+        text="🔑 Probar FIEL",
+        command=lambda: _probar_fiel(),
+        bootstyle="warning-outline",
+    )
+    btn_probar.pack(side="left", padx=5)
+
     ttk.Button(
         fr_btn,
         text="📥 Descargar",
         command=_descargar,
         bootstyle="info-outline",
     ).pack(side="right", padx=5)
+
+    # ← NUEVO: label de estado
+    lbl_estado = ttk.Label(
+        ventana,
+        text="",
+        font=("Segoe UI", 8),
+        foreground="gray",
+        wraplength=400,
+        justify="center",
+    )
+    lbl_estado.pack(fill="x", padx=30, pady=(0, 10))
 
     ventana.protocol("WM_DELETE_WINDOW", _cancelar)
     ventana.bind("<Escape>", lambda e: _cancelar())
@@ -272,14 +334,16 @@ def _lanzar_descarga(app, anio, mes_idx, mes_nombre):
         return verificar_solicitud(cer, key, pwd, rfc, id_solicitud)
 
     def _on_completado(resultado_verif):
-        # Cuando el SAT termina, descargar paquetes y procesar
         paquetes = resultado_verif.get("paquetes", [])
-        _descargar_y_procesar(app, cer, key, pwd, rfc, paquetes, anio, mes_idx)
+        _descargar_y_procesar(
+            app, cer, key, pwd, rfc, paquetes, anio, mes_idx,
+            id_solicitud=id_solicitud,  # ← NUEVO
+        )
 
     abrir_ventana_espera_sat(app, _verificador, on_completado=_on_completado)
 
 
-def _descargar_y_procesar(app, cer, key, pwd, rfc, paquetes, anio, mes_idx):
+def _descargar_y_procesar(app, cer, key, pwd, rfc, paquetes, anio, mes_idx, id_solicitud=None):
     """Descarga paquetes y procesa todo. Se ejecuta en hilo."""
     def _worker():
         try:
@@ -290,11 +354,21 @@ def _descargar_y_procesar(app, cer, key, pwd, rfc, paquetes, anio, mes_idx):
             descargar_paquetes(
                 cer, key, pwd, rfc, paquetes,
                 carpeta_destino=carpeta_destino,
+                id_solicitud=id_solicitud,  # ← NUEVO
             )
 
             # Procesar todo
             from sat.procesar_completo import procesar_todo
             resumen = procesar_todo(anio, mes_idx, carpeta_xml=carpeta_destino)
+
+            # ← NUEVO: cerrar snapshot del historial
+            if id_solicitud:
+                from core import sat_historial
+                sat_historial.cerrar_snapshot(
+                    id_solicitud=id_solicitud,
+                    estado_final="terminada",
+                    num_xmls=resumen.get("nuevas", 0) + resumen.get("duplicadas", 0),
+                )
 
             # Limpiar la solicitud activa (ya terminó todo)
             from config.config_egresos import limpiar_solicitud_activa
@@ -307,10 +381,9 @@ def _descargar_y_procesar(app, cer, key, pwd, rfc, paquetes, anio, mes_idx):
                     f"✅ Descarga y procesamiento exitosos\n\n"
                     f"Facturas nuevas: {resumen['nuevas']}\n"
                     f"Duplicadas: {resumen['duplicadas']}\n"
-                    f"XMLs movidos: {resumen['movidos']}\n"
-                    f"Excel PUE: {resumen['excel'].get('total_pue', 0)} facturas\n"
-                    f"Excel PPD: {resumen['excel'].get('total_ppd', 0)} facturas\n\n"
-                    f"Carpeta: {resumen['excel'].get('carpeta')}",
+                    f"XMLs movidos: {resumen['movidos']}\n\n"
+                    f"Revisa los registros y usa '📊 Generar Excel'\n"
+                    f"cuando termines.",
                     parent=app)
             app.after(0, _mostrar)
 
@@ -385,8 +458,8 @@ def verificar_solicitud_pendiente(app):
         paquetes = resultado_verif.get("paquetes", [])
         _descargar_y_procesar(
             app, cer, key, pwd, rfc, paquetes, anio, mes_idx,
+            id_solicitud=id_solicitud,  # ← NUEVO
         )
-        # Limpiar la solicitud activa
         from config.config_egresos import limpiar_solicitud_activa
         limpiar_solicitud_activa()
 

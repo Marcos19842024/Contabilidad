@@ -611,6 +611,11 @@ class AppEgresos(ttk.Toplevel):
         pue = [r for r in filtrados if r.get("metodo_pago") != "PPD"]
         ppd = [r for r in filtrados if r.get("metodo_pago") == "PPD"]
 
+        # Ordenar por fecha + folio antes de escribir
+        from sat.mover_egresos import _ordenar_facturas
+        pue = _ordenar_facturas(pue)
+        ppd = _ordenar_facturas(ppd)
+
         carpeta = ruta_deposito_egreso(anio, mes_idx)
         carpeta.mkdir(parents=True, exist_ok=True)
 

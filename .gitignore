@@ -48,6 +48,10 @@ registros_egresos_*.json
 facturas_descargadas/
 logs/
 backups/
+ingresos/
+egresos/
+estetica_transportes/
+recordatorios/
 
 # ============================================
 # SISTEMA Y EDITORES
@@ -67,13 +71,6 @@ convertir_fiel.py
 # Archivos temporales de pruebas SAT
 test_*.py
 convertir_fiel.py
-
-# Archivos de Egresos (sensibles)
-config_egresos.json
-registros_egresos_*.json
-proveedores_tc.json
-proveedores_sucursal.json
-observaciones_egresos.json
 
 # Certificados de la FIEL
 *.key
@@ -116,3 +113,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Historial del SAT (contiene RFCs y montos reales)
+egresos/_sat_historial/
+egresos/_mock/
+
+# Marcador de modo dev (si usas la opción del archivo)
+.dev_mode
