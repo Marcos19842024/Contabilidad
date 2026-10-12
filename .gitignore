@@ -30,28 +30,52 @@ dist/
 # ============================================
 # JSONs con datos del usuario
 registros_ingresos_*.json
+registros_egresos_*.json
 historial_autocompletado.json
-config_ui.json
+historial_egresos.json
 categorias_manuales.json
 correos_procesados.json
-# Configuración de egresos (contiene credenciales)
+solicitud_sat_activa.json
+
+# Configuración (contiene credenciales)
+config_ui.json
 config_egresos.json
 proveedores_tc.json
 proveedores_sucursal.json
 observaciones_egresos.json
-registros_egresos_*.json
 
-# Catálogo (opcional, ver nota abajo)
-# catalogo_qvet.json
+# Certificados de la FIEL
+*.key
+*.cer
+*.pem
 
-# Carpetas de datos
-facturas_descargadas/
-logs/
-backups/
+# ============================================
+# CARPETAS DE DATOS (DEV)
+# ============================================
 ingresos/
 egresos/
 estetica_transportes/
 recordatorios/
+facturas_descargadas/
+datos/
+logs/
+backups/
+
+# ============================================
+# HISTORIAL DEL SAT (contiene RFCs y montos reales)
+# ============================================
+egresos/_sat_historial/
+egresos/_mock/
+
+# ============================================
+# ARCHIVOS TEMPORALES DE PRUEBAS SAT
+# ============================================
+test_*.py
+test_fiel*.py
+test_sat_auth.py
+convertir_fiel.py
+ver_xml.py
+.dev_mode
 
 # ============================================
 # SISTEMA Y EDITORES
@@ -62,61 +86,4 @@ Thumbs.db
 .idea/
 *.swp
 *.bak
-# Archivos temporales de FIEL
-test_fiel*.py
-test_sat_auth.py
-convertir_fiel.py
-
-
-# Archivos temporales de pruebas SAT
-test_*.py
-convertir_fiel.py
-
-# Certificados de la FIEL
-*.key
-*.cer
-*.pem
-
-# Scripts de prueba
-test_*.py
-convertir_fiel.py
-ver_xml.py
-
-# Datos del usuario (Egresos)
-historial_egresos.json
-solicitud_sat_activa.json
-registros_egresos_*.json
-
-# Datos locales de la app
-/datos/
-
-# Datos por módulo (dev)
-/ingresos/
-/egresos/
-/estetica_transportes/
-/recordatorios/
-
-# Config compartida generada
-/config_ui.json
-
-# Config compartida vieja (migrada)
-/recordatorios/sucursales.json
-/recordatorios/sucursales.json.bak
-
-# Entornos
-.venv/
-venv/
-
-# Sistema
-.DS_Store
-Thumbs.db
-
-# Logs
 *.log
-
-# Historial del SAT (contiene RFCs y montos reales)
-egresos/_sat_historial/
-egresos/_mock/
-
-# Marcador de modo dev (si usas la opción del archivo)
-.dev_mode
