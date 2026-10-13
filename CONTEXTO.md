@@ -221,6 +221,8 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 18. **`procesar_todo` (Egresos) NO genera Excel.** El usuario lo genera con el botón "📊 Generar Excel" tras revisar la tabla.
 19. **El Excel de Egresos se ordena por fecha + folio** antes de escribirse.
 20. **Catalogo_qvet.json** NO va en el bundle. El usuario lo importa desde la UI (botón "📥 Importar catálogo QVET" en Ingresos, visible solo si falta). Vive en ingresos/catalogo_qvet.json.
+21. Los módulos con embed exponen PanelX(ttk.Frame) y se declaran con
+  `panel=` en el registro. Los que no, siguen como Toplevel con `factory=`.
 
 ---
 
@@ -488,6 +490,21 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 ---
 
 ## Historial de versiones
+
+### v2.1.4 — Sidebar + Embed
+- **Nuevo: `shared/registro_modulos.py`** — registro declarativo de módulos.
+  Agregar un módulo = una entrada en `MODULOS`, sin tocar `app/principal.py`.
+- **Rediseño de `app/principal.py`** — sidebar lateral + lista compacta
+  de módulos agrupada por categoría (Operación / Clientes / Comunicación).
+- **Nuevo: contrato de embed.** Los módulos exponen `Panel*(ttk.Frame)` y se
+  embeben en el área central. Los que no, siguen abriendo como Toplevel.
+- **Migrado a embed: Estética y Transportes.**
+  - `AppEsteticaTransportes` → `PanelEsteticaTransportes(ttk.Frame)`.
+  - Se mantiene `AppEsteticaTransportes(ttk.Toplevel)` como wrapper legacy.
+  - Registro: `Modulo.panel` activa el embed.
+- **Regla nueva:** un módulo migrado a embed debe exponer
+  `PanelX(master, on_volver=None)` y no llamar `title/geometry/protocol`.
+- **Pendiente:** migrar Ingresos, Egresos y Recordatorios a embed.
 
 ### v2.1.3
 - **Nuevo: Anexar facturas al Excel de Egresos** sin perder anotaciones
