@@ -499,6 +499,20 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ## Historial de versiones
 
+### v2.1.6 — Migración de Egresos a embed
+- Migrado a embed: Egresos.
+  - AppEgresos → PanelEgresos(ttk.Frame).
+  - Se mantiene AppEgresos(ttk.Toplevel) como wrapper legacy.
+  - Registro: panel=_panel_egresos.
+- Fix: _preguntar_accion_excel usa parent.winfo_toplevel() para
+  transient, así funciona con Frame o Toplevel como parent.
+- Movido: botón "🔑 Probar FIEL" de dialogos/descargar_sat.py a
+  dialogos/egresos_config.py. Ahora vive donde se configuran las
+  credenciales y prueba los valores actuales del formulario
+  (aunque no estén guardados).
+- _panel_ingresos ya está declarada en shared/registro_modulos.py
+  pero comentada; se activa cuando se migre Ingresos.
+
 ### v2.1.5 — Migración de Recordatorios a embed
 - Migrado a embed: Recordatorios.
   - AppRecordatorios → PanelRecordatorios(ttk.Frame).
@@ -598,7 +612,6 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ### Pendiente
 - [ ] Migrar Ingresos a embed.
-- [ ] Migrar Egresos a embed.
 
 ### Egresos
 - [ ] **Rotación de snapshots SAT** (borrar los más viejos automáticamente)

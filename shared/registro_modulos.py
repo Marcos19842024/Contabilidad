@@ -82,7 +82,7 @@ MODULOS: tuple[Modulo, ...] = (
         icono="💰",
         categoria="operacion",
         factory=_abrir_ingresos,
-        # panel=_panel_ingresos,     # ← pendiente migrar Ingresos
+        panel=_panel_ingresos,       # ← activado
         atajo="Control-Key-1",
     ),
     Modulo(
@@ -92,7 +92,7 @@ MODULOS: tuple[Modulo, ...] = (
         icono="💸",
         categoria="operacion",
         factory=_abrir_egresos,
-        panel=_panel_egresos,        # ← activa el embed
+        panel=_panel_egresos,
         atajo="Control-Key-2",
     ),
     Modulo(

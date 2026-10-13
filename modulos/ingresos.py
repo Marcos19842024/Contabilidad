@@ -20,8 +20,6 @@ _raiz = Path(__file__).parent.parent
 if str(_raiz) not in sys.path:
     sys.path.insert(0, str(_raiz))
 
-from ui.utils import configurar_ventana
-
 # ============================================================
 # IMPORTS INTERNOS
 # ============================================================
@@ -84,21 +82,19 @@ def centro_desde_serie(serie):
 
 
 # ============================================================
-# INTERFAZ PRINCIPAL
+# PANEL PRINCIPAL (embebible)
 # ============================================================
-class AppIngresos(ttk.Toplevel):
-    """Módulo de Ingresos."""
+class PanelIngresos(ttk.Frame):
+    """
+    Panel principal del módulo de Ingresos.
 
-    def __init__(self, master=None):
+    Diseñado para ser embebido como Frame dentro de Vet Suite.
+    También puede usarse en un Toplevel si se necesita (ver wrapper abajo).
+    """
+
+    def __init__(self, master, on_volver=None):
         super().__init__(master)
-        self.title("Vet Suite — Ingresos")
-
-        configurar_ventana(
-            master, self,
-            ancho=1300, alto=880,
-            min_ancho=1050, min_alto=700,
-            centrar_en_padre=True,
-        )
+        self._on_volver = on_volver
 
         try:
             self._anio_cargado = int(datetime.now().year)
@@ -438,15 +434,11 @@ class AppIngresos(ttk.Toplevel):
     # SELECCIÓN
     # ============================================================
     def _actualizar_titulo(self):
-        """Actualiza el título de la ventana con el filtro actual."""
-        try:
-            self.title(
-                f"Sistema de Ingresos — {self.var_centro.get()} "
-                f"{self.var_mes.get()} {self.var_anio.get()}"
-            )
-        except Exception:
-            pass
-
+        """
+        Antes actualizaba el título de la ventana. En embed no aplica.
+        Se mantiene como no-op por compatibilidad.
+        """
+        pass
 
     def _obtener_seleccionado(self):
         sel = self.tabla.selection()
@@ -526,7 +518,7 @@ class AppIngresos(ttk.Toplevel):
             messagebox.showerror("Error", f"No se pudo abrir la carpeta:\n{e}")
 
     # ============================================================
-    # ACCIONES DE BOTONES (las mismas de antes)
+    # ACCIONES DE BOTONES
     # ============================================================
     def _sincronizar(self):
         if self._sincronizacion_activa:
@@ -585,9 +577,7 @@ class AppIngresos(ttk.Toplevel):
 
         self._guardar_silencioso(datos_completos)
 
-        # ============================================================
         # Sincronizar filtros del UI con el registro guardado
-        # ============================================================
         try:
             self.var_centro.set(datos_completos.get("centro", "Central"))
             self.var_anio.set(str(datos_completos.get("anio", datetime.now().year)))
@@ -853,7 +843,7 @@ class AppIngresos(ttk.Toplevel):
         # Agrupar conceptos por categoría
         agrupado, detalle, avisos = agrupar_por_categoria(datos)
 
-        # Mapeo de campos (opción B confirmada)
+        # Mapeo de campos
         mapa_campos = {
             "U": {"importe": "u_importe"},
             "ACCESORIOS": {"importe": "ac_importe"},
@@ -887,23 +877,20 @@ class AppIngresos(ttk.Toplevel):
                 if subclave in valores:
                     datos_completos[campo] = round(valores[subclave], 2)
 
-        # Rellenar los IVA calculados por Python (para validación interna,
-        # el Excel usa fórmula viva pero el registro los necesita para
-        # el check rojo `_calcular_total_remisiones` vs `_calcular_total_factura`)
+        # Rellenar los IVA calculados por Python
         datos_completos["u_iva"] = round(datos_completos.get("u_importe", 0) * 0.16, 2)
         datos_completos["ac_iva"] = round(datos_completos.get("ac_importe", 0) * 0.16, 2)
         datos_completos["est_iva"] = round(datos_completos.get("est_importe", 0) * 0.16, 2)
         datos_completos["tra_iva"] = round(datos_completos.get("tra_importe", 0) * 0.16, 2)
         datos_completos["pen_iva"] = round(datos_completos.get("pen_importe", 0) * 0.16, 2)
 
-        # IVA / IEPS de MEDICAMENTOS y HIGIENE (para validación interna)
+        # IVA / IEPS de MEDICAMENTOS y HIGIENE
         datos_completos["med_iva"] = round(datos_completos.get("med_sin_iva", 0) * 0.16, 2)
         datos_completos["hig_iva"] = round(datos_completos.get("hig_sin_iva", 0) * 0.16, 2)
         datos_completos["hig_ieps_6"] = round(datos_completos.get("hig_sin_ieps_6", 0) * 0.06, 2)
         datos_completos["hig_ieps_7"] = round(datos_completos.get("hig_sin_ieps_7", 0) * 0.07, 2)
 
         # Guardar las expresiones (fórmulas) en el registro.
-        # El detalle viene con clave "nombre_campo" → "=expr" (sin el =)
         for campo, expr in detalle.items():
             datos_completos[f"{campo}__expr"] = expr
 
@@ -948,7 +935,6 @@ class AppIngresos(ttk.Toplevel):
         guardar_db(regs_destino, anio_datos)
 
         # ---- Sincronizar estado en memoria ----
-        # Si el año cambió, actualizamos el año cargado y self.registros
         if anio_datos != self._anio_cargado:
             self._anio_cargado = anio_datos
         self.registros = regs_destino
@@ -1000,6 +986,26 @@ class AppIngresos(ttk.Toplevel):
             abrir_dialogo_registrar_productos(self, avisos)
         except Exception:
             pass
+
+
+# ================================================================
+# Wrapper legacy: abre el panel dentro de un Toplevel independiente
+# ================================================================
+
+class AppIngresos(ttk.Toplevel):
+    """
+    Wrapper legacy: abre el panel dentro de una ventana independiente.
+    Mantener mientras haya código que importe AppIngresos.
+    """
+
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.title("Vet Suite — Ingresos")
+        self.geometry("1300x880")
+        self.minsize(1050, 700)
+
+        panel = PanelIngresos(self)
+        panel.pack(fill="both", expand=True)
 
 
 # ============================================================
