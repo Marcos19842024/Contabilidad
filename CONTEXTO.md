@@ -220,10 +220,18 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 17. **`config_ui.json` es el ÚNICO JSON que vive en la raíz del proyecto.** Los JSON de cada módulo van en su carpeta.
 18. **`procesar_todo` (Egresos) NO genera Excel.** El usuario lo genera con el botón "📊 Generar Excel" tras revisar la tabla.
 19. **El Excel de Egresos se ordena por fecha + folio** antes de escribirse.
-20. **Catalogo_qvet.json** NO va en el bundle. El usuario lo importa desde la UI (botón "📥 Importar catálogo QVET" en Ingresos, visible solo si falta). Vive en ingresos/catalogo_qvet.json.
-21. Los módulos con embed exponen PanelX(ttk.Frame) y se declaran con
-  `panel=` en el registro. Los que no, siguen como Toplevel con `factory=`.
-
+20. **Catalogo_qvet.json** NO va en el bundle. El usuario lo importa desde la UI (botón "📥 Importar catálogo QVET" en Ingresos visible solo si falta). Vive en ingresos/catalogo_qvet.json.
+21. La ventana principal usa sidebar lateral estilo QVET: categorías
+  colapsables con módulos indentados debajo. Sin flechas ni iconos
+  en las categorías (solo texto). El módulo activo se resalta con
+  fondo amarillo (#f0a500) y texto negro.
+22. Los módulos que se quieren embeber exponen PanelX(ttk.Frame) y se
+  declaran con `panel=` en shared/registro_modulos.py. Los que no,
+  siguen abriendo como Toplevel con `factory=`.
+23. La pantalla de bienvenida del área central NO muestra tarjetas de
+  módulos. Solo el saludo. La navegación vive en el sidebar.
+24. El sidebar usa tk.Frame + tk.Label con colores propios (no ttk),
+  para evitar que ttkbootstrap sobrescriba bg/fg.
 ---
 
 ## Módulo Ingresos — procesamiento de facturas
@@ -491,6 +499,30 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ## Historial de versiones
 
+### v2.1.5 — Migración de Recordatorios a embed
+- Migrado a embed: Recordatorios.
+  - AppRecordatorios → PanelRecordatorios(ttk.Frame).
+  - Se mantiene AppRecordatorios(ttk.Toplevel) como wrapper legacy.
+  - Registro: panel=_panel_recordatorios.
+- Fix: al abrir un módulo embebido, se destruye el panel anterior
+  antes de crear el nuevo (evita paneles superpuestos).
+- Botón "Volver" del embed ahora es solo la flecha ←, sin texto
+  ni contorno (bootstyle="link").
+
+### v2.1.4 — Rediseño de ventana principal
+- Nuevo: shared/registro_modulos.py — registro declarativo de módulos.
+  Agregar un módulo = una entrada en MODULOS, sin tocar app/principal.py.
+- Rediseño de app/principal.py — sidebar lateral con acordeón de
+  categorías (estilo QVET), sin flechas ni iconos en categorías.
+- Nuevo: contrato de embed. Módulos con PanelX(ttk.Frame) se declaran
+  con `panel=` y se embeben en el área central. Los demás siguen como
+  Toplevel.
+- Migrado a embed: Estética y Transportes.
+  - AppEsteticaTransportes → PanelEsteticaTransportes(ttk.Frame).
+  - Se mantiene AppEsteticaTransportes(ttk.Toplevel) como wrapper legacy.
+- Pantalla de bienvenida simplificada (sin tarjetas de módulos).
+- Pendiente: migrar Ingresos, Egresos y Recordatorios a embed.
+
 ### v2.1.4 — Sidebar + Embed
 - **Nuevo: `shared/registro_modulos.py`** — registro declarativo de módulos.
   Agregar un módulo = una entrada en `MODULOS`, sin tocar `app/principal.py`.
@@ -563,6 +595,10 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 ---
 
 ## Pendientes / Deuda técnica
+
+### Pendiente
+- [ ] Migrar Ingresos a embed.
+- [ ] Migrar Egresos a embed.
 
 ### Egresos
 - [ ] **Rotación de snapshots SAT** (borrar los más viejos automáticamente)

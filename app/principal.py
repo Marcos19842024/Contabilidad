@@ -435,15 +435,34 @@ class AppPrincipal(ttk.Window):
 
     def _abrir_embed(self, modulo):
         try:
+            # ---- Limpiar panel anterior si existe ----
+            if getattr(self, "_panel_activo", None) is not None:
+                try:
+                    self._panel_activo.destroy()
+                except Exception:
+                    pass
+                self._panel_activo = None
+
+            # Por si quedara algún widget residual en el área embed
+            for w in self._area_embed.winfo_children():
+                try:
+                    w.destroy()
+                except Exception:
+                    pass
+
+            # Ocultar pantalla de inicio
             self._pantalla_inicio.pack_forget()
 
+            # Barra superior
             for w in self._barra_embed.winfo_children():
                 w.destroy()
 
+            # Botón "volver": solo la flecha
             ttk.Button(
                 self._barra_embed,
-                text="←  Volver al inicio",
-                bootstyle="secondary-outline",
+                text="←",
+                bootstyle="link",
+                width=3,
                 command=self._cerrar_embed,
             ).pack(side="left")
 
@@ -456,6 +475,7 @@ class AppPrincipal(ttk.Window):
             self._barra_embed.pack(fill="x", pady=(0, 10))
             self._area_embed.pack(fill="both", expand=True)
 
+            # Crear panel nuevo
             self._panel_activo = modulo.panel(
                 master=self._area_embed,
                 on_volver=self._cerrar_embed,

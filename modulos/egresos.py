@@ -4,7 +4,6 @@ modulos/egresos.py
 Modulo de Egresos con tabla, edicion, reportes y generacion de Excel.
 """
 
-from ui.utils import configurar_ventana
 import sys
 import shutil
 from datetime import datetime
@@ -36,20 +35,17 @@ from core.rutas_egresos import (
 )
 
 
-class AppEgresos(ttk.Toplevel):
-    """Modulo de Egresos."""
+class PanelEgresos(ttk.Frame):
+    """
+    Panel principal del módulo de Egresos.
 
-    def __init__(self, master=None):
+    Diseñado para ser embebido como Frame dentro de Vet Suite.
+    También puede usarse en un Toplevel si se necesita (ver wrapper abajo).
+    """
+
+    def __init__(self, master, on_volver=None):
         super().__init__(master)
-        self.title("Vet Suite — Egresos")
-
-        # Configurar tamano y centrar
-        configurar_ventana(
-            master, self,
-            ancho=1300, alto=880,
-            min_ancho=1050, min_alto=700,
-            centrar_en_padre=True,
-        )
+        self._on_volver = on_volver
 
         # Estado interno
         try:
@@ -718,8 +714,18 @@ def _preguntar_accion_excel(parent, nombre_archivo):
     """Devuelve 'anexar', 'reemplazar' u 'omitir'."""
     ventana = ttk.Toplevel(parent)
     ventana.title("Archivo existente")
-    ventana.transient(parent)
-    ventana.grab_set()
+
+    # Subir al Toplevel padre si el parent es un Frame embebido
+    toplevel_padre = parent.winfo_toplevel() if hasattr(parent, "winfo_toplevel") else parent
+    try:
+        ventana.transient(toplevel_padre)
+    except Exception:
+        pass
+    try:
+        ventana.grab_set()
+    except Exception:
+        pass
+
     ventana.resizable(False, False)
 
     ttk.Label(
@@ -763,6 +769,27 @@ def _preguntar_accion_excel(parent, nombre_archivo):
 
     ventana.wait_window()
     return resultado["accion"]
+
+
+# ================================================================
+# Wrapper legacy: abre el panel dentro de un Toplevel independiente
+# ================================================================
+
+class AppEgresos(ttk.Toplevel):
+    """
+    Wrapper legacy: abre el panel dentro de una ventana independiente.
+    Mantener mientras haya código que importe AppEgresos.
+    """
+
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.title("Vet Suite — Egresos")
+        self.geometry("1300x880")
+        self.minsize(1050, 700)
+
+        panel = PanelEgresos(self)
+        panel.pack(fill="both", expand=True)
+
 
 if __name__ == "__main__":
     import ttkbootstrap as ttk_local

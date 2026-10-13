@@ -17,8 +17,6 @@ from tkinter import filedialog, messagebox
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
-from ui.utils import configurar_ventana
-
 from core.rutas_recordatorios import _cargar_json, _guardar_json, CARPETA_DATOS
 from core.recordatorios.sucursales import (
     cargar_sucursales,
@@ -42,19 +40,17 @@ VACUNAS_CACHE = CARPETA_DATOS / "vacunas_importada.json"
 # Si se encuentra una lista plana (formato viejo), se migra automáticamente.
 
 
-class AppRecordatorios(ttk.Toplevel):
-    """Ventana principal del módulo de Recordatorios."""
+class PanelRecordatorios(ttk.Frame):
+    """
+    Panel principal del módulo de Recordatorios.
 
-    def __init__(self, master=None):
+    Diseñado para ser embebido como Frame dentro de Vet Suite.
+    También puede usarse en un Toplevel si se necesita (ver wrapper abajo).
+    """
+
+    def __init__(self, master, on_volver=None):
         super().__init__(master)
-        self.title("Vet Suite — Recordatorios")
-
-        configurar_ventana(
-            master, self,
-            ancho=1150, alto=880,
-            min_ancho=1000, min_alto=720,
-            centrar_en_padre=True,
-        )
+        self._on_volver = on_volver
 
         self.sucursales = cargar_sucursales()
 
@@ -69,8 +65,6 @@ class AppRecordatorios(ttk.Toplevel):
         self.clientes_vacunas = cache_vacunas["clientes"]
 
         # Sucursal con la que se generaron los mensajes actualmente en caché.
-        # Si los dos cachés tienen sucursales distintas, priorizamos citas.
-        # (En la práctica, se guardan igual porque ambas se regeneran juntas.)
         self._sucursal_guardada = (
             cache_citas["sucursal"] or cache_vacunas["sucursal"] or ""
         )
@@ -594,3 +588,23 @@ class AppRecordatorios(ttk.Toplevel):
                 f"Pendientes: {total_vacunas - enviados_vacunas})"
             )
         )
+
+
+# ================================================================
+# Wrapper legacy: abre el panel dentro de un Toplevel independiente
+# ================================================================
+
+class AppRecordatorios(ttk.Toplevel):
+    """
+    Wrapper legacy: abre el panel dentro de una ventana independiente.
+    Mantener mientras haya código que importe AppRecordatorios.
+    """
+
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.title("Vet Suite — Recordatorios")
+        self.geometry("1150x880")
+        self.minsize(1000, 720)
+
+        panel = PanelRecordatorios(self)
+        panel.pack(fill="both", expand=True)

@@ -6,8 +6,10 @@ Permite configurar:
   - RFC del receptor
   - Archivos de la e.firma (.cer y .key)
   - Contraseña de la e.firma
-  - Rango de fechas por defecto
+  - Probar la FIEL sin gastar solicitud
 """
+
+import threading
 
 import tkinter as tk
 import ttkbootstrap as ttk
@@ -19,6 +21,7 @@ from config.config_egresos import (
     cargar_config_egresos,
     guardar_config_egresos,
 )
+from sat.descarga import probar_fiel
 
 
 def abrir_dialogo_config_egresos(app):
@@ -32,8 +35,8 @@ def abrir_dialogo_config_egresos(app):
 
     ventana = ttk.Toplevel(app)
     ventana.title("⚙️ Configuración de Egresos")
-    configurar_ventana(app, ventana, ancho=500, alto=500,
-                       min_ancho=450, min_alto=450)
+    configurar_ventana(app, ventana, ancho=540, alto=620,
+                       min_ancho=500, min_alto=560)
 
     # ---- Encabezado ----
     ttk.Label(ventana,
@@ -58,7 +61,7 @@ def abrir_dialogo_config_egresos(app):
     # RFC del receptor
     ttk.Label(form, text="RFC del receptor:").grid(
         row=fila, column=0, sticky="w", padx=(0, 10), pady=8)
-    
+
     var_rfc = tk.StringVar(value=cfg.get("rfc_receptor", ""))
     ttk.Entry(form, textvariable=var_rfc).grid(
         row=fila, column=1, sticky="ew", pady=8)
@@ -71,7 +74,7 @@ def abrir_dialogo_config_egresos(app):
         if texto != upper:
             var_rfc.set(upper)
     var_rfc.trace_add("write", _force_upper_rfc)
-    
+
     ttk.Label(form,
               text="El RFC de la empresa (Animalia/Baalak).",
               foreground="gray", font=("Segoe UI", 8)).grid(
@@ -130,8 +133,85 @@ def abrir_dialogo_config_egresos(app):
         row=fila, column=1, sticky="w", pady=8)
     fila += 1
 
-    # ---- Separador ----
-    ttk.Separator(ventana).pack(fill="x", padx=20, pady=15)
+    # ---- Probar FIEL ----
+    ttk.Separator(ventana).pack(fill="x", padx=20, pady=(15, 10))
+
+    frame_probar = ttk.Frame(ventana)
+    frame_probar.pack(fill="x", padx=20, pady=(0, 5))
+
+    btn_probar = ttk.Button(
+        frame_probar,
+        text="🔑 Probar FIEL",
+        bootstyle="warning-outline",
+    )
+    btn_probar.pack(side="left")
+
+    lbl_estado = ttk.Label(
+        frame_probar,
+        text="Sin probar",
+        font=("Segoe UI", 9),
+        foreground="gray",
+    )
+    lbl_estado.pack(side="left", padx=(12, 0))
+
+    def _probar_fiel():
+        rfc = var_rfc.get().strip().upper()
+        cer = var_cer.get().strip()
+        key = var_key.get().strip()
+        pwd = var_password.get().strip()
+
+        # Validaciones locales (antes de tocar la red)
+        if not all([rfc, cer, key, pwd]):
+            lbl_estado.configure(
+                text="✗ Faltan datos (RFC, .cer, .key o contraseña)",
+                foreground="red",
+            )
+            return
+
+        if not Path(cer).exists():
+            lbl_estado.configure(
+                text=f"✗ No existe el archivo .cer",
+                foreground="red",
+            )
+            return
+
+        if not Path(key).exists():
+            lbl_estado.configure(
+                text=f"✗ No existe el archivo .key",
+                foreground="red",
+            )
+            return
+
+        btn_probar.configure(state="disabled")
+        lbl_estado.configure(text="Probando…", foreground="gray")
+
+        def _worker():
+            try:
+                res = probar_fiel(cer, key, pwd)
+            except Exception as e:
+                res = {"ok": False, "mensaje": f"Error: {e}"}
+
+            def _mostrar():
+                if res.get("ok"):
+                    lbl_estado.configure(
+                        text=f"✓ {res.get('mensaje', 'FIEL válida')}",
+                        foreground="green",
+                    )
+                else:
+                    lbl_estado.configure(
+                        text=f"✗ {res.get('mensaje', 'FIEL inválida')}",
+                        foreground="red",
+                    )
+                btn_probar.configure(state="normal")
+
+            try:
+                ventana.after(0, _mostrar)
+            except Exception:
+                pass
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    btn_probar.configure(command=_probar_fiel)
 
     # ---- Nota ----
     ttk.Label(ventana,
@@ -139,7 +219,7 @@ def abrir_dialogo_config_egresos(app):
                    "La contraseña se guarda en texto plano. No la compartas.",
               font=("Segoe UI", 8),
               foreground="gray",
-              justify="center").pack(pady=(0, 15))
+              justify="center").pack(pady=(10, 10))
 
     # ---- Botones ----
     fr_btn = ttk.Frame(ventana)
