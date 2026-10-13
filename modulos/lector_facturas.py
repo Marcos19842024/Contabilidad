@@ -37,6 +37,18 @@ def _ruta_recurso(nombre_archivo):
         return Path(__file__).parent.parent / nombre_archivo
 
 
+def ruta_catalogo_usuario():
+    """Ruta donde vive el catálogo del usuario."""
+    return _carpeta_datos() / "catalogo_qvet.json"
+
+
+def recargar_catalogo():
+    """Fuerza recarga del catálogo (limpia la caché global)."""
+    global _CATALOGO
+    _CATALOGO = None
+    return cargar_catalogo()
+
+
 # ============================================================
 # CATÁLOGO
 # ============================================================
@@ -49,7 +61,7 @@ def cargar_catalogo():
     if _CATALOGO is not None:
         return _CATALOGO
 
-    ruta_usuario = _carpeta_datos() / "catalogo_qvet.json"
+    ruta_usuario = ruta_catalogo_usuario()
     ruta_recurso = _ruta_recurso("catalogo_qvet.json")
     ruta = ruta_usuario if ruta_usuario.exists() else ruta_recurso
 

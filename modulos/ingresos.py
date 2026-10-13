@@ -58,7 +58,12 @@ from excel.generador import (
     escribir_excel,
     anexar_al_excel,
 )
-from modulos.lector_facturas import procesar_factura, agrupar_por_categoria
+from modulos.lector_facturas import (
+    procesar_factura,
+    agrupar_por_categoria,
+    ruta_catalogo_usuario,
+    recargar_catalogo,
+)
 
 
 # ============================================================
@@ -160,11 +165,21 @@ class AppIngresos(ttk.Toplevel):
             ("📜 Ver logs",          self._ver_logs,          "secondary-outline"),
             ("🔧 Reset caché",       self._reset_cache,       "secondary-outline"),
         ]
-        
+
         for txt, cmd, estilo in acciones:
             ttk.Button(
                 botones, text=txt, command=cmd, bootstyle=estilo,
             ).pack(side="left", padx=3)
+
+        # ---- Botón "Importar catálogo QVET" (solo si falta) ----
+        self.btn_importar_catalogo = ttk.Button(
+            botones,
+            text="📥 Importar catálogo QVET",
+            command=self._importar_catalogo,
+            bootstyle="warning",
+        )
+        # No se empaqueta aquí; lo maneja _actualizar_boton_catalogo()
+        self._actualizar_boton_catalogo()
 
         # ---- Tabla ----
         frame_tabla = ttk.LabelFrame(self, text="Registros", padding=5)
@@ -248,6 +263,77 @@ class AppIngresos(ttk.Toplevel):
         self.var_anio.trace_add("write", self._al_cambiar_anio)
         self.var_mes.trace_add("write", lambda *a: self._refrescar_tabla())
         self.var_centro.trace_add("write", lambda *a: self._refrescar_tabla())
+
+    def _actualizar_boton_catalogo(self):
+        """Muestra u oculta el botón 'Importar catálogo' según exista."""
+        try:
+            existe = ruta_catalogo_usuario().exists()
+        except Exception:
+            existe = False
+
+        if existe:
+            self.btn_importar_catalogo.pack_forget()
+        else:
+            self.btn_importar_catalogo.pack(side="left", padx=3)
+
+    def _importar_catalogo(self):
+        """Abre file picker, valida, copia el JSON y recarga."""
+        ruta = filedialog.askopenfilename(
+            title="Selecciona el catálogo QVET (JSON)",
+            filetypes=[("JSON", "*.json"), ("Todos los archivos", "*.*")],
+        )
+        if not ruta:
+            return
+
+        # Validar antes de copiar
+        try:
+            import json
+            with open(ruta, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict) or not data:
+                messagebox.showerror(
+                    "Catálogo inválido",
+                    "El archivo no tiene el formato esperado.\n"
+                    "Debe ser un JSON con entradas {producto: categoría}.",
+                    parent=self,
+                )
+                return
+        except Exception as e:
+            messagebox.showerror(
+                "Error al leer",
+                f"No se pudo leer el archivo:\n{e}",
+                parent=self,
+            )
+            return
+
+        # Copiar
+        destino = ruta_catalogo_usuario()
+        destino.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.copy2(ruta, destino)
+        except Exception as e:
+            messagebox.showerror(
+                "Error al copiar",
+                f"No se pudo copiar el catálogo:\n{e}",
+                parent=self,
+            )
+            return
+
+        # Recargar en memoria
+        try:
+            catalogo = recargar_catalogo()
+            total = len(catalogo) if isinstance(catalogo, dict) else 0
+        except Exception:
+            total = 0
+
+        self._actualizar_boton_catalogo()
+        messagebox.showinfo(
+            "Catálogo importado",
+            f"✅ Catálogo cargado correctamente.\n\n"
+            f"Productos: {total}\n"
+            f"Ubicación: {destino}",
+            parent=self,
+        )
 
     def _crear_menu_contextual(self):
         self.menu_ctx = tk.Menu(self, tearoff=0)
