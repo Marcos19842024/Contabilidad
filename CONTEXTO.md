@@ -220,6 +220,7 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 17. **`config_ui.json` es el ÚNICO JSON que vive en la raíz del proyecto.** Los JSON de cada módulo van en su carpeta.
 18. **`procesar_todo` (Egresos) NO genera Excel.** El usuario lo genera con el botón "📊 Generar Excel" tras revisar la tabla.
 19. **El Excel de Egresos se ordena por fecha + folio** antes de escribirse.
+20. **Catalogo_qvet.json** NO va en el bundle. El usuario lo importa desde la UI (botón "📥 Importar catálogo QVET" en Ingresos, visible solo si falta). Vive en ingresos/catalogo_qvet.json.
 
 ---
 
@@ -488,7 +489,14 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ## Historial de versiones
 
-### v2.1.2 (actual)
+### v2.1.3
+- **Nuevo: Anexar facturas al Excel de Egresos** sin perder anotaciones
+  - `excel/egresos.py::anexar_facturas_al_excel()`
+  - Diálogo de 3 opciones: Anexar / Reemplazar / Omitir
+  - Detecta duplicados por UUID
+  - Renumera columna # y recalcula TOTALES
+
+### v2.1.2
 - **Fix: XMLs de Egresos se archivan por fecha real de factura** (no mes de solicitud)
 - **Refactor: `sat/guardar_egresos.py` usa `core.rutas_egresos`** (única fuente de verdad)
 - **Migración: `registros_egresos_YYYY.json` movido a `egresos/`**
@@ -502,6 +510,8 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 - **Fix: Excel de Egresos se ordena por fecha + folio**
 - **Limpieza: `_ordenar_facturas` restaurada y usada en la generación de Excel**
 - **Fix: `mover_y_renombrar_egresos` agrupa por `(anio_factura, mes_factura, sucursal, metodo, forma)`**
+- **Nuevo: botón "📥 Importar catálogo QVET"** en Ingresos (solo si falta el catálogo)
+- **Fix: catalogo_qvet.json** fuera del bundle (causaba fallo en CI)
 
 ### v2.1.1
 - **Refactor de configuración compartida:**
@@ -538,7 +548,6 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 ## Pendientes / Deuda técnica
 
 ### Egresos
-- [ ] **Anexar + reordenar en Excel** cuando ya existe y tiene anotaciones del usuario
 - [ ] **Rotación de snapshots SAT** (borrar los más viejos automáticamente)
 - [ ] **`actualizar_json` podría fusionarse con `mover_y_renombrar_egresos`** (hacen cosas parecidas)
 
