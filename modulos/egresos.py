@@ -630,6 +630,7 @@ class AppEgresos(ttk.Toplevel):
                 ruta_pue,
                 lambda ruta: generar_excel_pue(pue, ruta, mes_nombre, anio),
                 msgs, f"PUE ({len(pue)} facturas)",
+                tipo="PUE", facturas=pue,
             )
 
         # PPD
@@ -639,16 +640,20 @@ class AppEgresos(ttk.Toplevel):
                 ruta_ppd,
                 lambda ruta: generar_excel_ppd(ppd, ruta, mes_nombre, anio),
                 msgs, f"PPD ({len(ppd)} facturas)",
+                tipo="PPD", facturas=ppd,
             )
 
         msgs.append(f"\nCarpeta:\n{carpeta}")
         messagebox.showinfo("Excel generado", "\n".join(msgs))
         self._abrir_carpeta(carpeta)
 
-    def _generar_con_backup(self, ruta_xlsx, generador, msgs, etiqueta):
+    def _generar_con_backup(self, ruta_xlsx, generador, msgs, etiqueta,
+                             tipo=None, facturas=None):
         """
-        Genera un Excel. Si ya existe, pregunta: reemplazar o anexar.
-        Hace backup antes de reemplazar.
+        Genera un Excel. Si ya existe, pregunta: anexar, reemplazar u omitir.
+
+        tipo: "PUE" o "PPD" (necesario para el anexado).
+        facturas: lista de registros a escribir (necesario para el anexado).
         """
         if not ruta_xlsx.exists():
             try:
@@ -658,52 +663,106 @@ class AppEgresos(ttk.Toplevel):
                 msgs.append(f"❌ {etiqueta}: {e}")
             return
 
-        # El archivo ya existe
-        respuesta = messagebox.askyesnocancel(
-            "Archivo existente",
-            f"El archivo ya existe:\n{ruta_xlsx.name}\n\n"
-            f"• Sí  → Reordenar TODO (backup + regenerar)\n"
-            f"• No  → Solo verificar que esté al día (no hace nada)\n"
-            f"• Cancelar → Omitir",
-        )
+        # El archivo ya existe → preguntar
+        accion = _preguntar_accion_excel(self, ruta_xlsx.name)
 
-        if respuesta is None:
+        if accion == "omitir":
             msgs.append(f"⏭️ {etiqueta}: omitido")
             return
 
-        if respuesta is False:
-            msgs.append(f"ℹ️ {etiqueta}: ya existe, no se modifico")
+        if accion == "reemplazar":
+            # Backup
+            try:
+                timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                nombre_backup = (
+                    f"{ruta_xlsx.stem}_backup_{timestamp}{ruta_xlsx.suffix}"
+                )
+                ruta_backup = ruta_xlsx.parent / nombre_backup
+                shutil.copy2(ruta_xlsx, ruta_backup)
+            except Exception as e:
+                msgs.append(f"⚠️ {etiqueta}: no se pudo crear backup ({e})")
+                return
+
+            # Borrar y regenerar
+            try:
+                ruta_xlsx.unlink()
+                generador(ruta_xlsx)
+                msgs.append(
+                    f"✅ {etiqueta}: reordenado\n"
+                    f"    Backup: {ruta_backup.name}"
+                )
+            except Exception as e:
+                msgs.append(f"❌ {etiqueta}: {e}")
             return
 
-        # Hacer backup
-        try:
-            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-            nombre_backup = (
-                f"{ruta_xlsx.stem}_backup_{timestamp}{ruta_xlsx.suffix}"
-            )
-            ruta_backup = ruta_xlsx.parent / nombre_backup
-            shutil.copy2(ruta_xlsx, ruta_backup)
-        except Exception as e:
-            msgs.append(f"⚠️ {etiqueta}: no se pudo crear backup ({e})")
+        if accion == "anexar":
+            if tipo is None or facturas is None:
+                msgs.append(f"⚠️ {etiqueta}: no se puede anexar (faltan datos)")
+                return
+
+            try:
+                from excel.egresos import anexar_facturas_al_excel
+                nuevos, omitidos = anexar_facturas_al_excel(
+                    ruta_xlsx, facturas, tipo,
+                )
+                msgs.append(
+                    f"✅ {etiqueta}: {nuevos} anexadas, "
+                    f"{omitidos} omitidas (ya existían)"
+                )
+            except Exception as e:
+                msgs.append(f"❌ {etiqueta}: {e}")
             return
 
-        # Borrar el original
-        try:
-            ruta_xlsx.unlink()
-        except Exception as e:
-            msgs.append(f"❌ {etiqueta}: no se pudo borrar el original ({e})")
-            return
 
-        # Regenerar
-        try:
-            generador(ruta_xlsx)
-            msgs.append(
-                f"✅ {etiqueta}: reordenado\n"
-                f"    Backup: {ruta_backup.name}"
-            )
-        except Exception as e:
-            msgs.append(f"❌ {etiqueta}: {e}")
+def _preguntar_accion_excel(parent, nombre_archivo):
+    """Devuelve 'anexar', 'reemplazar' u 'omitir'."""
+    ventana = ttk.Toplevel(parent)
+    ventana.title("Archivo existente")
+    ventana.transient(parent)
+    ventana.grab_set()
+    ventana.resizable(False, False)
 
+    ttk.Label(
+        ventana,
+        text=f"El archivo ya existe:\n{nombre_archivo}",
+        font=("Segoe UI", 10, "bold"),
+    ).pack(pady=(20, 5), padx=30)
+
+    ttk.Label(
+        ventana,
+        text="¿Qué quieres hacer?",
+        font=("Segoe UI", 9),
+    ).pack(pady=(0, 15))
+
+    resultado = {"accion": "omitir"}
+
+    def _set(accion):
+        resultado["accion"] = accion
+        ventana.destroy()
+
+    frame = ttk.Frame(ventana)
+    frame.pack(pady=(0, 20), padx=20)
+
+    ttk.Button(
+        frame, text="📥 Anexar nuevas",
+        command=lambda: _set("anexar"),
+        bootstyle="success",
+    ).pack(side="left", padx=5)
+
+    ttk.Button(
+        frame, text="🔄 Reemplazar todo",
+        command=lambda: _set("reemplazar"),
+        bootstyle="warning",
+    ).pack(side="left", padx=5)
+
+    ttk.Button(
+        frame, text="Omitir",
+        command=lambda: _set("omitir"),
+        bootstyle="secondary",
+    ).pack(side="left", padx=5)
+
+    ventana.wait_window()
+    return resultado["accion"]
 
 if __name__ == "__main__":
     import ttkbootstrap as ttk_local
