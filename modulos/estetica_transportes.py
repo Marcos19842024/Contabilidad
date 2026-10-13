@@ -31,7 +31,6 @@ from core.rutas_estetica import (
     TRANSPORTES_CLIENTE,
 )
 from core.geocoding import geocodificar
-from ui.utils import configurar_ventana
 from config.veterinaria import sucursal_activa as _sucursal_activa
 
 
@@ -546,22 +545,22 @@ def importar_tarifas_transporte(ruta_excel: str) -> dict:
 
 
 # ---------------------------------------------------------------
-# Ventana principal del módulo
+# Panel del módulo (embebible)
 # ---------------------------------------------------------------
 
-class AppEsteticaTransportes(ttk.Toplevel):
-    """Ventana principal del módulo Estética y Transportes."""
+class PanelEsteticaTransportes(ttk.Frame):
+    """
+    Panel principal del módulo Estética y Transportes.
 
-    def __init__(self, master=None):
+    Diseñado para ser embebido como Frame dentro de Vet Suite.
+    También puede usarse en un Toplevel si se necesita.
+    """
+
+    def __init__(self, master, on_volver=None):
         super().__init__(master)
-        self.title("Vet Suite — Estética y Transportes")
+        self._on_volver = on_volver
 
-        configurar_ventana(
-            master, self,
-            ancho=1300, alto=880,
-            min_ancho=1050, min_alto=700,
-            centrar_en_padre=True,
-        )
+        # (sin title, sin geometry, sin configurar_ventana)
 
         self.clientes = _cargar_json(CLIENTES_MAESTRO, [])
         self.mascotas = _cargar_json(MASCOTAS_FILE, {})
@@ -573,6 +572,7 @@ class AppEsteticaTransportes(ttk.Toplevel):
 
     def _construir_ui(self):
         # ---- Barra superior con buscador ----
+        # Nota: en Toplevel era self; ahora self es el Frame, funciona igual.
         top = ttk.LabelFrame(self, text="Búsqueda", padding=10)
         top.pack(fill="x", padx=10, pady=5)
 
@@ -874,3 +874,20 @@ class AppEsteticaTransportes(ttk.Toplevel):
             "nuevo": True,
         }
         DialogoClienteDetalle(self, nuevo, on_guardar=self._recargar_clientes)
+
+# Alias retrocompatible: si algún otro archivo importa
+# AppEsteticaTransportes, sigue funcionando (abre en Toplevel).
+class AppEsteticaTransportes(ttk.Toplevel):
+    """
+    Wrapper legacy: abre el panel dentro de una ventana independiente.
+    Mantener mientras haya código que importe AppEsteticaTransportes.
+    """
+
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.title("Vet Suite — Estética y Transportes")
+        self.geometry("1300x880")
+        self.minsize(1050, 700)
+
+        panel = PanelEsteticaTransportes(self)
+        panel.pack(fill="both", expand=True)

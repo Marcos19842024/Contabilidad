@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 main.py
-Punto de entrada del Sistema de Contabilidad QVET.
+Punto de entrada de Vet Suite.
 """
 
 from app.principal import AppPrincipal
