@@ -232,6 +232,14 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
   módulos. Solo el saludo. La navegación vive en el sidebar.
 24. El sidebar usa tk.Frame + tk.Label con colores propios (no ttk),
   para evitar que ttkbootstrap sobrescriba bg/fg.
+25. Agregar un módulo nuevo = una entrada en shared/registro_modulos.py.
+  No se toca app/principal.py.
+26. Al abrir un módulo embebido, se destruye el panel anterior antes de
+  crear el nuevo (evita paneles superpuestos).
+27. El botón "Probar FIEL" vive en dialogos/egresos_config.py (junto a
+  las credenciales), no en el diálogo de descarga. Prueba los valores
+  actuales del formulario, no los guardados.
+
 ---
 
 ## Módulo Ingresos — procesamiento de facturas
@@ -499,6 +507,22 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ## Historial de versiones
 
+### v2.1.7 — Rediseño de ventana principal + embed completo
+- **Nuevo: `shared/registro_modulos.py`** — registro declarativo de módulos.
+  Agregar un módulo = una entrada en MODULOS, sin tocar app/principal.py.
+- **Rediseño de `app/principal.py`** — sidebar lateral estilo QVET con
+  categorías colapsables. Sin iconos en categorías, sin tarjetas de
+  módulos en el área central.
+- **Migrados a embed los 4 módulos:** Ingresos, Egresos, Estética y
+  Recordatorios. Cada uno expone `PanelX(ttk.Frame)` y mantiene
+  `AppX(ttk.Toplevel)` como wrapper legacy.
+- **Fix: paneles acumulados** al cambiar de módulo sin dar "←".
+- **Botón "🔑 Probar FIEL" movido** de `dialogos/descargar_sat.py` a
+  `dialogos/egresos_config.py`.
+- **Botón "Volver" del embed** ahora es solo la flecha `←`.
+- **Contrato de embed:** `Modulo.panel` activa el embed. Los módulos sin
+  `panel=` siguen abriendo como Toplevel.
+
 ### v2.1.6 — Migración de Egresos a embed
 - Migrado a embed: Egresos.
   - AppEgresos → PanelEgresos(ttk.Frame).
@@ -608,31 +632,10 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ---
 
-## Pendientes / Deuda técnica
-
 ### Pendiente
-- [ ] Migrar Ingresos a embed.
-
-### Egresos
-- [ ] **Rotación de snapshots SAT** (borrar los más viejos automáticamente)
-- [ ] **`actualizar_json` podría fusionarse con `mover_y_renombrar_egresos`** (hacen cosas parecidas)
-
-### Testing
-- [ ] **Tests con pytest** sobre snapshots reales del SAT
-- [ ] **Tests de `core/config_ui.py`**
-- [ ] **Tests del pipeline de facturas de Ingresos**
-
-### Ingresos
-- [ ] **Reprocesar duplicadas en sincronizar** para regenerar `__expr` si faltan
-
-### Recordatorios
-- [ ] **Informe de recordatorios** (PDF/Excel)
-
-### Estética
-- [ ] **Autocompletado en Estética**
-
-### Arquitectura
-- [ ] **Refactor v3.0.0 por dominio funcional:**
-  - Separar `ingresos/`, `egresos/`, `estetica_transportes/`, `recordatorios/`
-  - Cada dominio autocontenido (módulo + lógica + rutas + diálogos + tests)
-  - `shared/` para código transversal
+- [ ] Rotación de snapshots SAT.
+- [ ] Tests con pytest sobre snapshots reales (anonimizados).
+- [ ] Tests de core/config_ui.py.
+- [ ] Tests del pipeline de Ingresos.
+- [ ] Refactor v3.0.0 por dominio funcional.
+- [ ] Actualizar el manual.

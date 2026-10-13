@@ -1,95 +1,79 @@
-# Sesión de trabajo — 2026-10-12 (v2.1.2)
+# Sesión de trabajo — 2026-10-13 (v2.1.7)
 
 ## Resumen
-Fix del archivado de XMLs de Egresos por fecha real de factura
-+ historial completo del SAT + limpieza de rutas de JSONs.
+Rediseño completo de la ventana principal: sidebar estilo QVET con
+categorías colapsables + migración de los 4 módulos a embed (Frame).
+Además: botón "Probar FIEL" movido a Config, fix de paneles acumulados.
 
 ## Qué se hizo
 
-### 1. Historial del SAT (`core/sat_historial.py`)
-- Módulo nuevo que guarda **todo** lo que viene del SAT:
-  - `meta.json` por solicitud (id, RFC, fechas, estado, verificaciones)
-  - `01_solicita.json`, `02_verifica_N.json`, `03_descarga_N.json/.zip`
-  - `xmls/` extraídos del ZIP
-  - `_errores/` con errores del SAT
-- Snapshots en `egresos/_sat_historial/<timestamp>_<id>/`
-- Flag en `config_egresos.json`: `guardar_historial_sat`
-- Override por entorno: `VET_SUITE_HISTORIAL=1`
-- **Regla:** nunca sobreescribe, nunca borra automáticamente, nunca falla
-  por el historial (si algo sale mal, loguea y sigue).
+### 1. Registro declarativo de módulos (`shared/registro_modulos.py`)
+- Archivo nuevo. Cada módulo se declara una sola vez con:
+  `id, nombre, descripcion, icono, categoria, factory, panel, atajo, activo`.
+- `factory(master)` → abre como Toplevel (legacy).
+- `panel(master, on_volver)` → abre como Frame embebido (preferido).
+- Helpers: `modulos_activos()`, `modulos_por_categoria()`, `buscar_modulo()`.
+- Agregar un módulo nuevo = una entrada en `MODULOS`, sin tocar `app/principal.py`.
 
-### 2. `sat/descarga.py` engancha el historial
-- `solicitar_descarga` → guarda `01_solicita.json`
-- `verificar_solicitud` → guarda cada `02_verifica_N.json`
-- `descargar_paquetes` → guarda el ZIP + extrae `xmls/`
-- `guardar_error` en cada excepción
-- Firma de `descargar_paquetes` ahora acepta `id_solicitud`
+### 2. Rediseño de `app/principal.py` — sidebar estilo QVET
+- Sidebar lateral oscuro (`#2b2b2b`), categorías colapsables
+  (`▶`/`▼`), módulos indentados debajo de su categoría.
+- Sin iconos ni flechas en las categorías (solo texto).
+- El módulo activo se resalta con fondo amarillo (`#f0a500`) y texto negro.
+- Sidebar usa `tk.Frame` + `tk.Label` (no ttk) para evitar que
+  ttkbootstrap sobrescriba `bg`/`fg`.
+- Área central: pantalla de bienvenida simple (sin tarjetas de módulos)
+  cuando no hay módulo abierto; barra "←" + panel embebido cuando sí.
+- Botón "Volver" del embed es solo la flecha `←`, sin texto ni contorno
+  (`bootstyle="link"`).
+- Atajos Ctrl+1..Ctrl+4 declarados en el registro, bindeados por el shell.
 
-### 3. `probar_fiel()` — validar FIEL sin gastar solicitud
-- `sat/descarga.py::probar_fiel(cer, key, pwd)` → solo `Autenticacion`.
-- El SAT no cuenta `Autenticacion` como solicitud.
-- Botón **"🔑 Probar FIEL"** en `dialogos/descargar_sat.py`.
-- Corre en hilo, muestra estado en label (verde/rojo).
+### 3. Migración de los 4 módulos a embed
+Todos siguen el mismo patrón: `AppX(ttk.Toplevel)` → `PanelX(ttk.Frame)`,
+y se mantiene `AppX(ttk.Toplevel)` como **wrapper legacy** para no romper
+imports existentes.
 
-### 4. `scripts/probar_egresos.py` — CLI de pruebas
-- Reprocesa XMLs de una carpeta sin tocar el SAT.
-- Flags: `--dry-run`, `--hasta`, `--anio`, `--mes`, `--desde-snapshot`,
-  `--listar-snapshots`, `--reproducir-error`, `--probar-fiel`, `--historial`.
-- **Ojo:** `procesar_todo` siempre corre completo; `--dry-run` solo omite
-  las etapas cosméticas.
+- **Estética y Transportes** → `PanelEsteticaTransportes(ttk.Frame)`.
+- **Recordatorios** → `PanelRecordatorios(ttk.Frame)`.
+- **Egresos** → `PanelEgresos(ttk.Frame)`.
+  - Fix: `_preguntar_accion_excel` usa `parent.winfo_toplevel()` para
+    `transient`, así funciona con Frame o Toplevel como parent.
+- **Ingresos** → `PanelIngresos(ttk.Frame)`.
+  - `_actualizar_titulo` convertido en no-op (no aplica en Frame).
 
-### 5. Fix: XMLs de Egresos por fecha real de factura
-- `sat/mover_egresos.py::mover_y_renombrar_egresos` ahora agrupa por
-  `(anio_factura, mes_factura, sucursal, metodo, forma)`.
-- Nuevo helper `_parsear_fecha_ddmmyyyy()`.
-- Los XMLs van a `Contabilidad <mes-real>/Egreso/<Sucursal>/<Metodo>/<Forma>/`.
-- `ruta_xml` en la DB apunta al mes real.
-- **Regla nueva:** un CFDI del 20/04/2026 va a `Contabilidad abril/...`
-  aunque la descarga se haga en octubre.
+### 4. Fix: paneles acumulados al cambiar de módulo
+- Al abrir un módulo embebido sin haber hecho "←", el panel anterior
+  quedaba vivo y se apilaba debajo del nuevo.
+- Fix en `app/principal.py::_abrir_embed`: destruye el panel anterior
+  (y limpia el área embed) antes de crear el nuevo.
 
-### 6. Fix: `sat/guardar_egresos.py` usa `core.rutas_egresos`
-- Antes calculaba su propia `_carpeta_datos()` (apuntaba a la raíz).
-- Ahora importa `ruta_registros_egresos` de `core.rutas_egresos`.
-- `registros_egresos_YYYY.json` movido de la raíz a `egresos/`.
-
-### 7. Cambio: `procesar_todo` NO genera Excel
-- `sat/procesar_completo.py::generar_excels` eliminada.
-- `procesar_todo` solo procesa, mueve y actualiza DB.
-- El Excel se genera con el botón **"📊 Generar Excel"** de la app.
-- Resumen de `procesar_todo` ahora devuelve `excel: {None...}`.
-
-### 8. Fix: Excel ordenado por fecha + folio
-- `_ordenar_facturas` (en `sat/mover_egresos.py`) ahora se importa desde
-  `modulos/egresos.py::_generar_excel` y se aplica antes de generar.
-
-### 9. Limpieza de rutas
-- `catalogo_qvet.json` movido de la raíz a `ingresos/`.
-- `Reportes Recordatorios` movido de `~/Documents/Vet Suite/` a `~/Documents/`.
-
-### 10. Reglas nuevas en `CONTEXTO.md`
-- Regla 16: XMLs de Egresos por fecha real de factura.
-- Regla 17: `config_ui.json` es el único JSON en la raíz.
-- Regla 18: `procesar_todo` no genera Excel.
-- Regla 19: Excel de Egresos ordenado por fecha + folio.
+### 5. Mover botón "Probar FIEL" a Config
+- Antes: en `dialogos/descargar_sat.py` (junto al botón Descargar).
+- Ahora: en `dialogos/egresos_config.py` (junto a las credenciales FIEL).
+- Prueba los valores **actuales del formulario** (aunque no estén guardados).
+- Corre en hilo, muestra estado verde/rojo.
+- Sigue sin gastar solicitud (usa `Autenticacion`).
 
 ## Estado actual
-- ✅ Todo funciona: Ingresos, Egresos, Estética, Recordatorios, Config General.
-- ✅ XMLs de Egresos se archivan por fecha real de factura.
-- ✅ Historial del SAT operativo (activado).
-- ✅ CLI de pruebas funcional.
-- ✅ Botón "Probar FIEL" verificado (autenticó correctamente).
+- ✅ Sidebar QVET con categorías colapsables y módulos indentados.
+- ✅ Los 4 módulos migrados a embed (Frame).
+- ✅ Wrappers legacy `AppX(ttk.Toplevel)` mantenidos.
+- ✅ Botón "Probar FIEL" en Config, no en Descargar.
+- ✅ Sin paneles acumulados al cambiar de módulo.
+- ✅ `python3 verificar_config.py` OK.
 - ⏳ Pendiente: pruebas con SAT real y cliente final.
 
 ## Próximos pasos sugeridos
-- A) **Anexar + reordenar Excel** cuando ya existe y tiene anotaciones.
-- B) **Tests con pytest** sobre snapshots del SAT.
-- C) **Rotación de snapshots SAT** (evitar llenar el disco).
-- D) **Mover Reportes Recordatorios** (ya hecho) + verificar otros módulos.
-- E) **Refactor v3.0.0 por dominio funcional.**
+- A) **Refactor v3.0.0 por dominio funcional** (el grande).
+- B) **Rotación de snapshots SAT** (evitar llenar el disco).
+- C) **Anexar + reordenar Excel de Egresos** cuando ya existe con anotaciones.
+- D) **Tests con pytest** sobre snapshots reales (anonimizados).
+- E) **Tests de `core/config_ui.py`** y `shared/registro_modulos.py`.
 
 ## Cómo trabajar
 - Configuración compartida → `core/config_ui.py`.
 - Sucursales → `config/veterinaria.py` (fuente de verdad).
+- Registro de módulos → `shared/registro_modulos.py`.
 - Antes de tocar: correr `python3 verificar_config.py`.
 - Los JSON de datos NO van a git.
 - `config_ui.json` se autocrea; no lo borres.
@@ -98,17 +82,24 @@ Fix del archivado de XMLs de Egresos por fecha real de factura
 ## Pendientes de la sesión (deuda técnica)
 
 ### Egresos
-- [ ] **Anexar + reordenar Excel.** Hoy: "Sí" = backup + regenerar (pierde
-  anotaciones); "No" = no hace nada; no hay "Anexar".
+- [ ] **Anexar + reordenar Excel.** El diálogo de 3 opciones (Anexar /
+  Reemplazar / Omitir) ya existe en `_preguntar_accion_excel`.
 - [ ] **`actualizar_json` y `mover_y_renombrar_egresos`** hacen cosas
   parecidas. Fusionar en el refactor.
-- [ ] **5 XMLs ignorados** en `/tmp/sat_descargas/` (no son Ingreso,
-  probablemente notas de crédito). Revisar.
 
 ### Testing
 - [ ] **pytest** sobre snapshots reales (anonimizados).
 - [ ] Tests de `core/config_ui.py`.
+- [ ] Tests de `shared/registro_modulos.py`.
 - [ ] Tests del pipeline de Ingresos.
 
 ### Arquitectura
-- [ ] Refactor v3.0.0 por dominio funcional.
+- [ ] **Refactor v3.0.0 por dominio funcional:**
+  - `ingresos/`, `egresos/`, `estetica_transportes/`, `recordatorios/`
+  - Cada dominio autocontenido (módulo + lógica + rutas + diálogos + tests).
+  - `shared/` para código transversal (config_ui, registro_modulos, rutas base).
+
+### Otros
+- [ ] **Rotación de snapshots SAT** (borrar los más viejos automáticamente).
+- [ ] **Revisar 5 XMLs ignorados** en `/tmp/sat_descargas/` (no son Ingreso,
+  probablemente notas de crédito).
