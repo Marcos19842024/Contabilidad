@@ -107,6 +107,35 @@ def existe() -> bool:
     return CONFIG_UI_FILE.exists()
 
 
+# ---------------------------------------------------------------
+# Módulos activos (activar/desactivar desde Config General)
+# ---------------------------------------------------------------
+
+def modulos_activos() -> dict:
+    """
+    Devuelve {id_modulo: bool} tal como está guardado en config_ui.json.
+    Si la clave no existe o no es dict, devuelve {}.
+    El default (módulo nuevo = activo) lo resuelve modulo_esta_activo().
+    """
+    valor = get_seccion("modulos_activos", {})
+    return dict(valor) if isinstance(valor, dict) else {}
+
+
+def modulo_esta_activo(modulo_id: str, default: bool = True) -> bool:
+    """
+    True/False para un módulo concreto.
+    Si no está en config_ui.json, devuelve `default` (el del registro).
+    """
+    return bool(modulos_activos().get(modulo_id, default))
+
+
+def set_modulo_activo(modulo_id: str, activo: bool) -> None:
+    """
+    Marca/desmarca un módulo. Merge no destructivo (no toca los demás).
+    """
+    set_seccion("modulos_activos", {modulo_id: bool(activo)})
+
+
 def resetear():
     """Borra el archivo (útil para tests)."""
     with _LOCK:

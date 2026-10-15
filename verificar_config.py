@@ -102,6 +102,81 @@ except Exception as e:
     print(f"    ❌ ERROR: {e}")
     errores.append(("config_ui.json", e))
 
+# 8) módulos activos (config_ui)
+print("\n[8] modulos_activos en config_ui ...")
+try:
+    from core import config_ui
+    from shared.registro_modulos import MODULOS, modulos_visibles
+
+    guardados = config_ui.modulos_activos()
+    visibles = modulos_visibles()
+
+    print(f"    guardados en config_ui.json: {guardados}")
+    print(f"    módulos visibles ahora    : {[m.id for m in visibles]}")
+
+    # Validación: la sección debe ser dict de str -> bool si existe
+    if guardados:
+        for k, v in guardados.items():
+            if not isinstance(k, str) or not isinstance(v, bool):
+                raise TypeError(
+                    f"modulos_activos[{k!r}] debe ser bool, es {type(v).__name__}"
+                )
+
+    # Validación: ids guardados deben existir en el registro
+    ids_registro = {m.id for m in MODULOS}
+    ids_huerfanos = set(guardados) - ids_registro
+    if ids_huerfanos:
+        print(f"    ⚠️  ids en config_ui que no existen en el registro: "
+              f"{ids_huerfanos}")
+
+    print("    ✅ OK")
+except Exception as e:
+    print(f"    ❌ ERROR: {e}")
+    errores.append(("modulos_activos", e))
+
+# 9) perfiles (config_ui) — validación estructural
+print("\n[9] perfiles en config_ui ...")
+try:
+    from core import config_ui
+    from shared.perfiles import perfiles, perfil_por_id, ADMIN_ID
+    from shared.registro_modulos import MODULOS
+
+    guardados = config_ui.get_seccion("perfiles", None)
+    actuales = perfiles()
+
+    print(f"    perfiles en config_ui.json: "
+          f"{'sí' if guardados else 'no (se siembran al vuelo)'}")
+    print(f"    perfiles actuales         : {[p.id for p in actuales]}")
+
+    # Validación: admin siempre existe
+    if perfil_por_id(ADMIN_ID) is None:
+        raise RuntimeError("admin no está en la lista de perfiles")
+
+    admin = perfil_por_id(ADMIN_ID)
+    if admin.modulos != "*":
+        raise RuntimeError(f"admin debe ver todos los módulos, "
+                            f"tiene {admin.modulos!r}")
+
+    # Validación: cada módulo referenciado existe en el registro
+    ids_modulos = {m.id for m in MODULOS}
+    for p in actuales:
+        if p.modulos == "*":
+            continue
+        for mid in p.modulos:
+            if mid not in ids_modulos:
+                print(f"    ⚠️  perfil {p.id!r} referencia módulo "
+                      f"desconocido: {mid!r}")
+
+    # Validación: no hay ids duplicados
+    ids = [p.id for p in actuales]
+    if len(ids) != len(set(ids)):
+        raise RuntimeError(f"hay ids de perfil duplicados: {ids}")
+
+    print("    ✅ OK")
+except Exception as e:
+    print(f"    ❌ ERROR: {e}")
+    errores.append(("perfiles", e))
+
 # Resumen
 print("\n" + "=" * 60)
 if errores:

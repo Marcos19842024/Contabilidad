@@ -120,13 +120,29 @@ MODULOS: tuple[Modulo, ...] = (
 
 # ── Helpers de consulta ──────────────────────────────────────────────────
 
-def modulos_activos() -> list[Modulo]:
-    return [m for m in MODULOS if m.activo]
+def modulos_visibles() -> list[Modulo]:
+    """
+    Módulos visibles = activos (config_ui) Y permitidos (perfil actual).
+    Sin sesión activa, ningún módulo es visible.
+    """
+    from core import config_ui
+    from shared.perfiles import modulo_permitido
+
+    return [
+        m for m in MODULOS
+        if config_ui.modulo_esta_activo(m.id, default=m.activo)
+        and modulo_permitido(m.id)
+    ]
 
 
 def modulos_por_categoria() -> dict[str, list[Modulo]]:
+    """
+    {categoria: [Modulo, ...]} solo con módulos visibles.
+    Las categorías sin módulos visibles NO aparecen en el dict.
+    Ordenadas por CATEGORIAS[...]["orden"].
+    """
     grupos: dict[str, list[Modulo]] = {}
-    for m in modulos_activos():
+    for m in modulos_visibles():
         grupos.setdefault(m.categoria, []).append(m)
     return dict(sorted(
         grupos.items(),
@@ -135,6 +151,7 @@ def modulos_por_categoria() -> dict[str, list[Modulo]]:
 
 
 def buscar_modulo(id_modulo: str) -> Optional[Modulo]:
+    """Lookup crudo por id. NO filtra por activo (el caller decide)."""
     for m in MODULOS:
         if m.id == id_modulo:
             return m

@@ -16,7 +16,7 @@ Layout:
   │  ────────────        │                              │
   │  Configuración       │                              │
   │  Ayuda               │                              │
-  │  v2.1.4              │                              │
+  │  v2.2.0              │                              │
   └──────────────────────┴──────────────────────────────┘
 """
 
@@ -32,13 +32,15 @@ import ttkbootstrap as ttk
 from tkinter import messagebox
 
 from config.temas import obtener_tema
+from core import sesion
+from shared.perfiles import perfil_por_id
 from shared.registro_modulos import (
     modulos_por_categoria,
-    modulos_activos,
+    modulos_visibles,
     CATEGORIAS,
 )
 
-VERSION = "v2.1.4"
+VERSION = "v2.2.0"
 
 # Colores del sidebar (estilo QVET)
 COLOR_SIDEBAR_BG       = "#2b2b2b"
@@ -75,8 +77,46 @@ class AppPrincipal(ttk.Window):
         self._panel_activo = None
         self._modulo_activo = None
 
+        # Flag de cierre limpio
+        self._app_cerrando = False
+
         self._construir_ui()
+        self.protocol("WM_DELETE_WINDOW", self._cerrar_app)
+        self.report_callback_exception = self._reportar_excepcion
         self.after(50, self._centrar_ventana)
+
+    # ============================================================
+    # Manejo global de excepciones
+    # ============================================================
+
+    def _reportar_excepcion(self, exc_type, exc_value, tb):
+        """
+        Manejador global de excepciones en callbacks de Tk.
+        Ignora TclError por widgets destruidos (típico al cerrar ventanas).
+        """
+        import traceback
+        from tkinter import TclError
+
+        # Errores benignos de widgets destruidos: silencio total.
+        if exc_type is TclError:
+            msg = str(exc_value)
+            if ("invalid command name" in msg
+                    or "bad window path name" in msg
+                    or "application has been destroyed" in msg):
+                return
+
+        # Cualquier otro: imprimir traceback y mostrar mensaje estándar.
+        traceback.print_exception(exc_type, exc_value, tb)
+        try:
+            if not self._sigue_viva():
+                return
+            messagebox.showerror(
+                "Error inesperado",
+                f"{exc_type.__name__}: {exc_value}",
+                parent=self,
+            )
+        except Exception:
+            pass
 
     # ============================================================
     # Construcción general
@@ -117,14 +157,13 @@ class AppPrincipal(ttk.Window):
             bg=COLOR_SIDEBAR_BG, fg="#ffffff",
         ).pack(anchor="w")
 
-        tk.Label(
-            marca, text="Panel de inicio",
-            font=("Segoe UI", 9),
-            bg=COLOR_SIDEBAR_BG, fg="#999999",
-        ).pack(anchor="w")
+        # ---- Bloque de sesión (arriba, junto a la marca) ----
+        self._bloque_sesion = tk.Frame(sidebar, bg=COLOR_SIDEBAR_BG)
+        self._bloque_sesion.pack(fill="x", padx=16, pady=(10, 6))
+        self._actualizar_bloque_sesion()
 
         tk.Frame(sidebar, bg="#444444", height=1).pack(
-            fill="x", padx=12, pady=(10, 10)
+            fill="x", padx=12, pady=(4, 10)
         )
 
         # ---- Navegación por categorías ----
@@ -137,17 +176,27 @@ class AppPrincipal(ttk.Window):
         # ---- Footer ----
         footer = tk.Frame(sidebar, bg=COLOR_SIDEBAR_BG)
         footer.pack(side="bottom", fill="x", padx=10, pady=(10, 14))
+        self._footer = footer
 
         tk.Frame(footer, bg="#444444", height=1).pack(fill="x", pady=(0, 10))
 
-        self._crear_boton_footer(footer, "Configuración", self._abrir_configuracion)
-        self._crear_boton_footer(footer, "Ayuda", self._abrir_ayuda)
+        # Acciones del usuario: Configuración/Mi cuenta · Ayuda · Cerrar sesión
+        texto_config = ("Configuración" if sesion.es_admin() else "Mi cuenta")
+        self._lbl_config = self._crear_boton_footer(
+            footer, texto_config, self._abrir_configuracion
+        )
+        self._lbl_ayuda = self._crear_boton_footer(
+            footer, "Ayuda", self._abrir_ayuda
+        )
+        self._crear_boton_footer(footer, "🚪 Cerrar sesión",
+                                  self._cerrar_sesion)
 
+        # Versión al pie
         tk.Label(
             footer, text=VERSION,
             font=("Segoe UI", 8),
             bg=COLOR_SIDEBAR_BG, fg="#777777",
-        ).pack(anchor="e", pady=(8, 0))
+        ).pack(anchor="e", pady=(10, 0))
 
     def _crear_boton_footer(self, padre, texto, comando):
         """Botón plano para el pie del sidebar."""
@@ -161,6 +210,83 @@ class AppPrincipal(ttk.Window):
         lbl.bind("<Button-1>", lambda _e: comando())
         lbl.bind("<Enter>", lambda _e: lbl.configure(bg=COLOR_MODULO_BG_HOVER))
         lbl.bind("<Leave>", lambda _e: lbl.configure(bg=COLOR_SIDEBAR_BG))
+        return lbl
+
+    def _actualizar_bloque_sesion(self):
+        """
+        Rellena el bloque de sesión de arriba con el usuario actual.
+        Se llama al construir el sidebar y tras cada login.
+        Solo muestra información: las acciones (Configuración / Mi cuenta,
+        Ayuda, Cerrar sesión) viven en el footer.
+        """
+        bloque = self._bloque_sesion
+        for w in bloque.winfo_children():
+            w.destroy()
+
+        s = sesion.actual()
+        if s is None:
+            return
+
+        perfil = perfil_por_id(s.perfil_id)
+        perfil_nombre = perfil.nombre if perfil else s.perfil_id
+        primer_nombre = s.nombre.split()[0] if s.nombre.split() else s.nombre
+
+        tk.Label(
+            bloque,
+            text=f"👤 {primer_nombre} ({perfil_nombre})",
+            font=("Segoe UI", 10, "bold"),
+            bg=COLOR_SIDEBAR_BG, fg="#e0e0e0",
+            anchor="w",
+        ).pack(fill="x")
+
+        tk.Label(
+            bloque, text="Panel de inicio",
+            font=("Segoe UI", 10),
+            bg=COLOR_SIDEBAR_BG, fg="#999999",
+        ).pack(anchor="w")
+
+    def _cerrar_sesion(self):
+        """
+        Cierra la sesión activa y vuelve al login sin reiniciar el proceso.
+        Si el usuario cancela el login, la app se cierra.
+        """
+        self._cerrar_embed()
+        sesion.cerrar_sesion()
+
+        self.withdraw()
+        try:
+            from dialogos.login import mostrar_login
+            ok = mostrar_login(self)
+        except Exception as e:
+            if not self._sigue_viva():
+                return
+            messagebox.showerror(
+                "Error",
+                f"No se pudo abrir el login:\n{e}",
+                parent=self,
+            )
+            ok = False
+
+        if not ok:
+            try:
+                self.destroy()
+            except Exception:
+                pass
+            return
+
+        # Si la app se destruyó durante el login, no seguimos.
+        if not self._sigue_viva():
+            return
+
+        try:
+            self._reconstruir_sidebar()
+            self._verificar_modulo_activo()
+            self.deiconify()
+            self.lift()
+            self.focus_force()
+        except Exception as e:
+            print(f"[_cerrar_sesion] Error al reconstruir: {e}",
+                  file=sys.stderr)
 
     def _crear_categoria_sidebar(self, padre, cat_id, modulos):
         """
@@ -191,7 +317,6 @@ class AppPrincipal(ttk.Window):
             fila_mod = self._crear_fila_modulo(cont_mods, modulo)
             botones_mods.append(fila_mod)
 
-        # Guardar referencias (incluye el widget "siguiente" para el before)
         self._widgets_categoria[cat_id] = {
             "fila_cat": fila_cat,
             "label": lbl_cat,
@@ -212,7 +337,6 @@ class AppPrincipal(ttk.Window):
                 l.configure(bg=COLOR_CATEGORIA_BG),
             ))
 
-        # Estado inicial
         self._categorias_expandidas.setdefault(cat_id, False)
 
     def _crear_fila_modulo(self, padre, modulo):
@@ -268,7 +392,6 @@ class AppPrincipal(ttk.Window):
         cont = info["cont"]
 
         if visible:
-            # Buscar el siguiente widget del nav después de esta categoría
             siguiente = self._siguiente_widget_nav(cat_id)
             if siguiente is not None:
                 cont.pack(fill="x", before=siguiente)
@@ -277,15 +400,12 @@ class AppPrincipal(ttk.Window):
         else:
             cont.pack_forget()
 
-        # Refrescar el color de la cabecera (activo/inactivo)
         self._actualizar_color_categoria(cat_id)
 
     def _siguiente_widget_nav(self, cat_id):
         """
         Devuelve el widget del nav que va inmediatamente después de la
         categoría 'cat_id' (o None si es la última).
-        Sirve para anclar el contenedor de hijos justo debajo de su
-        categoría con pack(before=...).
         """
         orden = list(self._widgets_categoria.keys())
         try:
@@ -318,6 +438,61 @@ class AppPrincipal(ttk.Window):
 
         self._mostrar_hijos(cat_id, nuevo)
 
+    def _reconstruir_sidebar(self):
+        """
+        Vuelve a construir el sidebar desde cero con el estado actual
+        de config_ui.json. Preserva qué categorías estaban expandidas.
+        """
+        expandidas_previas = dict(self._categorias_expandidas)
+
+        for w in self._nav.winfo_children():
+            w.destroy()
+        self._widgets_categoria = {}
+        self._categorias_expandidas = {}
+
+        for cat_id, modulos in modulos_por_categoria().items():
+            self._crear_categoria_sidebar(self._nav, cat_id, modulos)
+
+        for cat_id, estaba in expandidas_previas.items():
+            if cat_id in self._widgets_categoria and estaba:
+                self._categorias_expandidas[cat_id] = True
+                self._mostrar_hijos(cat_id, True)
+
+        if not any(self._categorias_expandidas.values()) and self._widgets_categoria:
+            primera = next(iter(self._widgets_categoria))
+            self._categorias_expandidas[primera] = True
+            self._mostrar_hijos(primera, True)
+
+        # Refrescar texto del botón "Configuración" / "Mi cuenta"
+        if getattr(self, "_lbl_config", None) is not None:
+            try:
+                self._lbl_config.configure(
+                    text=("Configuración" if sesion.es_admin()
+                          else "Mi cuenta")
+                )
+            except Exception:
+                pass
+
+        self._resaltar_modulo_activo(self._modulo_activo)
+        self._actualizar_bloque_sesion()
+
+    def _verificar_modulo_activo(self):
+        """
+        Si el módulo abierto dejó de ser visible (lo desactivaron o el
+        perfil actual ya no lo permite), se cierra el embed.
+        """
+        if self._modulo_activo is None:
+            return
+        from core import config_ui
+        from shared.perfiles import modulo_permitido
+
+        activo = config_ui.modulo_esta_activo(
+            self._modulo_activo.id, default=self._modulo_activo.activo
+        )
+        permitido = modulo_permitido(self._modulo_activo.id)
+        if not (activo and permitido):
+            self._cerrar_embed()
+
     def _resaltar_modulo_activo(self, modulo_activo):
         """Marca con fondo amarillo el módulo activo."""
         try:
@@ -327,25 +502,24 @@ class AppPrincipal(ttk.Window):
                     activo = (modulo_activo is not None and m.id == modulo_activo.id)
 
                     if activo:
-                        # Fondo amarillo + texto negro
                         w["fila"].configure(bg=COLOR_MODULO_BG_ACTIVO)
                         w["texto"].configure(
                             bg=COLOR_MODULO_BG_ACTIVO,
                             fg=COLOR_MODULO_FG_ACTIVO,
                         )
                     else:
-                        # Fondo normal + texto gris claro
                         w["fila"].configure(bg=COLOR_MODULO_BG)
                         w["texto"].configure(
                             bg=COLOR_MODULO_BG,
                             fg=COLOR_MODULO_FG,
                         )
         except Exception as e:
-            print(f"[_resaltar_modulo_activo] Error: {e}")
+            print(f"[_resaltar_modulo_activo] Error: {e}", file=sys.stderr)
 
     # ------------------------------------------------------------
     # Área central
     # ------------------------------------------------------------
+
     def _construir_contenido(self, padre):
         cont = ttk.Frame(padre, padding=(28, 24, 28, 24))
         cont.pack(side="left", fill="both", expand=True)
@@ -401,9 +575,15 @@ class AppPrincipal(ttk.Window):
 
     def _abrir_modulo(self, modulo):
         """Si el módulo declara 'panel', lo embebe. Si no, Toplevel."""
-        # Asegurar categoría expandida
-        for cat_id in self._widgets_categoria:
-            if any(m.id == modulo.id for m in modulos_por_categoria()[cat_id]):
+        from core import config_ui
+        from shared.perfiles import modulo_permitido
+        if not config_ui.modulo_esta_activo(modulo.id, default=modulo.activo):
+            return
+        if not modulo_permitido(modulo.id):
+            return
+
+        for cat_id, info in self._widgets_categoria.items():
+            if any(w["modulo"].id == modulo.id for w in info["modulos"]):
                 if not self._categorias_expandidas.get(cat_id, False):
                     self._categorias_expandidas[cat_id] = True
                     self._mostrar_hijos(cat_id, True)
@@ -428,14 +608,16 @@ class AppPrincipal(ttk.Window):
             app.lift()
             app.focus_force()
         except Exception as e:
+            if not self._sigue_viva():
+                return
             messagebox.showerror(
                 "Error",
                 f"No se pudo abrir {modulo.nombre}:\n{e}",
+                parent=self,
             )
 
     def _abrir_embed(self, modulo):
         try:
-            # ---- Limpiar panel anterior si existe ----
             if getattr(self, "_panel_activo", None) is not None:
                 try:
                     self._panel_activo.destroy()
@@ -443,21 +625,17 @@ class AppPrincipal(ttk.Window):
                     pass
                 self._panel_activo = None
 
-            # Por si quedara algún widget residual en el área embed
             for w in self._area_embed.winfo_children():
                 try:
                     w.destroy()
                 except Exception:
                     pass
 
-            # Ocultar pantalla de inicio
             self._pantalla_inicio.pack_forget()
 
-            # Barra superior
             for w in self._barra_embed.winfo_children():
                 w.destroy()
 
-            # Botón "volver": solo la flecha
             ttk.Button(
                 self._barra_embed,
                 text="←",
@@ -475,7 +653,6 @@ class AppPrincipal(ttk.Window):
             self._barra_embed.pack(fill="x", pady=(0, 10))
             self._area_embed.pack(fill="both", expand=True)
 
-            # Crear panel nuevo
             self._panel_activo = modulo.panel(
                 master=self._area_embed,
                 on_volver=self._cerrar_embed,
@@ -484,9 +661,12 @@ class AppPrincipal(ttk.Window):
             self._modulo_activo = modulo
 
         except Exception as e:
+            if not self._sigue_viva():
+                return
             messagebox.showerror(
                 "Error",
                 f"No se pudo abrir {modulo.nombre} embebido:\n{e}",
+                parent=self,
             )
             self._cerrar_embed()
 
@@ -499,22 +679,29 @@ class AppPrincipal(ttk.Window):
         except Exception:
             pass
 
-        self._barra_embed.pack_forget()
-        self._area_embed.pack_forget()
-        self._pantalla_inicio.pack(fill="both", expand=True)
-
-        self._resaltar_modulo_activo(None)
+        try:
+            self._barra_embed.pack_forget()
+            self._area_embed.pack_forget()
+            self._pantalla_inicio.pack(fill="both", expand=True)
+            self._resaltar_modulo_activo(None)
+        except Exception:
+            pass
 
     def _cerrar_modulo(self, app):
         try:
             app.destroy()
         except Exception:
             pass
-        self.lift()
-        self.focus_force()
+        if not self._sigue_viva():
+            return
+        try:
+            self.lift()
+            self.focus_force()
+        except Exception:
+            pass
 
     def _registrar_atajos(self):
-        for m in modulos_activos():
+        for m in modulos_visibles():
             if not m.atajo:
                 continue
             self.bind_all(
@@ -529,27 +716,97 @@ class AppPrincipal(ttk.Window):
     def _abrir_configuracion(self):
         try:
             from dialogos.config_general import abrir_dialogo_config_general
-            abrir_dialogo_config_general(self)
+            dlg = abrir_dialogo_config_general(self)
+            self.wait_window(dlg)
         except Exception as e:
+            if not self._sigue_viva():
+                return
             messagebox.showerror(
                 "Error",
                 f"No se pudo abrir la configuración:\n{e}",
+                parent=self,
             )
+            return
+
+        # Después del wait_window, la app puede haberse destruido si el
+        # usuario cerró la ventana principal mientras Config estaba abierta.
+        if not self._sigue_viva():
+            return
+
+        try:
+            self._reconstruir_sidebar()
+            self._verificar_modulo_activo()
+        except Exception as e:
+            print(f"[_abrir_configuracion] Error al reconstruir: {e}",
+                  file=sys.stderr)
 
     def _abrir_ayuda(self):
         try:
             from dialogos.manual import abrir_manual
             abrir_manual(self)
         except Exception as e:
+            if not self._sigue_viva():
+                return
             messagebox.showerror(
                 "Error",
                 f"No se pudo abrir el manual:\n{e}",
+                parent=self,
             )
 
+    # ============================================================
+    # Ciclo de vida
+    # ============================================================
+
+    def _sigue_viva(self) -> bool:
+        """True si la ventana raíz sigue existiendo y es usable."""
+        try:
+            return bool(self.winfo_exists())
+        except Exception:
+            return False
+
+    def _cerrar_app(self):
+        """
+        Cierra la app limpiamente: destruye los Toplevel hijos antes de
+        destruir la raíz, para evitar callbacks diferidos contra widgets
+        ya muertos.
+        """
+        self._app_cerrando = True
+
+        try:
+            self._destruir_toplevels_recursivo(self)
+        except Exception:
+            pass
+
+        try:
+            self._cerrar_embed()
+        except Exception:
+            pass
+
+        try:
+            self.destroy()
+        except Exception:
+            pass
+
+    def _destruir_toplevels_recursivo(self, padre):
+        """Destruye recursivamente todos los Toplevel descendientes."""
+        for w in list(padre.winfo_children()):
+            if isinstance(w, tk.Toplevel):
+                try:
+                    self._destruir_toplevels_recursivo(w)
+                except Exception:
+                    pass
+                try:
+                    w.destroy()
+                except Exception:
+                    pass
+
     def _centrar_ventana(self):
-        self.update_idletasks()
-        ancho = 1040
-        alto = 720
-        x = (self.winfo_screenwidth() - ancho) // 2
-        y = (self.winfo_screenheight() - alto) // 2
-        self.geometry(f"{ancho}x{alto}+{x}+{y}")
+        try:
+            self.update_idletasks()
+            ancho = 1040
+            alto = 720
+            x = (self.winfo_screenwidth() - ancho) // 2
+            y = (self.winfo_screenheight() - alto) // 2
+            self.geometry(f"{ancho}x{alto}+{x}+{y}")
+        except Exception:
+            pass

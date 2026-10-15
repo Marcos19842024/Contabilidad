@@ -25,6 +25,11 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 - `"tema"` → nombre del tema ttkbootstrap (ej. `"darkly"`)
 - `"veterinaria"` → `{nombre, sucursal_activa, sucursales: [...]}`
 
+**Claves adicionales:**
+- `"modulos_activos"` → `{id_modulo: bool}` (activación global de módulos)
+- `"perfiles"` → lista de perfiles `[{id, nombre, descripcion, modulos}]`.
+  Si falta, se siembra con los defaults de `shared/perfiles.py`.
+
 **Sucursales (fuente de verdad única):**
 - Definidas en `config/veterinaria.py` (`SUCURSALES_DEFAULT`).
 - Se editan SOLO desde **Configuración General → tab 🏥 Veterinaria**.
@@ -34,6 +39,13 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 - Los `nombre_corto` actuales: `"Baalak"`, `"Prado"`, `"Animalia"`.
 - La activa se marca con el botón **● Marcar como activa** (no hay checkbox).
 - El diálogo de detalle NO tiene checkbox "activa" — se maneja desde la tabla.
+
+**Perfiles y usuarios (v2.2.0):**
+- Los perfiles viven en `config_ui.json#perfiles`. Fuente de verdad.
+- Las cuentas de usuario viven en `usuarios.json` (raíz de datos).
+- El perfil activo vive SOLO en memoria (`core/sesion.py`).
+- La app arranca en login. Sin sesión no hay módulos visibles.
+- Solo `admin` puede gestionar perfiles, usuarios y módulos.
 
 **Módulo compartido de acceso:**
 - `core/config_ui.py` → única API para leer/escribir `config_ui.json`.
@@ -197,6 +209,19 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 | `core/recordatorios/envio.py` | WhatsApp (wa.me) + portapapeles |
 | `core/recordatorios/historial.py` | Historial de envíos |
 
+### Autenticación, sesión y perfiles
+| Archivo | Propósito |
+|---------|-----------|
+| `core/auth.py` | Hash/verificación de contraseñas (PBKDF2-SHA256) + generación de password temporal legible |
+| `core/sesion.py` | Estado en memoria de la sesión activa. NO se persiste |
+| `core/usuarios.py` | CRUD de `usuarios.json` + reglas de "no quedar sin admins" |
+| `shared/perfiles.py` | Perfiles: semilla + validación + CRUD. Fuente de verdad en `config_ui.json#perfiles` |
+| `dialogos/login.py` | Login modal + bootstrap de primer arranque |
+| `dialogos/usuario_editar.py` | Alta/edición de usuarios (admin) |
+| `dialogos/perfil_editar.py` | Alta/edición de perfiles (admin) |
+| `dialogos/sucursal_detalle.py` | Alta/edición de sucursales (extraído de config_general) |
+| `scripts/probar_auth.py` | Pruebas de auth, sesión, perfiles y módulos |
+
 ---
 
 ## Reglas importantes
@@ -239,6 +264,61 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 27. El botón "Probar FIEL" vive en dialogos/egresos_config.py (junto a
   las credenciales), no en el diálogo de descarga. Prueba los valores
   actuales del formulario, no los guardados.
+28. Los módulos se activan/desactivan desde Config General → tab 🧩 Módulos.
+29. El estado de activación vive en `config_ui.json#modulos_activos`
+  (`{id: bool}`). El campo `activo` del registro
+  (`shared/registro_modulos.py`) es solo el DEFAULT para módulos nuevos.
+30. El sidebar usa `modulos_por_categoria()`, que filtra por
+  config Y por perfil de la sesión, y OMITE categorías sin módulos
+  visibles. `modulos_visibles()` es la lista plana.
+31. Al cerrar Config General, la ventana principal reconstruye el sidebar
+  (`_reconstruir_sidebar`) y, si el módulo abierto quedó inactivo o ya
+  no lo permite el perfil, cierra el embed (`_verificar_modulo_activo`).
+32. Los perfiles se declaran/editan en `config_ui.json#perfiles`. Los
+  defaults de `shared/perfiles.py` son la SEMILLA inicial (se copian
+  si la clave no existe).
+33. El perfil `admin` es **intocable**: siempre existe, siempre ve todo,
+  siempre puede configurar. Si falta o está alterado en config, se
+  regenera al vuelo desde `shared/perfiles.py`.
+34. Las cuentas de usuario viven en `usuarios.json` (raíz de datos,
+  junto a `config_ui.json`). NO va a git. Solo admin las edita desde
+  Config General → 👥 Usuarios.
+35. El perfil activo NO vive en `config_ui.json`. Vive en
+  `core/sesion.py` (memoria). Se resuelve al hacer login. Así el
+  JSON de config no se manipula para escalar privilegios.
+36. Sin sesión activa no se ve NINGÚN módulo. La app arranca en login.
+37. Un módulo es visible si: (a) está activo en `config_ui.json` Y
+  (b) el perfil de la sesión lo permite.
+38. Solo el perfil `admin` tiene `puede_configurar=True`. Los tabs
+  🎨 Apariencia, 🏥 Veterinaria, 🧩 Módulos, 🧑 Perfiles y 👥 Usuarios
+  solo se muestran si `sesion.es_admin()`. El tab 🔒 Mi cuenta lo ve
+  todo el mundo.
+39. No se puede eliminar ni desactivar al último admin activo. La app
+  lo rechaza con mensaje claro. Tampoco se puede eliminar la propia
+  cuenta desde la sesión activa.
+40. Las contraseñas se hashean con **PBKDF2-SHA256, 600k iteraciones,
+  salt 16 bytes por usuario**. Implementación en `core/auth.py`. NUNCA
+  se guarda en claro. NUNCA se compara con `==` (usar
+  `hmac.compare_digest`).
+41. Primer arranque: si no hay `usuarios.json`, se crea un admin con
+  contraseña aleatoria legible (12+ chars) y se muestra UNA VEZ en
+  pantalla con checkbox de confirmación. Si el usuario cancela, el
+  admin se elimina y se fuerza bootstrap limpio en el siguiente
+  arranque.
+42. Un perfil NO se puede eliminar si hay usuarios asignados a él. La
+  UI lo rechaza y muestra la lista de usuarios. No hay reasignación
+  automática.
+43. El `id` de un perfil es estable (`snake_case`, 3–32 chars). Solo se
+  puede editar su nombre visible, descripción y módulos. El id no se
+  cambia ni al editar.
+44. Un módulo nuevo NO se añade solo a los perfiles con lista explícita.
+  Hay que marcarlo en cada perfil que deba verlo (`"*"` es la
+  excepción: admin ve todo automáticamente).
+45. Cambiar de perfil/sesión NO es autenticación completa: es solo un
+  filtro de UI basado en login. La contraseña es la única barrera.
+  No hay 2FA, expiración de sesión, ni bloqueo por intentos.
+46. Los diálogos de detalle de sucursal viven en
+  `dialogos/sucursal_detalle.py`, no en `dialogos/config_general.py`.
 
 ---
 
@@ -483,6 +563,14 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ## Estado actual
 
+- ✅ Autenticación con login obligatorio (PBKDF2, 600k iteraciones)
+- ✅ Sesión en memoria, sin persistencia del perfil
+- ✅ Perfiles editables desde Config General (admin intocable)
+- ✅ Usuarios editables desde Config General
+- ✅ Módulos activables/desactivables desde Config
+- ✅ Sidebar filtra por activo ∧ permitido por perfil
+- ✅ Tab "Mi cuenta" para cambiar la propia contraseña
+- ✅ `scripts/probar_auth.py` con 86 checks verdes
 - ✅ Ingresos funcional (con fórmulas por remisión)
 - ✅ Egresos: descarga, procesa, mueve, Excel
 - ✅ XMLs de Egresos se archivan por fecha real de factura
@@ -502,10 +590,52 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 - ✅ `catalogo_qvet.json` en `ingresos/`
 - ✅ `Reportes Recordatorios` en `~/Documents/`
 - ⏳ Pendiente: pruebas con SAT real y cliente final
+- ✅ Activar/desactivar módulos desde Config General
 
 ---
 
 ## Historial de versiones
+
+### v2.2.0 — Autenticación, perfiles y usuarios
+- **Nuevo: sistema de autenticación completo.**
+  - `core/auth.py` — hash PBKDF2-SHA256, 600k iteraciones, salt por usuario.
+  - `core/sesion.py` — sesión activa en memoria. NO se persiste.
+  - `core/usuarios.py` — CRUD de `usuarios.json` + reglas de admins.
+  - `shared/perfiles.py` — perfiles como semilla + CRUD, admin blindado.
+- **Nuevo: `dialogos/login.py`** — login modal + bootstrap de primer arranque.
+- **Cambio mayor: la app arranca en login.** Sin sesión no hay módulos visibles.
+- **Nuevo: `dialogos/usuario_editar.py`** — alta/edición de usuarios.
+- **Nuevo: `dialogos/perfil_editar.py`** — alta/edición de perfiles.
+- **Nuevo: `dialogos/sucursal_detalle.py`** — extraído de `config_general.py`.
+- **Config General reescrito:** tabs filtrados por perfil. No-admin solo ve
+  "Mi cuenta". Admin ve además Apariencia, Veterinaria, Módulos, Perfiles y Usuarios.
+- **Sidebar rediseñado:** bloque de sesión arriba (nombre + perfil),
+  footer con Configuración/Mi cuenta · Ayuda · Cerrar sesión.
+- **Perfiles editables desde la UI.** Admin intocable. No se elimina un perfil
+  con usuarios asignados. Módulos por perfil en `config_ui.json#perfiles`.
+- **Módulos activables/desactivables** (ya en v2.1.8, consolidado aquí).
+- **Fix: cerrar la ventana principal con Config abierto ya no muestra
+  messagebox de error.**
+- **Fix: login en macOS ya no queda bloqueado por `transient` sobre
+  ventana withdrawn.**
+- **Migración automática:** `config_ui.json#perfiles` se siembra con los
+  defaults la primera vez que se lee.
+- **`scripts/probar_auth.py`** — 86 checks de auth/sesión/perfiles/módulos.
+
+### v2.1.8 — Activar/desactivar módulos desde Config
+- **Nuevo: tab 🧩 Módulos** en Config General con checkboxes por módulo,
+  agrupados por categoría. Guarda al instante.
+- **`config_ui.modulos_activos()` / `modulo_esta_activo()` /
+  `set_modulo_activo()`** — estado en `config_ui.json#modulos_activos`.
+- **`shared.registro_modulos.modulos_visibles()`** reemplaza a
+  `modulos_activos()` (eliminada). `modulos_por_categoria()` filtra por
+  config y omite categorías vacías.
+- **`app/principal.py`**: `_reconstruir_sidebar()` tras cerrar Config;
+  `_verificar_modulo_activo()` cierra el embed si lo desactivaron;
+  `_abrir_modulo()` ignora módulos inactivos (atajos viejos).
+- **`abrir_dialogo_config_general()`** ahora devuelve el Toplevel para
+  poder hacer `wait_window`.
+- **`verificar_config.py`**: bloque [8] valida `modulos_activos`.
 
 ### v2.1.7 — Rediseño de ventana principal + embed completo
 - **Nuevo: `shared/registro_modulos.py`** — registro declarativo de módulos.
@@ -639,3 +769,8 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 - [ ] Tests del pipeline de Ingresos.
 - [ ] Refactor v3.0.0 por dominio funcional.
 - [ ] Actualizar el manual.
+- [ ] Ampliar `verificar_config.py` con bloque `[10]` para `usuarios.json`.
+- [ ] Ampliar `scripts/probar_auth.py` con tests de integración de perfiles.
+- [ ] Migración de usuarios huérfanos (perfil borrado tras asignar usuario).
+- [ ] Log de auditoría de cambios de perfiles/usuarios.
+- [ ] Sección de login y perfiles en el manual.

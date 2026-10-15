@@ -1,105 +1,100 @@
-# Sesión de trabajo — 2026-10-13 (v2.1.7)
+# Sesión de trabajo — 2026-10-15 (v2.2.0)
 
 ## Resumen
-Rediseño completo de la ventana principal: sidebar estilo QVET con
-categorías colapsables + migración de los 4 módulos a embed (Frame).
-Además: botón "Probar FIEL" movido a Config, fix de paneles acumulados.
+Sistema completo de autenticación, perfiles y usuarios. La app arranca
+en login. Sidebar y Config General se filtran por perfil. Módulos
+activables/desactivables y perfiles editables desde la UI.
 
 ## Qué se hizo
 
-### 1. Registro declarativo de módulos (`shared/registro_modulos.py`)
-- Archivo nuevo. Cada módulo se declara una sola vez con:
-  `id, nombre, descripcion, icono, categoria, factory, panel, atajo, activo`.
-- `factory(master)` → abre como Toplevel (legacy).
-- `panel(master, on_volver)` → abre como Frame embebido (preferido).
-- Helpers: `modulos_activos()`, `modulos_por_categoria()`, `buscar_modulo()`.
-- Agregar un módulo nuevo = una entrada en `MODULOS`, sin tocar `app/principal.py`.
+### 1. Autenticación (Fases 1–3)
+- **`core/auth.py`** — PBKDF2-SHA256, 600k iteraciones, salt 16 bytes por
+  usuario. `hashear_password()`, `verificar_password()` (comparación en
+  tiempo constante), `generar_password_temporal()` (12+ chars legibles).
+- **`core/sesion.py`** — sesión activa en memoria. NO se persiste. El
+  perfil activo vive aquí, no en `config_ui.json`, para evitar escalada
+  de privilegios editando el JSON.
+- **`core/usuarios.py`** — CRUD de `usuarios.json` (raíz de datos).
+  Reglas de negocio: no eliminar/desactivar al último admin activo.
+- **`shared/perfiles.py`** — 5 perfiles iniciales (admin, contabilidad,
+  almacen, cajero, medico). Admin blindado. Fuente de verdad en
+  `config_ui.json#perfiles`, defaults aquí.
+- **`dialogos/login.py`** — login modal + bootstrap de primer arranque.
+  En macOS, sin `transient` ni `grab_set` sobre padre withdrawn.
+- **`main.py`** — DPI awareness → crear AppPrincipal → withdraw →
+  mostrar_login → si OK, deiconify + mainloop.
 
-### 2. Rediseño de `app/principal.py` — sidebar estilo QVET
-- Sidebar lateral oscuro (`#2b2b2b`), categorías colapsables
-  (`▶`/`▼`), módulos indentados debajo de su categoría.
-- Sin iconos ni flechas en las categorías (solo texto).
-- El módulo activo se resalta con fondo amarillo (`#f0a500`) y texto negro.
-- Sidebar usa `tk.Frame` + `tk.Label` (no ttk) para evitar que
-  ttkbootstrap sobrescriba `bg`/`fg`.
-- Área central: pantalla de bienvenida simple (sin tarjetas de módulos)
-  cuando no hay módulo abierto; barra "←" + panel embebido cuando sí.
-- Botón "Volver" del embed es solo la flecha `←`, sin texto ni contorno
-  (`bootstyle="link"`).
-- Atajos Ctrl+1..Ctrl+4 declarados en el registro, bindeados por el shell.
+### 2. Sidebar con sesión (Fase 3)
+- Bloque de sesión arriba: `👤 Ana (Administrador)`.
+- Footer: `Configuración`/`Mi cuenta` (según perfil) · `Ayuda` ·
+  `🚪 Cerrar sesión`.
+- Cerrar sesión vuelve al login sin reiniciar el proceso.
 
-### 3. Migración de los 4 módulos a embed
-Todos siguen el mismo patrón: `AppX(ttk.Toplevel)` → `PanelX(ttk.Frame)`,
-y se mantiene `AppX(ttk.Toplevel)` como **wrapper legacy** para no romper
-imports existentes.
+### 3. Config General con tabs filtrados (Fases 4a–4c)
+- Tab **🔒 Mi cuenta** (todos los perfiles) — cambiar la propia contraseña.
+- Tabs admin: 🎨 Apariencia, 🏥 Veterinaria, 🧩 Módulos, 🧑 Perfiles,
+  👥 Usuarios.
+- CRUD de usuarios desde la UI. Contraseña editable en el diálogo de
+  edición (vacío = no cambiar).
+- Sucursales extraídas a `dialogos/sucursal_detalle.py`.
 
-- **Estética y Transportes** → `PanelEsteticaTransportes(ttk.Frame)`.
-- **Recordatorios** → `PanelRecordatorios(ttk.Frame)`.
-- **Egresos** → `PanelEgresos(ttk.Frame)`.
-  - Fix: `_preguntar_accion_excel` usa `parent.winfo_toplevel()` para
-    `transient`, así funciona con Frame o Toplevel como parent.
-- **Ingresos** → `PanelIngresos(ttk.Frame)`.
-  - `_actualizar_titulo` convertido en no-op (no aplica en Frame).
+### 4. Perfiles editables (Sub-fases A y B)
+- Perfiles movidos a `config_ui.json#perfiles`. Defaults como semilla.
+- Admin blindado: no editable, no eliminable, siempre `modulos="*"`.
+- CRUD de perfiles desde la UI. No se elimina un perfil con usuarios
+  asignados (rechazo con lista de usuarios).
+- Cambios en perfiles aplican al siguiente login del usuario afectado,
+  no en caliente.
 
-### 4. Fix: paneles acumulados al cambiar de módulo
-- Al abrir un módulo embebido sin haber hecho "←", el panel anterior
-  quedaba vivo y se apilaba debajo del nuevo.
-- Fix en `app/principal.py::_abrir_embed`: destruye el panel anterior
-  (y limpia el área embed) antes de crear el nuevo.
-
-### 5. Mover botón "Probar FIEL" a Config
-- Antes: en `dialogos/descargar_sat.py` (junto al botón Descargar).
-- Ahora: en `dialogos/egresos_config.py` (junto a las credenciales FIEL).
-- Prueba los valores **actuales del formulario** (aunque no estén guardados).
-- Corre en hilo, muestra estado verde/rojo.
-- Sigue sin gastar solicitud (usa `Autenticacion`).
+### 5. Bugs resueltos
+- Login en macOS con `transient` sobre padre withdrawn → queda colgado.
+- Bootstrap no bloqueante → doble ventana superpuesta.
+- Cancelar bootstrap → admin huérfano con contraseña perdida.
+- Cerrar ventana principal con Config abierto → messagebox de error.
+- `_abrir_configuracion` faltante tras refactor.
+- `_abrir_ayuda` duplicado.
 
 ## Estado actual
-- ✅ Sidebar QVET con categorías colapsables y módulos indentados.
-- ✅ Los 4 módulos migrados a embed (Frame).
-- ✅ Wrappers legacy `AppX(ttk.Toplevel)` mantenidos.
-- ✅ Botón "Probar FIEL" en Config, no en Descargar.
-- ✅ Sin paneles acumulados al cambiar de módulo.
+- ✅ Login obligatorio (PBKDF2-SHA256, 600k iteraciones).
+- ✅ Sesión en memoria, sin persistencia del perfil.
+- ✅ Sidebar filtrado por activo ∧ permitido por perfil.
+- ✅ Perfiles editables desde Config General (admin intocable).
+- ✅ Usuarios editables desde Config General.
+- ✅ Módulos activables/desactivables desde Config.
+- ✅ Tab "Mi cuenta" para cambiar la propia contraseña.
+- ✅ `scripts/probar_auth.py` con 86 checks verdes.
 - ✅ `python3 verificar_config.py` OK.
 - ⏳ Pendiente: pruebas con SAT real y cliente final.
 
-## Próximos pasos sugeridos
-- A) **Refactor v3.0.0 por dominio funcional** (el grande).
-- B) **Rotación de snapshots SAT** (evitar llenar el disco).
-- C) **Anexar + reordenar Excel de Egresos** cuando ya existe con anotaciones.
-- D) **Tests con pytest** sobre snapshots reales (anonimizados).
-- E) **Tests de `core/config_ui.py`** y `shared/registro_modulos.py`.
-
 ## Cómo trabajar
 - Configuración compartida → `core/config_ui.py`.
+- Cuentas de usuario → `core/usuarios.py` + `usuarios.json`.
+- Perfiles → `config_ui.json#perfiles` (semilla en `shared/perfiles.py`).
+- Sesión activa → `core/sesion.py`.
 - Sucursales → `config/veterinaria.py` (fuente de verdad).
 - Registro de módulos → `shared/registro_modulos.py`.
-- Antes de tocar: correr `python3 verificar_config.py`.
-- Los JSON de datos NO van a git.
-- `config_ui.json` se autocrea; no lo borres.
-- Historial del SAT: `python3 scripts/probar_egresos.py --historial status`.
+- Antes de tocar: correr `python3 verificar_config.py` y
+  `python3 scripts/probar_auth.py`.
+- Los JSON de datos NO van a git (`config_ui.json`, `usuarios.json`).
 
-## Pendientes de la sesión (deuda técnica)
-
-### Egresos
-- [ ] **Anexar + reordenar Excel.** El diálogo de 3 opciones (Anexar /
-  Reemplazar / Omitir) ya existe en `_preguntar_accion_excel`.
-- [ ] **`actualizar_json` y `mover_y_renombrar_egresos`** hacen cosas
-  parecidas. Fusionar en el refactor.
+## Pendientes (deuda técnica)
 
 ### Testing
-- [ ] **pytest** sobre snapshots reales (anonimizados).
-- [ ] Tests de `core/config_ui.py`.
-- [ ] Tests de `shared/registro_modulos.py`.
+- [ ] Ampliar `verificar_config.py` con bloque `[10]` para `usuarios.json`.
+- [ ] Ampliar `scripts/probar_auth.py` con tests de integración de perfiles.
+- [ ] pytest sobre snapshots reales (anonimizados).
 - [ ] Tests del pipeline de Ingresos.
 
-### Arquitectura
-- [ ] **Refactor v3.0.0 por dominio funcional:**
-  - `ingresos/`, `egresos/`, `estetica_transportes/`, `recordatorios/`
-  - Cada dominio autocontenido (módulo + lógica + rutas + diálogos + tests).
-  - `shared/` para código transversal (config_ui, registro_modulos, rutas base).
+### Autenticación
+- [ ] Migración de usuarios huérfanos (perfil borrado tras asignar usuario).
+- [ ] Log de auditoría de cambios de perfiles/usuarios.
+- [ ] (Opcional) Bloqueo por intentos fallidos.
+- [ ] (Opcional) Expiración de sesión.
 
-### Otros
-- [ ] **Rotación de snapshots SAT** (borrar los más viejos automáticamente).
-- [ ] **Revisar 5 XMLs ignorados** en `/tmp/sat_descargas/` (no son Ingreso,
-  probablemente notas de crédito).
+### Módulos y arquitectura
+- [ ] Refactor v3.0.0 por dominio funcional.
+- [ ] Rotación de snapshots SAT.
+- [ ] Anexar + reordenar Excel de Egresos con anotaciones.
+
+### Documentación
+- [ ] Sección de login y perfiles en `MANUAL.md`.

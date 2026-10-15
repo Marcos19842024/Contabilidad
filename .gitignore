@@ -87,3 +87,6 @@ Thumbs.db
 *.swp
 *.bak
 *.log
+usuarios.json
+usuarios.json.tmp
+

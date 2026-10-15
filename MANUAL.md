@@ -1,6 +1,6 @@
 # Manual de Usuario - Vet Suite
 
-**Versión:** 2.1.0  
+**Versión:** 2.2.0  
 **Última actualización:** Octubre 2026
 
 ---
@@ -9,19 +9,21 @@
 
 1. Introducción
 2. Instalación
-3. Configuración inicial
-4. Flujo de trabajo diario (Ingresos)
-5. Reclasificación de productos
-6. Generación de Excel (Ingresos)
-7. Reportes (Ingresos)
-8. Adjuntos
-9. Módulo de Egresos
-10. Módulo de Estética y Transportes
-11. Módulo de Recordatorios
-12. Configuración avanzada
-13. Solución de problemas
-14. Preguntas frecuentes
-15. Glosario
+3. Inicio de sesión y perfiles
+4. Configuración inicial
+5. Flujo de trabajo diario (Ingresos)
+6. Reclasificación de productos
+7. Generación de Excel (Ingresos)
+8. Reportes (Ingresos)
+9. Adjuntos
+10. Módulo de Egresos
+11. Módulo de Estética y Transportes
+12. Módulo de Recordatorios
+13. Administración del sistema
+14. Configuración avanzada
+15. Solución de problemas
+16. Preguntas frecuentes
+17. Glosario
 
 ---
 
@@ -59,6 +61,22 @@ Software:
 - e.firma del SAT (.cer y .key) (para Egresos).
 - WhatsApp Desktop instalado (recomendado para Recordatorios).
 
+### ¿Quién puede ver qué?
+
+La app tiene **perfiles de trabajo**. Cada usuario entra con un perfil que
+determina qué módulos ve:
+
+| Perfil | Módulos visibles |
+|--------|------------------|
+| Administrador | Todos (Ingresos, Egresos, Estética, Recordatorios) + configuración |
+| Contabilidad | Ingresos, Egresos |
+| Almacén | Ingresos |
+| Cajero | Estética y Transportes, Recordatorios |
+| Médico | Recordatorios |
+
+El administrador puede crear perfiles nuevos o modificar los existentes
+(ver sección 13).
+
 ---
 
 ## 2. Instalación
@@ -82,16 +100,96 @@ Software:
 
 ### 2.3 Primer arranque
 
-Al abrir la app por primera vez se crea automáticamente la carpeta de datos:
+Al abrir la app por primera vez:
 
-- Windows: `C:\Users\<usuario>\Documents\Vet Suite\`
-- macOS: `~/Documents/Vet Suite/`
+1. Se crea automáticamente la carpeta de datos:
+   - Windows: `C:\Users\<usuario>\Documents\Vet Suite\`
+   - macOS: `~/Documents/Vet Suite/`
+
+2. Se crea un **usuario administrador** con una contraseña temporal
+   aleatoria (ej. `TortugaZapato42`).
+
+3. La app **muestra la contraseña UNA SOLA VEZ**, con un botón para
+   copiarla al portapapeles.
+
+4. Anota la contraseña en un lugar seguro y marca la casilla
+   "Ya anoté la contraseña" para continuar.
+
+> ⚠️ **Si cierras esa ventana sin marcar la casilla**, la app borra el
+> administrador recién creado y vuelve a empezar en el siguiente arranque.
+> Esto es para evitar dejar un usuario con contraseña que nadie conoce.
+
+5. Después te pide iniciar sesión con `admin` y la contraseña temporal.
+
+6. Una vez dentro, **cambia la contraseña** desde Configuración → Mi cuenta
+   (ver sección 13).
 
 ---
 
-## 3. Configuración inicial
+## 3. Inicio de sesión y perfiles
 
-### 3.1 Conectar con Gmail (para Ingresos)
+### 3.1 Iniciar sesión
+
+Al abrir la app, siempre pide usuario y contraseña:
+
+1. **Usuario**: el nombre de usuario (minúsculas, sin espacios).
+2. **Contraseña**.
+3. Enter o clic en "Entrar".
+
+Si los datos no coinciden, verás "Usuario o contraseña incorrectos". No
+te dice cuál de los dos falló (por seguridad).
+
+### 3.2 Cerrar sesión
+
+En el panel lateral izquierdo, al pie:
+
+`🚪 Cerrar sesión`
+
+Vuelve al login sin cerrar la app. Útil si varias personas usan la misma
+computadora con perfiles distintos.
+
+### 3.3 Olvidé mi contraseña
+
+No hay auto-recuperación. Pídele al **administrador** que te cambie la
+contraseña desde Configuración → Usuarios (ver sección 13).
+
+### 3.4 Mi cuenta (cambiar mi contraseña)
+
+Cualquier usuario puede cambiar su propia contraseña:
+
+1. Clic en **Mi cuenta** (o **Configuración** si eres admin) en el pie
+   del panel lateral.
+2. Pestaña **🔒 Mi cuenta**.
+3. Escribe la contraseña actual, la nueva y su confirmación.
+4. Clic en "Cambiar contraseña".
+
+Reglas:
+
+- La nueva debe tener **mínimo 8 caracteres**.
+- La nueva no puede ser igual a la actual.
+- La confirmación debe coincidir.
+
+### 3.5 ¿Qué es un perfil?
+
+Un **perfil** determina qué módulos puede ver un usuario. Por ejemplo:
+
+- Un **cajero** solo ve Estética, Transportes y Recordatorios.
+- Un **contador** solo ve Ingresos y Egresos.
+
+El perfil no cambia lo que el usuario puede hacer con los datos: si un
+usuario ve un módulo, puede usarlo completo. Si no lo ve, no existe para él.
+
+### 3.6 ¿Qué pasa si me cambian el perfil?
+
+El cambio aplica en el **próximo inicio de sesión**. La sesión activa
+mantiene el perfil con el que entró. Esto evita cambios sorpresivos a
+mitad de una tarea.
+
+---
+
+## 4. Configuración inicial
+
+### 4.1 Conectar con Gmail (para Ingresos)
 
 1. Genera una contraseña de aplicación en: https://myaccount.google.com/apppasswords
 2. Abre la app, entra a Ingresos, clic en Sincronizar.
@@ -104,7 +202,7 @@ Al abrir la app por primera vez se crea automáticamente la carpeta de datos:
 
 La config se guarda en `~/Documents/Vet Suite/ingresos/gmail_config.json`.
 
-### 3.2 Configurar la e.firma (para Egresos)
+### 4.2 Configurar la e.firma (para Egresos)
 
 1. Abre Egresos.
 2. Clic en `⚙️ Configuración SAT`.
@@ -117,11 +215,14 @@ La config se guarda en `~/Documents/Vet Suite/ingresos/gmail_config.json`.
 
 La app convierte los archivos automáticamente. No tienes que hacer nada extra.
 
-### 3.3 Elegir tema visual
+### 4.3 Elegir tema visual
 
-1. En la pantalla principal, clic en `⚙️ Configuración`.
-2. Elige un tema.
-3. Aplicar y guardar.
+Solo el **administrador** puede cambiar el tema:
+
+1. En el panel lateral, clic en **Configuración**.
+2. Pestaña **🎨 Apariencia**.
+3. Elige un tema.
+4. Aplicar y guardar.
 
 Temas recomendados:
 
@@ -131,9 +232,9 @@ Temas recomendados:
 
 ---
 
-## 4. Flujo de trabajo diario (Ingresos)
+## 5. Flujo de trabajo diario (Ingresos)
 
-### 4.1 Sincronizar facturas del correo
+### 5.1 Sincronizar facturas del correo
 
 1. Clic en Sincronizar.
 2. Elige modo:
@@ -146,7 +247,7 @@ Temas recomendados:
    - "Solo guardar los archivos"
 5. Revisa el resumen.
 
-### 4.2 Leer facturas manualmente
+### 5.2 Leer facturas manualmente
 
 1. Clic en Leer factura.
 2. Selecciona el XML.
@@ -154,7 +255,7 @@ Temas recomendados:
 4. La app procesa el XML y el PDF automáticamente.
 5. El registro aparece en la tabla.
 
-### 4.3 La tabla de registros
+### 5.3 La tabla de registros
 
 La tabla muestra:
 
@@ -165,7 +266,7 @@ La tabla muestra:
 
 Los campos de categorías (U, ACCESORIOS, MEDICAMENTOS, HIGIENE, ESTETICA, TRANSPORTE, PENSION, VACUNA, CLINICA) **se guardan automáticamente** cuando procesas una factura, y se usan al generar el Excel.
 
-### 4.4 Ver adjuntos y editar
+### 5.4 Ver adjuntos y editar
 
 1. Doble clic en un registro → abre el diálogo de edición.
 2. Puedes:
@@ -174,7 +275,7 @@ Los campos de categorías (U, ACCESORIOS, MEDICAMENTOS, HIGIENE, ESTETICA, TRANS
    - Eliminar el registro.
 3. Guardar o cerrar.
 
-### 4.5 Filtros
+### 5.5 Filtros
 
 En la barra superior:
 
@@ -184,15 +285,15 @@ En la barra superior:
 
 ---
 
-## 5. Reclasificación de productos
+## 6. Reclasificación de productos
 
-### 5.1 Productos huérfanos
+### 6.1 Productos huérfanos
 
 Son productos que no están en el catálogo o que están mal clasificados.
 
 La app te avisa con un diálogo y ofrece registrarlos.
 
-### 5.2 El reclasificador
+### 6.2 El reclasificador
 
 1. Clic en Reclasificar.
 2. Busca el producto.
@@ -200,7 +301,7 @@ La app te avisa con un diálogo y ofrece registrarlos.
 4. Cambia la categoría.
 5. Guardar.
 
-### 5.3 Registrar productos nuevos
+### 6.3 Registrar productos nuevos
 
 Desde el reclasificador:
 
@@ -210,9 +311,9 @@ Desde el reclasificador:
 
 ---
 
-## 6. Generación de Excel (Ingresos)
+## 7. Generación de Excel (Ingresos)
 
-### 6.1 Cómo generar el resumen
+### 7.1 Cómo generar el resumen
 
 1. Verifica el mes en la barra superior.
 2. Clic en Generar Excel.
@@ -226,7 +327,7 @@ Si el archivo YA existe:
 - "No" → Reordenar TODO (borra y regenera con backup).
 - "Cancelar" → No hacer nada.
 
-### 6.2 Anexar vs Reordenar
+### 7.2 Anexar vs Reordenar
 
 Anexar:
 
@@ -241,7 +342,7 @@ Reordenar:
 - Ordena por fecha y No. factura.
 - Crea un backup antes.
 
-### 6.3 Backups
+### 7.3 Backups
 
 Los backups se guardan en la misma carpeta como:
 
@@ -249,7 +350,7 @@ Los backups se guardan en la misma carpeta como:
 
 No se borran automáticamente. Puedes eliminarlos manualmente cuando ya no los necesites.
 
-### 6.4 Recuperar un backup
+### 7.4 Recuperar un backup
 
 1. Abre la carpeta del Excel.
 2. Busca el archivo con `_backup_`.
@@ -257,7 +358,7 @@ No se borran automáticamente. Puedes eliminarlos manualmente cuando ya no los n
 
 ---
 
-## 7. Reportes (Ingresos)
+## 8. Reportes (Ingresos)
 
 1. Clic en Reportes.
 2. Explorar el árbol:
@@ -269,29 +370,29 @@ No se borran automáticamente. Puedes eliminarlos manualmente cuando ya no los n
 
 ---
 
-## 8. Adjuntos
+## 9. Adjuntos
 
-### 8.1 Ver adjuntos
+### 9.1 Ver adjuntos
 
 Doble clic en un registro → pestaña de adjuntos.
 
-### 8.2 Adjuntar manualmente
+### 9.2 Adjuntar manualmente
 
 Clic derecho → Adjuntar factura.
 
-### 8.3 Abrir carpeta
+### 9.3 Abrir carpeta
 
 Clic derecho → Ver adjuntos → Abrir carpeta.
 
 ---
 
-## 9. Módulo de Egresos
+## 10. Módulo de Egresos
 
-### 9.1 ¿Qué es?
+### 10.1 ¿Qué es?
 
 El módulo de Egresos descarga automáticamente las facturas de compra (CFDI recibidos) desde el SAT usando tu e.firma, las procesa y genera los reportes PUE y PPD en Excel.
 
-### 9.2 Configurar la e.firma
+### 10.2 Configurar la e.firma
 
 Necesitas 3 cosas:
 
@@ -306,7 +407,19 @@ Pasos en la app:
 3. Llena RFC, certificado, llave y contraseña.
 4. Clic en Guardar.
 
-### 9.3 Descargar del SAT
+### 10.3 Probar la e.firma sin gastar solicitud
+
+En `⚙️ Configuración SAT` hay un botón **🔑 Probar FIEL**.
+
+- Prueba los valores **actuales del formulario** (aunque no los hayas
+  guardado).
+- No gasta solicitud al SAT (usa autenticación, no descarga).
+- Muestra resultado en verde (éxito) o rojo (error).
+
+Úsalo cuando cambies la e.firma o si sospechas que algo está mal antes
+de lanzar una descarga completa.
+
+### 10.4 Descargar del SAT
 
 Paso 1 — Clic en `📥 Descargar del SAT`.
 
@@ -339,7 +452,9 @@ Paso 6 — Cuando el SAT termina, la app automáticamente:
 4. Guarda en el JSON del año.
 5. Mueve los XML a PUE / PPD / Animalia.
 6. Actualiza los números de línea.
-7. Genera los Excel PUE y PPD.
+
+**Importante:** la descarga **NO genera el Excel**. Después de revisar la
+tabla, tú decides cuándo generarlo (ver sección 10.7).
 
 #### Importante: solo una solicitud a la vez
 
@@ -349,7 +464,7 @@ Si tienes una en proceso, el botón cambia a `🔄 Verificar solicitud pendiente
 
 Si lleva más de 24 horas sin respuesta, el botón vuelve a `📥 Descargar del SAT`.
 
-### 9.4 Esperar y verificar
+### 10.5 Esperar y verificar
 
 Si cerraste la app mientras el SAT procesaba:
 
@@ -359,7 +474,7 @@ Si cerraste la app mientras el SAT procesaba:
 
 La app recuerda el `id_solicitud` y sigue verificando automáticamente.
 
-### 9.5 Clasificar Animalia / Baalak
+### 10.6 Clasificar Animalia / Baalak
 
 Por defecto, todas las facturas se asignan a **Baalak**.
 
@@ -373,7 +488,7 @@ Si tienes facturas de **Animalia**:
 
 Las facturas marcadas como Animalia se **excluyen del Excel**.
 
-### 9.6 Ver y editar registros
+### 10.7 Ver y editar registros
 
 La tabla muestra los registros del mes/sucursal seleccionados.
 
@@ -409,7 +524,7 @@ Se elimina el registro y su XML asociado.
 
 1. Clic derecho en la fila → Abrir carpeta del XML.
 
-### 9.7 Generar Excel PUE/PPD
+### 10.8 Generar Excel PUE/PPD
 
 1. Verifica el mes en el selector.
 2. Clic en `📊 Generar Excel`.
@@ -429,7 +544,7 @@ Si el archivo **ya existe**:
 - **No** → Ya existe, no hacer nada.
 - **Cancelar** → Omitir.
 
-### 9.8 Reportes de Egresos
+### 10.9 Reportes de Egresos
 
 Clic en `📈 Reportes`. Se abre un árbol:
 
@@ -447,7 +562,7 @@ Doble clic en cualquier nodo:
 - Refresca la tabla.
 - Muestra totales del nodo.
 
-### 9.9 Solución de problemas (Egresos)
+### 10.10 Solución de problemas (Egresos)
 
 #### Error 301 — XML Mal Formado
 
@@ -473,9 +588,9 @@ Recomendación: cierra la app y vuelve más tarde.
 
 ---
 
-## 10. Módulo de Estética y Transportes
+## 11. Módulo de Estética y Transportes
 
-### 10.1 ¿Qué es?
+### 11.1 ¿Qué es?
 
 Módulo auxiliar para **determinar qué espacio dar en la agenda de QVET**.
 
@@ -488,14 +603,14 @@ Sirve para saber de antemano:
 
 Con eso puedes asignar un espacio en la agenda con información real en lugar de adivinar.
 
-### 10.2 Datos que guarda
+### 11.2 Datos que guarda
 
 - **Cliente**: nombre, población, dirección, notas.
 - **Transporte**: distancia, tiempo, tarifa, notas.
 - **Mascotas**: nombre, raza, carácter, precauciones, notas.
 - **Catálogos**: servicios de estética con duración, tarifas de transporte.
 
-### 10.3 Importar clientes desde Excel
+### 11.3 Importar clientes desde Excel
 
 1. Clic en `📥 Importar Excel`.
 2. Selecciona el Excel de clientes (debe tener columnas `CLIENTE`, `POBLACIÓN`, `DIRECCIÓN`).
@@ -505,13 +620,13 @@ Con eso puedes asignar un espacio en la agenda con información real en lugar de
 
 **Solo importa los que no existan** (merge por nombre).
 
-### 10.4 Buscar clientes
+### 11.4 Buscar clientes
 
 1. Escribe en el buscador (nombre, población, dirección o mascota).
 2. La tabla filtra en vivo.
 3. Doble clic en un cliente → abre el detalle con 4 pestañas.
 
-### 10.5 Pestañas del detalle
+### 11.5 Pestañas del detalle
 
 **Datos:**
 - Nombre, población, dirección.
@@ -531,18 +646,18 @@ Con eso puedes asignar un espacio en la agenda con información real en lugar de
 
 **Historial (en construcción).**
 
-### 10.6 Alertas ⚠️
+### 11.6 Alertas ⚠️
 
 Si un cliente tiene **notas en cualquier pestaña**, aparece un ⚠️ en la tabla principal.
 
-### 10.7 Duplicados y basura
+### 11.7 Duplicados y basura
 
 Clic en `⚠️ Duplicados / Basura`:
 
 - **Duplicados**: elige con cuál te quedas.
 - **Basura**: edita, elimina o restaura.
 
-### 10.8 Catálogos editables
+### 11.8 Catálogos editables
 
 Clic en `📚 Catálogos`:
 
@@ -553,9 +668,9 @@ Doble clic en un registro para editar.
 
 ---
 
-## 11. Módulo de Recordatorios
+## 12. Módulo de Recordatorios
 
-### 11.1 ¿Qué es?
+### 12.1 ¿Qué es?
 
 Envía recordatorios de **citas** y **vacunas** a tus clientes por WhatsApp.
 
@@ -564,14 +679,14 @@ Envía recordatorios de **citas** y **vacunas** a tus clientes por WhatsApp.
 - WhatsApp Desktop instalado y vinculado a tu número.
 - Los Excel de agenda y vacunas exportados de QVET.
 
-### 11.2 Exportar los Excel desde QVET
+### 12.2 Exportar los Excel desde QVET
 
 1. En QVET, ve a la sección de agenda y exporta.
 2. El archivo se descarga como `exportacion.xlsx` (o `exportacion(1).xlsx`).
 3. Repite para vacunas.
 4. NO importa cómo se llame el archivo, la app detecta el tipo por columnas.
 
-### 11.3 Importar Excel
+### 12.3 Importar Excel
 
 1. Clic en `📥 Importar Excel`.
 2. Selecciona 1 o más Excel (con Ctrl+clic).
@@ -587,7 +702,7 @@ Envía recordatorios de **citas** y **vacunas** a tus clientes por WhatsApp.
 **Vacunas:**
 `CLIENTE | TELÉFONO 1 | MASCOTA | TIPO DE RECORDATORIO | VACUNA | PRÓXIMA FECHA`
 
-### 11.4 Tabs de Citas y Vacunas
+### 12.4 Tabs de Citas y Vacunas
 
 Después de importar, verás 2 tabs:
 
@@ -599,12 +714,12 @@ Cada cliente tiene su **checkbox**:
 - ⬜ Pendiente
 - ✅ Enviado
 
-### 11.5 Ver el mensaje
+### 12.5 Ver el mensaje
 
 1. Clic en un cliente.
 2. El mensaje aparece abajo.
 
-### 11.6 Enviar por WhatsApp
+### 12.6 Enviar por WhatsApp
 
 1. Selecciona un cliente.
 2. Clic en `Enviar por WhatsApp`.
@@ -620,34 +735,36 @@ Cada cliente tiene su **checkbox**:
 
 **Ventaja:** los emojis se preservan al pegar, y usas tu número actual.
 
-### 11.7 Marcar y desmarcar
+### 12.7 Marcar y desmarcar
 
 - `Marcar como enviado`: si ya enviaste el mensaje.
 - `Desmarcar`: si te equivocaste.
 
-### 11.8 Sucursales
+### 12.8 Sucursales
 
-Clic en `Configurar sucursales`:
+Las sucursales **no se editan desde Recordatorios**. Se editan desde el
+panel general de la app:
 
-- Agregar una sucursal nueva.
-- Editar existentes.
-- Activar/desactivar.
+1. Panel lateral → **Configuración** (solo admin).
+2. Pestaña **🏥 Veterinaria**.
+3. Ahí se agregan, editan, eliminan y se marca la sucursal activa.
 
-La sucursal activa determina el nombre que aparece en los mensajes.
+La sucursal activa determina el nombre que aparece en los mensajes de
+Recordatorios y el origen de rutas en Estética.
 
-### 11.9 Al cambiar de sucursal
+### 12.9 Al cambiar de sucursal activa
 
 Los mensajes de los clientes **no enviados** se regeneran con el nuevo nombre de sucursal.
 
 Los mensajes **ya enviados** no cambian (para preservar el histórico).
 
-### 11.10 Limpiar todo
+### 12.10 Limpiar todo
 
 Clic en `Limpiar todo`. Pide confirmación.
 
 Borra todos los clientes importados y el historial de mensajes en pantalla.
 
-### 11.11 Estadísticas
+### 12.11 Estadísticas
 
 En la parte inferior de la ventana:
 
@@ -657,35 +774,185 @@ Vacunas: 20 (Enviados: 8 | Pendientes: 12)
 
 ---
 
-## 12. Configuración avanzada
+## 13. Administración del sistema
 
-### 12.1 Cambiar tema
+> Esta sección es **solo para el perfil Administrador**. Los demás
+> perfiles no ven los tabs aquí descritos.
 
-En la pantalla principal, clic en `⚙️ Configuración`.
+Todo se administra desde el panel lateral → **Configuración** →
+pestañas 🎨 Apariencia, 🏥 Veterinaria, 🧩 Módulos, 🧑 Perfiles y 👥 Usuarios.
 
-### 12.2 Ver logs
+### 13.1 Usuarios
+
+**Crear un usuario:**
+
+1. Configuración → pestaña **👥 Usuarios**.
+2. Clic en `+ Nuevo usuario`.
+3. Llena:
+   - **Usuario (login)**: minúsculas, sin espacios. Empieza con letra.
+     Solo a-z, 0-9, _ (3–32 caracteres).
+   - **Nombre completo**: como quieres que aparezca en pantalla.
+   - **Perfil**: qué módulos verá.
+   - **Usuario activo**: si puede iniciar sesión.
+   - **Contraseña inicial**: se genera automáticamente. Puedes
+     regenerarla (botón ↻), verla (botón 👁) o copiarla (📋).
+4. Clic en **💾 Guardar**.
+
+Al guardar, la app muestra la contraseña inicial **una sola vez** en un
+mensaje. Anótala y entrégasela al usuario.
+
+**Editar un usuario:**
+
+- Doble clic en la fila.
+- Cambia lo que necesites.
+- **Dejar la contraseña en blanco** para no cambiarla.
+- Escribir una nueva + su confirmación para cambiarla.
+- Guardar.
+
+**Eliminar un usuario:**
+
+- Selecciona la fila.
+- Clic en `🗑️ Eliminar`.
+- Confirmar.
+
+**Reglas de seguridad:**
+
+- No puedes eliminar tu propia cuenta.
+- No puedes eliminar ni desactivar al último administrador activo.
+- No puedes eliminar un perfil que tenga usuarios asignados (ver 13.2).
+
+**Desactivar un usuario:**
+
+- Edítalo, desmarca "Usuario activo" y guarda.
+- Un usuario inactivo no puede iniciar sesión, pero su cuenta sigue
+  existiendo (útil si va a volver).
+
+### 13.2 Perfiles
+
+**Ver los perfiles:**
+
+Configuración → pestaña **🧑 Perfiles**.
+
+La tabla muestra cada perfil y qué módulos ve. El perfil **Administrador
+es intocable**: siempre existe, siempre ve todo y no se puede editar ni
+eliminar.
+
+**Crear un perfil:**
+
+1. Clic en `+ Nuevo perfil`.
+2. Llena:
+   - **ID del perfil**: minúsculas, sin espacios (ej. `veterinario`).
+     No se puede cambiar después.
+   - **Nombre visible**: como quieres que aparezca en la tabla (ej.
+     "Veterinario").
+   - **Descripción**: opcional.
+   - **Módulos visibles**: marca los que verá este perfil.
+3. Guardar.
+
+**Editar un perfil:**
+
+- Doble clic en la fila.
+- Cambia nombre, descripción o módulos.
+- El **ID** no se puede cambiar (es la clave que usan los usuarios).
+- Guardar.
+
+**Eliminar un perfil:**
+
+- Selecciona la fila.
+- `🗑️ Eliminar`.
+- Si el perfil tiene usuarios asignados, la app **rechaza** la operación
+  y muestra la lista de usuarios. Reasígnalos a otro perfil primero.
+
+**Ejemplos de perfiles:**
+
+| ID | Nombre | Módulos |
+|----|--------|---------|
+| admin | Administrador | Todos (intocable) |
+| contabilidad | Contabilidad | Ingresos, Egresos |
+| almacen | Almacén | Ingresos |
+| cajero | Cajero | Estética y Transportes, Recordatorios |
+| medico | Médico | Recordatorios |
+
+### 13.3 Módulos (activar/desactivar)
+
+Configuración → pestaña **🧩 Módulos**.
+
+Cada módulo tiene un interruptor. Los desactivados **no aparecen en el
+panel lateral**, aunque el perfil los permita. Útil para ocultar un
+módulo temporalmente sin tocar los perfiles.
+
+La visibilidad final de un módulo es:
+
+    visible = activo (config)  Y  permitido por el perfil
+
+Ejemplo: si desactivas Egresos, nadie lo ve (ni el admin), aunque su
+perfil lo tenga marcado.
+
+### 13.4 Sucursales
+
+Configuración → pestaña **🏥 Veterinaria**.
+
+Aquí se administran las sucursales del negocio:
+
+- **+ Nueva**: agregar una sucursal.
+- **✏️ Editar**: cambiar nombre, dirección, teléfono, coordenadas.
+- **🗑️ Eliminar**: solo si no es la activa.
+- **● Marcar como activa**: la sucursal que se usa como origen de rutas
+  en Estética y como emisor en Recordatorios.
+
+La sucursal activa se marca con **●**.
+
+### 13.5 Cambiar mi propia contraseña
+
+Ver sección 3.4.
+
+---
+
+## 14. Configuración avanzada
+
+### 14.1 Cambiar tema
+
+Solo admin. Configuración → pestaña **🎨 Apariencia**.
+
+### 14.2 Ver logs
 
 Clic en `Ver logs` (Ingresos). Se abre la carpeta de logs.
 
-### 12.3 Reset caché
+### 14.3 Reset caché
 
 Clic en `Reset caché` (Ingresos). Aparece confirmación.
 
 ---
 
-## 13. Solución de problemas generales
+## 15. Solución de problemas generales
 
-### 13.1 La app no abre en Windows
+### 15.1 La app no abre en Windows
 
 Clic derecho → Ejecutar como administrador.
 
-### 13.2 La app no abre en macOS
+### 15.2 La app no abre en macOS
 
 Ejecuta en Terminal:
 
 `xattr -cr "/Applications/Vet Suite.app"`
 
-### 13.3 La sincronización falla
+### 15.3 No puedo iniciar sesión
+
+- Verifica que el usuario esté escrito en minúsculas y sin espacios.
+- Verifica que el teclado no esté en mayúsculas.
+- Si olvidaste la contraseña, contacta al administrador.
+
+### 15.4 No veo un módulo que debería ver
+
+Tres causas posibles:
+
+1. **Tu perfil no lo permite.** Pídele al admin que revise tu perfil.
+2. **El módulo está desactivado globalmente.** El admin lo puede activar
+   desde Configuración → 🧩 Módulos.
+3. **Hay un cambio pendiente.** Los cambios de perfil aplican al siguiente
+   inicio de sesión. Cierra sesión y vuelve a entrar.
+
+### 15.5 La sincronización falla
 
 Causas posibles:
 
@@ -694,11 +961,11 @@ Causas posibles:
 - Etiqueta de Gmail mal escrita.
 - Filtro muy estricto.
 
-### 13.4 El Excel está bloqueado
+### 15.6 El Excel está bloqueado
 
 Cierra Excel y vuelve a intentar.
 
-### 13.5 WhatsApp no abre el chat
+### 15.7 WhatsApp no abre el chat
 
 Verifica:
 
@@ -706,7 +973,7 @@ Verifica:
 2. Que esté vinculado con tu número.
 3. Que el enlace `wa.me` esté asociado a WhatsApp Desktop (Settings → Default Apps).
 
-### 13.6 Los emojis no se ven en la app
+### 15.8 Los emojis no se ven en la app
 
 Tkinter (la librería gráfica) no renderiza emojis de forma nativa. Es normal.
 
@@ -714,7 +981,7 @@ Tkinter (la librería gráfica) no renderiza emojis de forma nativa. Es normal.
 
 ---
 
-## 14. Preguntas frecuentes
+## 16. Preguntas frecuentes
 
 ### ¿Dónde se guardan los datos?
 
@@ -764,9 +1031,29 @@ Sí. Selecciona uno, envía, confirma, y pasa al siguiente. El flujo es rápido 
 
 Los mensajes nuevos usan el nuevo nombre. Los ya enviados no cambian.
 
+### ¿Qué pasa si olvido mi contraseña?
+
+Contacta al administrador. Él puede cambiarla desde Configuración → Usuarios.
+
+### ¿Puedo tener varias sesiones abiertas al mismo tiempo?
+
+No. Cada instalación de la app mantiene una sesión activa. Si quieres
+cambiar de usuario, cierra sesión primero.
+
+### ¿Los usuarios pueden ver los datos de otros módulos?
+
+No. Cada usuario solo ve los módulos de su perfil. Lo que no ve, no
+existe para él. Además, cada usuario ve todos los datos del módulo que
+tiene permitido (no hay restricción por usuario dentro de un módulo).
+
+### ¿Puedo crear más administradores?
+
+Sí. Crea un usuario nuevo y asígnale el perfil `admin`. El sistema solo
+bloquea eliminarlo si sería el último admin activo.
+
 ---
 
-## 15. Glosario
+## 17. Glosario
 
 | Término | Significado |
 |---------|-------------|
@@ -791,6 +1078,9 @@ Los mensajes nuevos usan el nuevo nombre. Los ya enviados no cambian.
 | Caché | Almacén temporal de datos. |
 | Geocodificación | Obtener coordenadas desde una dirección. |
 | wa.me | Enlace oficial de WhatsApp para abrir un chat. |
+| Perfil | Conjunto de módulos que puede ver un usuario. |
+| Sesión | Estado activo de un usuario tras iniciar sesión. |
+| Administrador | Usuario con acceso total a la app y su configuración. |
 
 ---
 
@@ -806,5 +1096,5 @@ Si tienes problemas:
 
 **Fin del manual.**
 
-**Versión:** 2.1.0  
+**Versión:** 2.2.0  
 **Última actualización:** Octubre 2026
