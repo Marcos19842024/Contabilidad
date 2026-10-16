@@ -352,6 +352,8 @@ def sincronizar_facturas(app):
     facturas_con_error = []
     todos_avisos = []          # ← Acumular avisos de reclasificación
     vistos_avisos = set()      # ← Para deduplicar mientras se procesan
+    todos_no_catalogados = []  # ← NUEVO: acumular productos no catalogados
+    vistos_no_cat = set()      # ← NUEVO: para deduplicar
 
     def _orden_grupo(item):
         clave = item[0]
@@ -361,6 +363,7 @@ def sincronizar_facturas(app):
             return 0
 
     todos_avisos = []
+    todos_no_catalogados = []
     for i, (_, files) in enumerate(sorted(grupos.items(), key=_orden_grupo), 1):
         no_factura = files.get("no_factura", "?")
         log(f"\n[{i}/{len(grupos)}] Procesando factura {no_factura}...")
@@ -411,16 +414,29 @@ def sincronizar_facturas(app):
                 facturas_duplicadas.append(datos["no_factura"])
                 continue
 
-            _, datos_completos, avisos_reclasificacion = app._llenar_desde_factura(datos)
+            _, datos_completos, avisos_reclasificacion, no_catalogados = \
+                app._llenar_desde_factura(datos)
+
+            # Avisos de reclasificación (VACUNA/CLINICA con IVA, etc.)
             if avisos_reclasificacion:
                 for a in avisos_reclasificacion:
-                    # Deduplicar mientras se acumula
                     clave = (a["categoria_actual"], a["producto"].strip().upper())
                     if clave in vistos_avisos:
                         continue
                     vistos_avisos.add(clave)
                     todos_avisos.append(a)
                     log(f"  ⚠️ Reclasificar: [{a['categoria_actual']}] {a['producto']}")
+
+            # Productos no catalogados (nuevos)
+            if no_catalogados:
+                for n in no_catalogados:
+                    clave = ("U", n["producto"].strip().upper())
+                    if clave in vistos_no_cat:
+                        continue
+                    vistos_no_cat.add(clave)
+                    todos_no_catalogados.append(n)
+                    log(f"  🆕 No catalogado: {n['producto']} "
+                        f"(rem {n['remision']})")
 
             # ============================================================
             # QVET y No. factura: leerlos del asunto del correo
@@ -519,47 +535,51 @@ def sincronizar_facturas(app):
 
     log(f"\n📄 Log completo guardado en: {info.get('log', '')}")
 
-    # ---- Si hay productos a reclasificar, ofrecer registrarlos ----
-    if todos_avisos:
-        respuesta = messagebox.askyesno(
-            "Sincronización completa",
-            f"✅ {len(facturas_procesadas)} facturas guardadas\n"
-            f"⏭️ {len(facturas_duplicadas)} duplicadas\n"
-            f"⚠️ {len(facturas_sin_xml)} sin XML\n"
-            f"❌ {len(facturas_con_error)} con error\n\n"
-            f"⚠️ Se detectaron {len(todos_avisos)} producto(s) en "
-            f"categorías incorrectas.\n\n"
-            f"¿Quieres registrarlos en el catálogo ahora?\n"
-            f"(También puedes hacerlo después desde 🏷️ Reclasificar)"
-        )
-        if respuesta:
-            from dialogos.registrar_productos import abrir_dialogo_registrar_productos
-            abrir_dialogo_registrar_productos(app, todos_avisos)
-    else:
-        # ---- Si hay productos a reclasificar, ofrecer registrarlos ----
-        mensaje_base = (
-            f"✅ {len(facturas_procesadas)} facturas guardadas\n"
-            f"⏭️ {len(facturas_duplicadas)} duplicadas\n"
-            f"⚠️ {len(facturas_sin_xml)} sin XML\n"
-            f"❌ {len(facturas_con_error)} con error\n\n"
-            f"Log: {info.get('log', '')}"
+    # ---- Ofrecer registrar en el catálogo (reclasificaciones + no catalogados) ----
+    total_nuevos = len(todos_no_catalogados)
+    total_reclasif = len(todos_avisos)
+    hay_pendientes = total_nuevos > 0 or total_reclasif > 0
+
+    mensaje_base = (
+        f"✅ {len(facturas_procesadas)} facturas guardadas\n"
+        f"⏭️ {len(facturas_duplicadas)} duplicadas\n"
+        f"⚠️ {len(facturas_sin_xml)} sin XML\n"
+        f"❌ {len(facturas_con_error)} con error"
+    )
+
+    if hay_pendientes:
+        lineas_extra = []
+        if total_nuevos:
+            lineas_extra.append(
+                f"🆕 {total_nuevos} producto(s) nuevo(s)"
+            )
+        if total_reclasif:
+            lineas_extra.append(
+                f"🏷️ {total_reclasif} producto(s) para reclasificar"
+            )
+        mensaje_avisos = (
+            "\n\nSe detectaron:\n  " +
+            "\n  ".join(lineas_extra) +
+            "\n\n¿Quieres registrarlos en el catálogo ahora?\n"
+            "(También puedes hacerlo después desde 🏷️ Reclasificar)"
         )
 
-        if todos_avisos:
-            mensaje_avisos = (
-                f"\n\n⚠️ Se detectaron {len(todos_avisos)} producto(s) "
-                f"en categorías incorrectas.\n\n"
-                f"¿Quieres registrarlos en el catálogo ahora?"
+        respuesta = messagebox.askyesno(
+            "Sincronización completa",
+            mensaje_base + mensaje_avisos
+        )
+        if respuesta:
+            # UNA SOLA VENTANA con ambos tipos
+            todos_pendientes = list(todos_no_catalogados) + list(todos_avisos)
+            from dialogos.registrar_productos import (
+                abrir_dialogo_registrar_productos
             )
-            respuesta = messagebox.askyesno(
-                "Sincronización completa",
-                mensaje_base + mensaje_avisos
-            )
-            if respuesta:
-                from dialogos.registrar_productos import abrir_dialogo_registrar_productos
-                abrir_dialogo_registrar_productos(app, todos_avisos)
-        else:
-            messagebox.showinfo("Sincronización completa", mensaje_base)
+            abrir_dialogo_registrar_productos(app, todos_pendientes)
+    else:
+        messagebox.showinfo(
+            "Sincronización completa",
+            mensaje_base + f"\n\nLog: {info.get('log', '')}"
+        )
 
     # Liberar el grab al terminar normalmente
     try:

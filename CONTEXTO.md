@@ -155,12 +155,12 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 ### Ingresos
 | Archivo | Propósito |
 |---------|-----------|
-| `modulos/ingresos.py` | Módulo Ingresos |
-| `modulos/lector_facturas.py` | Parser PDF (prioridad) + XML + agrupado |
+| `modulos/ingresos.py` | Módulo Ingresos. Importación de catálogo QVET desde Excel |
+| `modulos/lector_facturas.py` | Parser PDF (productos) + XML (cabecera). Detecta IVA/IEPS/exento por tasa. |
 | `modulos/correo_facturas.py` | Descarga de Gmail |
 | `dialogos/adjuntos.py` | Ver adjuntos |
 | `dialogos/sincronizar.py` | Sincronización Gmail |
-| `dialogos/registrar_productos.py` | Reclasificar productos |
+| `dialogos/registrar_productos.py` | Ventana unificada de registro (nuevos + reclasificaciones) con badge visual. |
 | `dialogos/reclasificador.py` | Reclasificador masivo |
 | `core/persistencia.py` | Carga/guarda JSONs |
 | `core/correo_utils.py` | Utilidades de correo |
@@ -227,7 +227,7 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 ## Reglas importantes
 
 1. **NO tocar `sat/conversion.py`** — usa openssl 1.1.1
-2. **NO tocar el password de `Fiel()`** — se pasa vacío porque `preparar_fiel()` ya desencripta
+2.  **NO tocar el password de `Fiel()`** — se pasa vacío porque `preparar_fiel()` ya desencripta.
 3. **Solo UNA solicitud SAT a la vez** — el SAT rechaza simultáneas
 4. **Los JSON de datos NO van a git** (están en .gitignore)
 5. **Los archivos se nombran `<serie>-<folio>.xml`** (sin número de línea)
@@ -238,12 +238,22 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
 10. **`nombre_corto` de sucursal es el identificador estable** entre módulos
 11. **Los reportes visibles van SIEMPRE a `~/Documents/Contabilidad AAAA/`** (excepto Recordatorios que va a `~/Documents/Reportes Recordatorios/`)
 12. **Los mensajes de Recordatorios se cachean con la sucursal activa** (`{"sucursal": id, "clientes": [...]}`). Al abrir, si la sucursal cambió, se regeneran los NO enviados.
-13. **El Excel de Ingresos solo anexa registros nuevos.** Si modificas un registro existente, debes elegir "No" (reordenar todo) al generar el Excel. El anexado compara por folio fiscal y no. de factura.
-14. **Las fórmulas del Excel de Ingresos reflejan el desglose por remisión.** Ej.: `=(228+115+125)/1.16`. Cada paréntesis es una remisión.
-15. **El importe del PDF ya viene con IVA incluido.** No dividir dos veces. El divisor solo se aplica en la fórmula y en el cálculo numérico interno.
-16. **Los XMLs de Egresos se archivan según la fecha real de emisión de cada factura**, no el mes de la solicitud. Un CFDI emitido el 20/04/2026 va a `Contabilidad abril/...` aunque la descarga se haga en octubre.
-17. **`config_ui.json` es el ÚNICO JSON que vive en la raíz del proyecto.** Los JSON de cada módulo van en su carpeta.
-18. **`procesar_todo` (Egresos) NO genera Excel.** El usuario lo genera con el botón "📊 Generar Excel" tras revisar la tabla.
+13. **El PDF es la FUENTE DE PRODUCTOS de Ingresos.** El XML solo
+  aporta cabecera. Motivo: el XML de Baalak agrupa productos por
+  remisión; el PDF los separa siempre.
+14. **Cada remisión se agrupa entre paréntesis en la fórmula del Excel**
+  si tiene 2+ productos. Con 1 producto no se ponen paréntesis.
+  Con 2+ remisiones, se suman los grupos: `(500+200)+(500+200)`.
+15. **El importe del PDF ya viene con descuento aplicado.** Se guarda
+  tal cual y la fórmula lleva el divisor (`/1.16`, `/1.06`, `/1.07`).
+  La celda contigua multiplica por la tasa.
+16. **El tipo de impuesto se infiere de la tasa del PDF**: 16% → IVA,
+  6% → IEPS 6, 7% → IEPS 7, 0% → sin impuesto.
+17. **El catálogo QVET se actualiza con merge no destructivo.** Los
+  productos que ya existen en el catálogo NO se sobreescriben; solo
+  se agregan los nuevos.
+18. **La ventana de registro de productos es única** para nuevos y
+  reclasificaciones. Se distinguen con badge visual (🆕 / 🏷️).
 19. **El Excel de Egresos se ordena por fecha + folio** antes de escribirse.
 20. **Catalogo_qvet.json** NO va en el bundle. El usuario lo importa desde la UI (botón "📥 Importar catálogo QVET" en Ingresos visible solo si falta). Vive en ingresos/catalogo_qvet.json.
 21. La ventana principal usa sidebar lateral estilo QVET: categorías
@@ -321,29 +331,59 @@ Vive en **`config_ui.json`** en la raíz de datos. Acceso único vía
   `dialogos/sucursal_detalle.py`, no en `dialogos/config_general.py`.
 
 ---
-
 ## Módulo Ingresos — procesamiento de facturas
 
-### Prioridad de lectura
-- **SIEMPRE** deben venir XML + PDF. Si falta uno → `ValueError` y se informa.
-- **Los productos** se leen del **PDF** por remisión. El XML solo aporta cabecera
-  (RFC, nombre, folio fiscal, total, fecha, pagos).
-- **NO hay fallback a conceptos del XML.** Si el PDF no trae productos → error.
-- El **total del XML NUNCA se pisa con el del PDF**. Si difieren > $0.01, se
-  loguea pero se usa el XML.
-- Pagos: del PDF si están; si no, `FormaPago` del XML.
+### Fuente de datos: PDF + XML
+- **El PDF es la FUENTE DE PRODUCTOS.** El XML solo aporta cabecera
+  (RFC, nombre, folio, fecha, total, folio fiscal).
+- **Motivo**: el XML de Baalak a veces agrupa productos de una misma
+  remisión en un solo concepto (`Descripcion="Venta"` con importe
+  total), a veces los separa. El PDF **siempre** los separa.
+- **Regla**: si falta XML o PDF → `ValueError` y no se procesa.
+- El **total del XML NUNCA se pisa con el del PDF**.
+
+### Estructura del PDF de Baalak
+- Encabezado: `Descripción del producto Cantidad ud. medida P.V.P Dto. Impuesto Importe`
+- Bloque por remisión: `No. Remisión: NNNNNN Fecha de remisión: DD/MM/YYYY H:MM a.m./p.m.`
+- Cada producto en **una sola línea**:
+<nombre> <cantidad> no aplica <PVP> <Dto> <Impuesto> <Importe>
+- Última línea del bloque: **total de la remisión** (solo un número).
+- **Columna Impuesto — variantes**:
+- `16,00% 0,` → IVA 16%
+- `16,00%15` → IVA 16% con descuento (el `15` es el % repetido)
+- `6,00% 0,` → IEPS 6%
+- `7,00% 0,` → IEPS 7%
+- `0,` → sin impuesto
+- `5,` → sin impuesto pero con descuento
+
+### Regex del producto
+^(?P<nombre>.+?)\s+
+(?P<cantidad>\d+[,.]\d+)\s+
+(?P<unidad>[^\d]+?)\s+
+(?P<pvp>[\d.,]+)\s+
+(?P<dto>[\d.,]+)\s+
+(?P<impuesto>(?:\d+[,.]\d+\s%\s\d,?)|(?:\d+,))\s+
+(?P<importe>[\d.,]+)\s$
+
+El ancla es la **cantidad** seguida de la unidad. Esto permite nombres
+que terminan en número (`TRATAMIENTO VETERINARIO 50`).
 
 ### Clasificación por categoría
-- Catálogo QVET (`ingresos/catalogo_qvet.json`) + excepciones manuales (`ingresos/categorias_manuales.json`).
+- Catálogo QVET (`ingresos/catalogo_qvet.json`) + excepciones manuales
+  (`ingresos/categorias_manuales.json`).
 - **Categorías válidas:** `U`, `ACCESORIOS`, `MEDICAMENTOS`, `HIGIENE`,
   `ESTETICA`, `TRANSPORTE`, `PENSION`, `VACUNA`, `CLINICA`.
 - Categoría no encontrada → `U` + aviso de reclasificación.
 - Producto con IVA/IEPS en categoría `SIN_IVA` (VACUNA, CLINICA) → `U` + aviso.
 
-### Separación por tipo fiscal
+### Tipo de impuesto
+Se infiere de la tasa del PDF:
+- 16.0% → `iva`
+- 6.0% → `ieps_6`
+- 7.0% → `ieps_7`
+- 0.0% → `sin_imp`
 
-**Regla clave:** cada columna del Excel tiene **un único tratamiento fiscal**.
-Ninguna columna mezcla IVA con IEPS ni con exentos.
+### Separación por tipo fiscal
 
 | Categoría | Columnas del Excel | Contenido |
 |---|---|---|
@@ -352,52 +392,67 @@ Ninguna columna mezcla IVA con IEPS ni con exentos.
 | MEDICAMENTOS | IMPORTE (sin IVA) + SIN IVA + IVA (16%) | Exentos / base gravados / IVA de gravados |
 | HIGIENE | IMPORTE (sin IVA) + SIN IVA + IVA (16%) + SIN IEPS 6% + IEPS (6%) + SIN IEPS 7% + IEPS (7%) | Igual pero con 3 impuestos |
 
-**Nota:** los títulos `IMPORTE (sin IVA)` son confusos — no significa "base de gravados"
-sino "productos que por ley no llevan IVA". Lo decide el usuario y no se cambia.
-
 ### Fórmulas en el Excel
-
 Cada columna construye una fórmula que refleja el desglose por remisión:
-
 - **1 producto en la remisión** → `114`
 - **2+ productos en la misma remisión** → `(114+100)`
 - **Varias remisiones** → `(114+100)+(200)+(58)`
-- **Si la columna tiene divisor (IVA/IEPS):** se saca al final: `=((114+100)+(200)+(58))/1.16`
-- **Si la columna no tiene divisor (exentos):** se mantienen los grupos: `=(50+30)+(80)`
-- **1 solo producto en la columna con divisor:** `=58/1.16`
-- **1 solo producto sin divisor:** `=58`
+- **Con divisor (IVA/IEPS):** `=((114+100)+(200)+(58))/1.16`
+- **Sin divisor:** `=(50+30)+(80)`
 
-**Divisores:**
-- IVA 16% → `/1.16`
-- IEPS 6% → `/1.06`
-- IEPS 7% → `/1.07`
-- Sin impuesto → sin división
+**Divisores:** IVA 16% → `/1.16`, IEPS 6% → `/1.06`, IEPS 7% → `/1.07`,
+sin impuesto → sin división.
 
 ### Valores guardados en el registro
-
-- `datos_completos["X_importe"]` → número plano (base sin IVA para gravados).
-- `datos_completos["X_iva"]` → número plano (para validación interna).
+- `datos_completos["X_importe"]` → número plano (base sin IVA).
+- `datos_completos["X_iva"]` → número plano (para validación).
 - `datos_completos["X_importe__expr"]` → string con la fórmula sin el `=`.
 
-En el Excel, la columna base usa `={X_importe__expr}`. La columna IVA usa
-siempre `=X_base{r}*0.16` (fórmula viva, NO expresión).
+En el Excel, la columna base usa `={X_importe__expr}`. La columna IVA
+usa siempre `=X_base{r}*0.16` (fórmula viva, NO expresión).
 
 ### Validaciones
-
-- **Ajuste de centavos:** si `suma_bases + suma_impuestos` difiere del total XML
-por ±$0.01, se ajusta a la **base más grande** (no al IVA).
-- **Deduplicación:** productos con mismo nombre + cantidad + remisión → se omite
-el segundo (con log).
-- **Check rojo en Excel:** `Total Remisiones` vs `Total Factura`. Si difieren
-> $0.01, la celda va en rojo.
+- **Ajuste de centavos**: si `suma_bases + suma_impuestos` difiere del
+  total XML por ±$0.01, se ajusta a la base más grande.
+- **Deduplicación**: productos con mismo nombre + cantidad + remisión →
+  se omite el segundo (con log).
+- **Validación por remisión**: suma de importes de productos vs total
+  de la remisión. Si difieren > $0.02, se registra en
+  `datos["remisiones_con_problema"]`.
+- **Check rojo en Excel**: `Total Remisiones` vs `Total Factura`.
 
 ### Sincronización de filtros al leer factura
+- `_leer_factura` **sincroniza los filtros del UI** (año/mes/centro)
+  con los del registro guardado.
+- `_guardar_silencioso` **siempre actualiza** `self.registros` y
+  `self._anio_cargado`, incluso cuando la factura es de otro año.
+- `_leer_factura` **busca el PDF automáticamente** con el mismo nombre
+  que el XML. Si no lo encuentra, busca cualquier PDF en la misma
+  carpeta. Si hay varios, pregunta.
 
-`_leer_factura` **sincroniza los filtros del UI** (año/mes/centro) con los del
-registro guardado, para que la factura aparezca en la tabla.
+### Catálogo QVET desde Excel
+- **Botón `📥 Importar catálogo QVET`** → `🔄 Actualizar catálogo QVET`
+  cuando ya existe el catálogo.
+- Acepta `.xlsx`, `.xls`, `.json`.
+- **Detección de encabezados por contenido** (no por nombre de archivo):
+  busca `DESCRIPCION` + (`SECCION` o `FAMILIA`).
+- **Mapeo QVET → categorías del catálogo**: ver `_mapear_categoria_qvet`
+  en `modulos/ingresos.py`.
+- **Merge no destructivo**: solo agrega productos que NO existan.
+- **Informe** con: productos en archivo, ya existentes, nuevos
+  agregados, descartadas, total, ubicación.
+- **Informe aparte de duplicados**: si hay nombres repetidos, los lista
+  con sus códigos internos para corregirlos en QVET.
+- **Filas descartadas**: `DESCRIPCION` vacía o que empieza con `*`.
 
-`_guardar_silencioso` **siempre actualiza** `self.registros` y
-`self._anio_cargado`, incluso cuando la factura es de otro año.
+### Ventana de registro de productos
+- **Una sola ventana** para dos tipos de pendientes:
+  - 🆕 **Productos nuevos** (no catalogados).
+  - 🏷️ **Reclasificaciones** (VACUNA/CLINICA con IVA).
+- **Badge visual** al inicio de cada fila.
+- Subtítulo: `🆕 N nuevo(s) · 🏷️ M para reclasificar`.
+- **Scroll con rueda del mouse** funcionando desde el primer movimiento.
+- **Scrollregion adaptativo**: se deshabilita si el contenido cabe.
 
 ---
 
@@ -596,6 +651,25 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 
 ## Historial de versiones
 
+### v2.3.0 — Lector de facturas v3 + catálogo QVET desde Excel
+- **Reescrito `modulos/lector_facturas.py`**: el PDF es la fuente de
+  productos (no el XML). El XML solo aporta cabecera.
+- **Detección correcta de IVA / IEPS 6% / IEPS 7% / exento** por tasa.
+- **Detección de descuentos del PDF** (columna Dto.).
+- **Deduplicación correcta entre remisiones** (por remisión + nombre +
+  cantidad).
+- **Detección de productos no catalogados** (`no_catalogados`).
+- **Validación por remisión**: suma de importes vs total de remisión.
+- **`_leer_factura` busca el PDF automáticamente** por nombre.
+- **Importación de catálogo QVET desde Excel** (merge no destructivo,
+  detección por contenido, mapeo de categorías, informe de duplicados).
+- **Botón `📥 Importar` ↔ `🔄 Actualizar`** según exista el catálogo.
+- **Ventana de registro unificada** (nuevos + reclasificaciones) con
+  badge visual.
+- **Fix scroll** en ventana de registro (rueda + scrollregion
+  adaptativo).
+- **Fix `sincronizar.py`**: unpacking de 4 valores.
+
 ### v2.2.0 — Autenticación, perfiles y usuarios
 - **Nuevo: sistema de autenticación completo.**
   - `core/auth.py` — hash PBKDF2-SHA256, 600k iteraciones, salt por usuario.
@@ -763,6 +837,10 @@ python3 scripts/probar_egresos.py --reproducir-error <archivo>
 ---
 
 ### Pendiente
+- [ ] Probar con PDFs de otros proveedores (no solo Baalak).
+- [ ] Tests del parser de PDF (casos: con/sin descuento, con/sin IEPS).
+- [ ] Tests de `_leer_excel_qvet` con Excel de QVET real.
+- [ ] Exportar informe de remisiones con discrepancia a un .txt.
 - [ ] Rotación de snapshots SAT.
 - [ ] Tests con pytest sobre snapshots reales (anonimizados).
 - [ ] Tests de core/config_ui.py.

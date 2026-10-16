@@ -7,6 +7,7 @@ Registros por año (un archivo JSON por año).
 
 import sys
 import os
+import json
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -82,15 +83,137 @@ def centro_desde_serie(serie):
 
 
 # ============================================================
+# IMPORTACIÓN DE CATÁLOGO QVET
+# ============================================================
+def _mapear_categoria_qvet(seccion, familia, subfamilia):
+    """Mapea (SECCION, FAMILIA, SUBFAMILIA) del Excel QVET a las 9 categorías."""
+    s = (seccion or "").strip().upper()
+    f = (familia or "").strip().upper()
+    sf = (subfamilia or "").strip().upper()
+
+    if f == "MEDICINA PREVENTIVA" and "VACUNA" in sf:
+        return "VACUNA"
+    if f == "ALIMENTOS":
+        return "PENSION"
+    if f in ("FARMACIA", "MEDICAMENTOS"):
+        return "MEDICAMENTOS"
+    if f == "HIGIENE":
+        return "HIGIENE"
+    if s == "ESTETICA" or f == "ESTETICA":
+        return "ESTETICA"
+    if s == "RESIDENCIA" or f in ("PENSION DIARIA", "GUARDERIA"):
+        return "PENSION"
+    if s == "TRANSPORTE" or f == "TRANSPORTE":
+        return "TRANSPORTE"
+    if f in (
+        "ACCESORIOS", "ROPA", "MOÑOS", "JUGUETES", "CAMAS", "COLLARES",
+        "CORREAS", "PECHERAS", "BOZALES", "PLATOS", "CARNAZAS",
+        "TRANSPORTADORAS", "MANEJO DE DESECHOS", "ENTRENADORES",
+        "CARDAS Y PEINES", "DISPENSADORES",
+    ):
+        return "ACCESORIOS"
+    if s == "CLINICA" or f in (
+        "CIRUGIA", "LABORATORIO", "RAYOS X", "ODONTOLOGIA",
+        "MATERIAL DE CURACION Y CIRUGIA", "INSTRUMENTAL DE CIRUGIA",
+        "EQUIPOS Y MOBILIARIO", "HOSPITALIZACION", "PROCEDIMIENTOS",
+        "CONSULTA", "ULTRASONIDO", "ELECTROCARDIOGRAFIA",
+        "MEDICINA PREVENTIVA",
+    ):
+        return "CLINICA"
+    return "U"
+
+
+def _leer_excel_qvet(ruta):
+    """
+    Lee el Excel de QVET y devuelve (catalogo, descartadas, duplicados).
+    Detecta encabezados por contenido.
+    """
+    import openpyxl
+    wb = openpyxl.load_workbook(ruta, data_only=True, read_only=True)
+    ws = wb.active
+
+    filas = list(ws.iter_rows(values_only=True))
+    if not filas:
+        raise ValueError("El archivo está vacío.")
+
+    idx_header = None
+    for i, fila in enumerate(filas[:20]):
+        celdas = [str(c or "").strip().upper() for c in fila]
+        tiene_desc = any(("DESCRIPCION" in c) or ("DESCRIPCIÓN" in c) for c in celdas)
+        tiene_sec = any(("SECCION" in c) or ("SECCIÓN" in c) for c in celdas)
+        tiene_fam = any("FAMILIA" in c for c in celdas)
+        if tiene_desc and (tiene_sec or tiene_fam):
+            idx_header = i
+            break
+
+    if idx_header is None:
+        raise ValueError(
+            "No se encontró la fila de encabezados.\n"
+            "Se esperaba una fila con 'DESCRIPCION' y 'SECCION' o 'FAMILIA'."
+        )
+
+    header = [str(c or "").strip().upper() for c in filas[idx_header]]
+
+    def _buscar_col(*nombres):
+        for j, h in enumerate(header):
+            for n in nombres:
+                if n in h:
+                    return j
+        return None
+
+    col_cod = _buscar_col("CODIGO", "CÓDIGO")
+    col_desc = _buscar_col("DESCRIPCION", "DESCRIPCIÓN")
+    col_sec = _buscar_col("SECCION", "SECCIÓN")
+    col_fam = _buscar_col("FAMILIA")
+    col_sub = _buscar_col("SUBFAMILIA")
+
+    if col_desc is None:
+        raise ValueError("No se encontró la columna DESCRIPCION.")
+
+    catalogo = {}
+    descartadas = 0
+    apariciones = {}
+
+    for fila in filas[idx_header + 1:]:
+        if not fila:
+            continue
+        desc = str(fila[col_desc] or "").strip().upper()
+        if not desc:
+            descartadas += 1
+            continue
+        if desc.startswith("*") or desc.startswith("CONCEPTO_MIGRACION"):
+            descartadas += 1
+            continue
+
+        cod = ""
+        if col_cod is not None:
+            cod = str(fila[col_cod] or "").strip()
+
+        sec = str(fila[col_sec] or "").strip().upper() if col_sec is not None else ""
+        fam = str(fila[col_fam] or "").strip().upper() if col_fam is not None else ""
+        sub = str(fila[col_sub] or "").strip().upper() if col_sub is not None else ""
+
+        cat = _mapear_categoria_qvet(sec, fam, sub)
+        apariciones.setdefault(desc, []).append(cod or "(sin código)")
+        catalogo[desc] = cat  # última aparición gana
+
+    if not catalogo:
+        raise ValueError("No se encontró ningún producto válido en el Excel.")
+
+    duplicados = {
+        desc: codigos
+        for desc, codigos in apariciones.items()
+        if len(codigos) > 1
+    }
+
+    return catalogo, descartadas, duplicados
+
+
+# ============================================================
 # PANEL PRINCIPAL (embebible)
 # ============================================================
 class PanelIngresos(ttk.Frame):
-    """
-    Panel principal del módulo de Ingresos.
-
-    Diseñado para ser embebido como Frame dentro de Vet Suite.
-    También puede usarse en un Toplevel si se necesita (ver wrapper abajo).
-    """
+    """Panel principal del módulo de Ingresos."""
 
     def __init__(self, master, on_volver=None):
         super().__init__(master)
@@ -106,7 +229,6 @@ class PanelIngresos(ttk.Frame):
         self.id_actual = None
         self._ultima_factura_xml = None
         self._ultima_factura_pdf = None
-        # Flag para bloquear múltiples sincronizaciones simultáneas
         self._sincronizacion_activa = False
         self._construir_ui()
         self._refrescar_tabla()
@@ -115,7 +237,6 @@ class PanelIngresos(ttk.Frame):
     # UI
     # ============================================================
     def _construir_ui(self):
-        # ---- Barra superior de filtros ----
         top = ttk.LabelFrame(self, text="Filtros", padding=10)
         top.pack(fill="x", padx=10, pady=5)
 
@@ -148,7 +269,6 @@ class PanelIngresos(ttk.Frame):
             bootstyle="info-outline",
         ).grid(row=0, column=6, padx=10)
 
-        # ---- Barra de botones de acciones ----
         botones = ttk.Frame(self, padding=(10, 5))
         botones.pack(fill="x", padx=10)
 
@@ -167,17 +287,14 @@ class PanelIngresos(ttk.Frame):
                 botones, text=txt, command=cmd, bootstyle=estilo,
             ).pack(side="left", padx=3)
 
-        # ---- Botón "Importar catálogo QVET" (solo si falta) ----
         self.btn_importar_catalogo = ttk.Button(
             botones,
             text="📥 Importar catálogo QVET",
             command=self._importar_catalogo,
             bootstyle="warning",
         )
-        # No se empaqueta aquí; lo maneja _actualizar_boton_catalogo()
         self._actualizar_boton_catalogo()
 
-        # ---- Tabla ----
         frame_tabla = ttk.LabelFrame(self, text="Registros", padding=5)
         frame_tabla.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -189,7 +306,6 @@ class PanelIngresos(ttk.Frame):
             "total", "efectivo", "tc", "td", "cheque", "transfer",
             "folio_fiscal", "centro", "adjuntos",
         ]
-
         encabezados = {
             "no_factura": "No. FACTURA",
             "qvet": "QVET",
@@ -207,20 +323,10 @@ class PanelIngresos(ttk.Frame):
             "adjuntos": "📎",
         }
         anchos = {
-            "no_factura": 110,
-            "qvet": 90,
-            "fecha": 90,
-            "nombre": 200,
-            "rfc": 120,
-            "total": 90,
-            "efectivo": 80,
-            "tc": 80,
-            "td": 80,
-            "cheque": 80,
-            "transfer": 80,
-            "folio_fiscal": 260,
-            "centro": 80,
-            "adjuntos": 50,
+            "no_factura": 110, "qvet": 90, "fecha": 90, "nombre": 200,
+            "rfc": 120, "total": 90, "efectivo": 80, "tc": 80, "td": 80,
+            "cheque": 80, "transfer": 80, "folio_fiscal": 260,
+            "centro": 80, "adjuntos": 50,
         }
 
         self.tabla = ttk.Treeview(
@@ -232,7 +338,6 @@ class PanelIngresos(ttk.Frame):
             self.tabla.column(c, width=anchos[c],
                               anchor="center" if c != "nombre" else "w")
 
-        # Scrolls
         sb_v = ttk.Scrollbar(contenedor, orient="vertical",
                              command=self.tabla.yview)
         sb_h = ttk.Scrollbar(contenedor, orient="horizontal",
@@ -245,121 +350,205 @@ class PanelIngresos(ttk.Frame):
         contenedor.rowconfigure(0, weight=1)
         contenedor.columnconfigure(0, weight=1)
 
-        # ---- Footer ----
         self.lbl_totales = ttk.Label(
             self, text="", font=("Segoe UI", 10, "bold"),
         )
         self.lbl_totales.pack(fill="x", padx=15, pady=(0, 8))
 
-        # ---- Menú contextual ----
-        #self._crear_menu_contextual()
-
-        # ---- Bindings ----
         self.tabla.bind("<Double-Button-1>", self._ver_adjuntos_seleccionado)
         self.var_anio.trace_add("write", self._al_cambiar_anio)
         self.var_mes.trace_add("write", lambda *a: self._refrescar_tabla())
         self.var_centro.trace_add("write", lambda *a: self._refrescar_tabla())
 
+    # ============================================================
+    # CATÁLOGO QVET
+    # ============================================================
     def _actualizar_boton_catalogo(self):
-        """Muestra u oculta el botón 'Importar catálogo' según exista."""
         try:
             existe = ruta_catalogo_usuario().exists()
         except Exception:
             existe = False
 
         if existe:
-            self.btn_importar_catalogo.pack_forget()
+            self.btn_importar_catalogo.configure(
+                text="🔄 Actualizar catálogo QVET",
+                bootstyle="info",
+            )
         else:
+            self.btn_importar_catalogo.configure(
+                text="📥 Importar catálogo QVET",
+                bootstyle="warning",
+            )
+        if not self.btn_importar_catalogo.winfo_ismapped():
             self.btn_importar_catalogo.pack(side="left", padx=3)
 
     def _importar_catalogo(self):
-        """Abre file picker, valida, copia el JSON y recarga."""
         ruta = filedialog.askopenfilename(
-            title="Selecciona el catálogo QVET (JSON)",
-            filetypes=[("JSON", "*.json"), ("Todos los archivos", "*.*")],
+            title="Selecciona el catálogo QVET (Excel o JSON)",
+            filetypes=[
+                ("Excel o JSON", "*.xlsx *.xls *.json"),
+                ("Excel", "*.xlsx *.xls"),
+                ("JSON", "*.json"),
+                ("Todos los archivos", "*.*"),
+            ],
         )
         if not ruta:
             return
 
-        # Validar antes de copiar
-        try:
-            import json
-            with open(ruta, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if not isinstance(data, dict) or not data:
+        ext = Path(ruta).suffix.lower()
+        destino = ruta_catalogo_usuario()
+        destino.parent.mkdir(parents=True, exist_ok=True)
+
+        duplicados = {}
+
+        if ext == ".json":
+            try:
+                with open(ruta, "r", encoding="utf-8") as f:
+                    nuevos = json.load(f)
+                if not isinstance(nuevos, dict) or not nuevos:
+                    messagebox.showerror(
+                        "Catálogo inválido",
+                        "El JSON no tiene el formato esperado.\n"
+                        "Debe ser {producto: categoría}.",
+                        parent=self,
+                    )
+                    return
+                descartadas = 0
+            except Exception as e:
                 messagebox.showerror(
-                    "Catálogo inválido",
-                    "El archivo no tiene el formato esperado.\n"
-                    "Debe ser un JSON con entradas {producto: categoría}.",
+                    "Error al leer",
+                    f"No se pudo leer el archivo:\n{e}",
                     parent=self,
                 )
                 return
-        except Exception as e:
+        elif ext in (".xlsx", ".xls"):
+            try:
+                nuevos, descartadas, duplicados = _leer_excel_qvet(ruta)
+            except Exception as e:
+                messagebox.showerror(
+                    "Error al leer Excel",
+                    f"No se pudo procesar el Excel:\n{e}",
+                    parent=self,
+                )
+                return
+        else:
             messagebox.showerror(
-                "Error al leer",
-                f"No se pudo leer el archivo:\n{e}",
+                "Formato no soportado",
+                f"Extensión no soportada: {ext}\nUsa .xlsx, .xls o .json.",
                 parent=self,
             )
             return
 
-        # Copiar
-        destino = ruta_catalogo_usuario()
-        destino.parent.mkdir(parents=True, exist_ok=True)
+        existente = {}
+        if destino.exists():
+            try:
+                with open(destino, "r", encoding="utf-8") as f:
+                    existente = json.load(f)
+                if not isinstance(existente, dict):
+                    existente = {}
+            except Exception:
+                existente = {}
+
+        hubo_catalogo_previo = bool(existente)
+
+        nuevos_agregados = []
+        ya_existentes = 0
+        for prod, cat in nuevos.items():
+            if prod in existente:
+                ya_existentes += 1
+            else:
+                existente[prod] = cat
+                nuevos_agregados.append(prod)
+
         try:
-            shutil.copy2(ruta, destino)
+            with open(destino, "w", encoding="utf-8") as f:
+                json.dump(existente, f, ensure_ascii=False, indent=2)
         except Exception as e:
             messagebox.showerror(
-                "Error al copiar",
-                f"No se pudo copiar el catálogo:\n{e}",
+                "Error al guardar",
+                f"No se pudo guardar el catálogo:\n{e}",
                 parent=self,
             )
             return
 
-        # Recargar en memoria
         try:
             catalogo = recargar_catalogo()
             total = len(catalogo) if isinstance(catalogo, dict) else 0
         except Exception:
-            total = 0
+            total = len(existente)
 
         self._actualizar_boton_catalogo()
-        messagebox.showinfo(
-            "Catálogo importado",
-            f"✅ Catálogo cargado correctamente.\n\n"
-            f"Productos: {total}\n"
-            f"Ubicación: {destino}",
-            parent=self,
-        )
 
-    def _crear_menu_contextual(self):
-        self.menu_ctx = tk.Menu(self, tearoff=0)
-        self.menu_ctx.add_command(
-            label="📎  Ver adjuntos",
-            command=self._ver_adjuntos_seleccionado,
-        )
-        self.menu_ctx.add_command(
-            label="🗑️  Eliminar",
-            command=self._eliminar_seleccionado,
-        )
-        self.menu_ctx.add_separator()
-        self.menu_ctx.add_command(
-            label="📂  Abrir carpeta del registro",
-            command=self._abrir_carpeta_registro,
-        )
+        accion = "actualizado" if hubo_catalogo_previo else "creado"
+        lineas = [
+            f"✅ Catálogo {accion}.",
+            "",
+            f"Productos en el archivo: {len(nuevos)}",
+            f"Ya existían en el catálogo: {ya_existentes}",
+            f"🆕 Nuevos agregados: {len(nuevos_agregados)}",
+        ]
+        if descartadas:
+            lineas.append(f"⚠️ Filas descartadas: {descartadas}")
+        lineas += ["", f"Total en catálogo: {total}", f"Ubicación: {destino}"]
 
-        self.tabla.bind("<Button-3>", self._mostrar_menu_ctx)
-        self.tabla.bind("<Button-2>", self._mostrar_menu_ctx)
-        self.tabla.bind("<Control-Button-1>", self._mostrar_menu_ctx)
+        if nuevos_agregados:
+            muestra = nuevos_agregados[:15]
+            lineas.append("")
+            lineas.append(f"Primeros {len(muestra)} nuevos:")
+            for p in muestra:
+                lineas.append(f"  • {p}")
+            if len(nuevos_agregados) > 15:
+                lineas.append(f"  … y {len(nuevos_agregados) - 15} más")
 
-    def _mostrar_menu_ctx(self, event):
-        item = self.tabla.identify_row(event.y)
-        if not item:
-            return
-        self.tabla.selection_set(item)
-        try:
-            self.menu_ctx.tk_popup(event.x_root, event.y_root)
-        finally:
-            self.menu_ctx.grab_release()
+        messagebox.showinfo("Catálogo QVET", "\n".join(lineas), parent=self)
+
+        if duplicados:
+            self._mostrar_duplicados(duplicados)
+
+    def _mostrar_duplicados(self, duplicados):
+        total_dup = sum(len(v) for v in duplicados.values()) - len(duplicados)
+        lineas = [
+            f"Se encontraron {len(duplicados)} nombre(s) repetido(s) en el Excel.",
+            f"({total_dup} fila(s) extra en total)",
+            "",
+            "En el catálogo solo se conserva la ÚLTIMA aparición.",
+            "Corrige estos nombres directamente en QVET:",
+            "",
+        ]
+        for desc, codigos in duplicados.items():
+            codigos_str = ", ".join(codigos)
+            lineas.append(f"  • {desc}")
+            lineas.append(f"      códigos: {codigos_str}")
+        texto = "\n".join(lineas)
+
+        win = tk.Toplevel(self)
+        win.title("Nombres duplicados en el Excel")
+        win.geometry("640x480")
+        win.transient(self.winfo_toplevel())
+
+        frame = ttk.Frame(win, padding=10)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(
+            frame,
+            text=f"⚠️ {len(duplicados)} nombre(s) duplicado(s) en el Excel",
+            font=("Segoe UI", 11, "bold"),
+            bootstyle="warning",
+        ).pack(anchor="w", pady=(0, 8))
+
+        texto_widget = tk.Text(frame, wrap="word", height=20)
+        texto_widget.pack(fill="both", expand=True, side="left")
+        sb = ttk.Scrollbar(frame, orient="vertical",
+                           command=texto_widget.yview)
+        sb.pack(side="right", fill="y")
+        texto_widget.configure(yscrollcommand=sb.set)
+
+        texto_widget.insert("1.0", texto)
+        texto_widget.configure(state="disabled")
+
+        ttk.Button(
+            win, text="Cerrar", command=win.destroy, bootstyle="secondary",
+        ).pack(pady=8)
 
     # ============================================================
     # TABLA
@@ -434,10 +623,6 @@ class PanelIngresos(ttk.Frame):
     # SELECCIÓN
     # ============================================================
     def _actualizar_titulo(self):
-        """
-        Antes actualizaba el título de la ventana. En embed no aplica.
-        Se mantiene como no-op por compatibilidad.
-        """
         pass
 
     def _obtener_seleccionado(self):
@@ -453,9 +638,6 @@ class PanelIngresos(ttk.Frame):
                 return r
         return None
 
-    # ============================================================
-    # ACCIONES DE TABLA
-    # ============================================================
     def _ver_adjuntos_seleccionado(self, event=None):
         reg = self._obtener_seleccionado()
         if not reg:
@@ -466,11 +648,9 @@ class PanelIngresos(ttk.Frame):
         fue_eliminado = abrir_dialogo_adjuntos(self, reg)
 
         if fue_eliminado:
-            # Quitar de la lista en memoria
             self.registros = [
                 r for r in self.registros if r.get("id") != reg.get("id")
             ]
-            # Guardar
             try:
                 anio = int(self.var_anio.get())
             except Exception:
@@ -485,7 +665,6 @@ class PanelIngresos(ttk.Frame):
             messagebox.showinfo("Eliminar", "Selecciona un registro.")
             return
 
-        # Delegar al diálogo de adjuntos (que ya tiene la confirmación)
         from dialogos.adjuntos import abrir_dialogo_adjuntos
         fue_eliminado = abrir_dialogo_adjuntos(self, reg)
 
@@ -522,7 +701,6 @@ class PanelIngresos(ttk.Frame):
     # ============================================================
     def _sincronizar(self):
         if self._sincronizacion_activa:
-            from tkinter import messagebox
             messagebox.showwarning(
                 "Sincronización en curso",
                 "Ya hay una sincronización activa.\n\n"
@@ -539,7 +717,10 @@ class PanelIngresos(ttk.Frame):
             self._sincronizacion_activa = False
 
     def _leer_factura(self):
-        """Lee un XML (y opcionalmente un PDF) y guarda el registro."""
+        """
+        Lee un XML y busca automáticamente el PDF con el mismo nombre.
+        Si no lo encuentra, lo pide.
+        """
         ruta_xml = filedialog.askopenfilename(
             title="Selecciona el XML de la factura",
             filetypes=[("XML CFDI", "*.xml"), ("Todos", "*.*")],
@@ -547,16 +728,38 @@ class PanelIngresos(ttk.Frame):
         if not ruta_xml:
             return
 
-        ruta_pdf = filedialog.askopenfilename(
-            title="Selecciona el PDF de la factura (obligatorio)",
-            filetypes=[("PDF", "*.pdf"), ("Todos", "*.*")],
-        )
+        # Buscar PDF automáticamente en la misma carpeta con el mismo nombre
+        ruta_pdf = None
+        p_xml = Path(ruta_xml)
+        candidatos = [
+            p_xml.with_suffix(".pdf"),
+            p_xml.with_suffix(".PDF"),
+        ]
+        for c in candidatos:
+            if c.exists():
+                ruta_pdf = str(c)
+                break
+
+        # Si no aparece con el mismo nombre, buscar cualquier PDF en la carpeta
         if not ruta_pdf:
-            messagebox.showwarning(
-                "Falta el PDF",
-                "El PDF es obligatorio. La factura no se procesó.",
+            pdfs_misma_carpeta = list(p_xml.parent.glob("*.pdf")) + \
+                                 list(p_xml.parent.glob("*.PDF"))
+            if len(pdfs_misma_carpeta) == 1:
+                ruta_pdf = str(pdfs_misma_carpeta[0])
+
+        # Si aún no, preguntar al usuario
+        if not ruta_pdf:
+            ruta_pdf = filedialog.askopenfilename(
+                title="No se encontró el PDF automáticamente. Selecciónalo:",
+                filetypes=[("PDF", "*.pdf"), ("Todos", "*.*")],
+                initialdir=str(p_xml.parent),
             )
-            return
+            if not ruta_pdf:
+                messagebox.showwarning(
+                    "Falta el PDF",
+                    "El PDF es obligatorio. La factura no se procesó.",
+                )
+                return
 
         try:
             datos = procesar_factura(ruta_xml, ruta_pdf)
@@ -570,14 +773,21 @@ class PanelIngresos(ttk.Frame):
         self._ultima_factura_xml = ruta_xml
         self._ultima_factura_pdf = ruta_pdf
 
-        resumen, datos_completos, avisos = self._llenar_desde_factura(datos)
+        # Nuevo unpacking: 4 valores (agregado no_catalogados)
+        resumen, datos_completos, avisos, no_catalogados = \
+            self._llenar_desde_factura(datos)
 
-        if avisos:
-            self._avisar_reclasificacion(avisos)
+        # Una sola ventana con ambos tipos de pendientes
+        todos_pendientes = list(no_catalogados or []) + list(avisos or [])
+        if todos_pendientes:
+            try:
+                from dialogos.registrar_productos import abrir_dialogo_registrar_productos
+                abrir_dialogo_registrar_productos(self, todos_pendientes)
+            except Exception:
+                pass
 
         self._guardar_silencioso(datos_completos)
 
-        # Sincronizar filtros del UI con el registro guardado
         try:
             self.var_centro.set(datos_completos.get("centro", "Central"))
             self.var_anio.set(str(datos_completos.get("anio", datetime.now().year)))
@@ -589,6 +799,11 @@ class PanelIngresos(ttk.Frame):
 
         self._refrescar_tabla()
 
+        # Mensaje final con conteo
+        n_productos = sum(
+            len(prods)
+            for prods in datos.get("productos_por_remision", {}).values()
+        )
         lineas = [
             f"Factura leída: {datos.get('no_factura', '')}",
             f"Centro: {datos_completos.get('centro', '?')}",
@@ -596,8 +811,14 @@ class PanelIngresos(ttk.Frame):
             f"Mes: {datos_completos.get('mes', '?')}",
             f"Total: ${datos.get('total', 0):,.2f}",
             "",
-            "Registro guardado.",
+            f"Productos procesados: {n_productos}",
         ]
+        if no_catalogados:
+            lineas.append(f"⚠️ No catalogados: {len(no_catalogados)}")
+        if avisos:
+            lineas.append(f"⚠️ Reclasificaciones: {len(avisos)}")
+        lineas += ["", "Registro guardado."]
+
         messagebox.showinfo("Factura leída", "\n".join(lineas))
 
     def _abrir_reclasificador(self):
@@ -605,7 +826,6 @@ class PanelIngresos(ttk.Frame):
         abrir_dialogo_reclasificador(self)
 
     def _generar_excel(self):
-        """Genera (o anexa a) el Excel de resumen."""
         if not self.registros:
             messagebox.showwarning("Sin datos", "No hay registros.")
             return
@@ -729,7 +949,6 @@ class PanelIngresos(ttk.Frame):
 
     @staticmethod
     def _backup_excel(ruta_xlsx):
-        """Crea un backup del Excel antes de borrarlo."""
         if not ruta_xlsx.exists():
             return None
         try:
@@ -796,7 +1015,6 @@ class PanelIngresos(ttk.Frame):
 
     @staticmethod
     def _abrir_archivo(ruta):
-        """Compatibilidad con dialogos que lo usaban."""
         if sys.platform.startswith("win"):
             os.startfile(str(ruta))
         elif sys.platform == "darwin":
@@ -805,28 +1023,28 @@ class PanelIngresos(ttk.Frame):
             os.system(f'xdg-open "{ruta}"')
 
     # ============================================================
-    # FUNCIONES INTERNAS (preservadas para sincronización)
+    # FUNCIONES INTERNAS
     # ============================================================
     def _llenar_desde_factura(self, datos):
         """
         Convierte los datos de una factura en un dict del formulario
         para guardarlo silenciosamente.
+        Devuelve: (resumen, datos_completos, avisos, no_catalogados)
         """
-        # Detectar centro y fechas
         serie = datos.get("serie", "").strip()
         centro_detectado = centro_desde_serie(serie) or "Central"
+        if not centro_desde_serie(serie):
+            print(f"ℹ️  Serie desconocida: '{serie}' → centro por default 'Central'")
 
         fecha_factura = datos.get("fecha", "")
         mes_detectado, anio_detectado = mes_anio_desde_fecha(fecha_factura)
         anio = anio_detectado or datetime.now().year
         mes = mes_detectado or MESES_ES[datetime.now().month - 1]
 
-        # Recargar registros si el año es distinto
         if self._anio_cargado != anio:
             self.registros = cargar_db(anio)
             self._anio_cargado = anio
 
-        # Datos base
         datos_completos = {
             "no_factura": str(datos.get("no_factura", "")).upper(),
             "qvet": str(datos.get("qvet", "")).upper(),
@@ -840,10 +1058,10 @@ class PanelIngresos(ttk.Frame):
             "mes": mes,
         }
 
-        # Agrupar conceptos por categoría
-        agrupado, detalle, avisos = agrupar_por_categoria(datos)
+        # Nueva firma: 4 valores
+        agrupado, detalle, avisos, no_catalogados = \
+            agrupar_por_categoria(datos)
 
-        # Mapeo de campos
         mapa_campos = {
             "U": {"importe": "u_importe"},
             "ACCESORIOS": {"importe": "ac_importe"},
@@ -864,12 +1082,10 @@ class PanelIngresos(ttk.Frame):
             },
         }
 
-        # Inicializar todos los campos numéricos a 0
         for clave, _, _, tipo in CAMPOS:
             if tipo == "number":
                 datos_completos.setdefault(clave, 0.0)
 
-        # Llenar valores desde el agrupado
         for cat, valores in agrupado.items():
             if cat not in mapa_campos:
                 continue
@@ -877,36 +1093,29 @@ class PanelIngresos(ttk.Frame):
                 if subclave in valores:
                     datos_completos[campo] = round(valores[subclave], 2)
 
-        # Rellenar los IVA calculados por Python
+        # IVA / IEPS calculados
         datos_completos["u_iva"] = round(datos_completos.get("u_importe", 0) * 0.16, 2)
         datos_completos["ac_iva"] = round(datos_completos.get("ac_importe", 0) * 0.16, 2)
         datos_completos["est_iva"] = round(datos_completos.get("est_importe", 0) * 0.16, 2)
         datos_completos["tra_iva"] = round(datos_completos.get("tra_importe", 0) * 0.16, 2)
         datos_completos["pen_iva"] = round(datos_completos.get("pen_importe", 0) * 0.16, 2)
-
-        # IVA / IEPS de MEDICAMENTOS y HIGIENE
         datos_completos["med_iva"] = round(datos_completos.get("med_sin_iva", 0) * 0.16, 2)
         datos_completos["hig_iva"] = round(datos_completos.get("hig_sin_iva", 0) * 0.16, 2)
         datos_completos["hig_ieps_6"] = round(datos_completos.get("hig_sin_ieps_6", 0) * 0.06, 2)
         datos_completos["hig_ieps_7"] = round(datos_completos.get("hig_sin_ieps_7", 0) * 0.07, 2)
 
-        # Guardar las expresiones (fórmulas) en el registro.
         for campo, expr in detalle.items():
             datos_completos[f"{campo}__expr"] = expr
 
-        # Pagos
         pagos = datos.get("pagos", {})
         for clave in ("efectivo", "tc", "td", "cheque", "transfer", "vale"):
             datos_completos[clave] = round(pagos.get(clave, 0.0), 2)
 
-        # Total
         datos_completos["total"] = round(datos.get("total", 0.0), 2)
 
-        return [], datos_completos, avisos
+        return [], datos_completos, avisos, no_catalogados
 
     def _guardar_silencioso(self, datos):
-        """Guarda un registro sin mostrar diálogos."""
-        # Normalizar fechas
         for clave, _, _, tipo in CAMPOS:
             if tipo == "date":
                 v = datos.get(clave, "")
@@ -916,16 +1125,13 @@ class PanelIngresos(ttk.Frame):
                     except Exception:
                         pass
 
-        # ID
         datos["id"] = int(datetime.now().timestamp() * 1000)
 
-        # Año del registro
         try:
             anio_datos = int(datos.get("anio", self._anio_cargado))
         except Exception:
             anio_datos = self._anio_cargado
 
-        # ---- Cargar la DB del año correspondiente ----
         if anio_datos != self._anio_cargado:
             regs_destino = cargar_db(anio_datos)
         else:
@@ -934,13 +1140,11 @@ class PanelIngresos(ttk.Frame):
         regs_destino.append(datos)
         guardar_db(regs_destino, anio_datos)
 
-        # ---- Sincronizar estado en memoria ----
         if anio_datos != self._anio_cargado:
             self._anio_cargado = anio_datos
         self.registros = regs_destino
         self.historial = actualizar_historial(regs_destino)
 
-        # Crear carpeta del registro
         try:
             fecha_carpeta = parse_fecha(datos.get("fecha", ""))
             ruta = ruta_ingreso(
@@ -951,7 +1155,6 @@ class PanelIngresos(ttk.Frame):
         except Exception:
             pass
 
-        # Auto-adjuntar XML y PDF
         rutas_adjuntar = []
         if self._ultima_factura_xml and Path(self._ultima_factura_xml).exists():
             rutas_adjuntar.append(self._ultima_factura_xml)
@@ -964,7 +1167,6 @@ class PanelIngresos(ttk.Frame):
             except Exception as e:
                 print(f"[_guardar_silencioso] Error al adjuntar: {e}")
 
-        # Eliminar originales de descargas
         carpeta_descargas = _CARPETA_DATOS / "facturas_descargadas"
         for r in rutas_adjuntar:
             try:
@@ -978,7 +1180,6 @@ class PanelIngresos(ttk.Frame):
         self._ultima_factura_pdf = None
 
     def _avisar_reclasificacion(self, avisos):
-        """Muestra aviso de reclasificación."""
         if not avisos:
             return
         try:
@@ -987,23 +1188,25 @@ class PanelIngresos(ttk.Frame):
         except Exception:
             pass
 
+    def _avisar_no_catalogados(self, no_catalogados):
+        if not no_catalogados:
+            return
+        try:
+            from dialogos.registrar_productos import abrir_dialogo_registrar_productos
+            abrir_dialogo_registrar_productos(self, no_catalogados)
+        except Exception:
+            pass
+
 
 # ================================================================
-# Wrapper legacy: abre el panel dentro de un Toplevel independiente
+# Wrapper legacy
 # ================================================================
-
 class AppIngresos(ttk.Toplevel):
-    """
-    Wrapper legacy: abre el panel dentro de una ventana independiente.
-    Mantener mientras haya código que importe AppIngresos.
-    """
-
     def __init__(self, master=None):
         super().__init__(master)
         self.title("Vet Suite — Ingresos")
         self.geometry("1300x880")
         self.minsize(1050, 700)
-
         panel = PanelIngresos(self)
         panel.pack(fill="both", expand=True)
 

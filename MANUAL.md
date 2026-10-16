@@ -1,6 +1,6 @@
 # Manual de Usuario - Vet Suite
 
-**Versión:** 2.2.0  
+**Versión:** 2.3.0  
 **Última actualización:** Octubre 2026
 
 ---
@@ -12,7 +12,7 @@
 3. Inicio de sesión y perfiles
 4. Configuración inicial
 5. Flujo de trabajo diario (Ingresos)
-6. Reclasificación de productos
+6. Catálogo de productos y reclasificación
 7. Generación de Excel (Ingresos)
 8. Reportes (Ingresos)
 9. Adjuntos
@@ -247,13 +247,35 @@ Temas recomendados:
    - "Solo guardar los archivos"
 5. Revisa el resumen.
 
+Al final del procesamiento, si hay **productos nuevos** (que no están
+en el catálogo) o **productos mal categorizados**, la app te ofrecerá
+abrir la ventana de **Registrar productos** para asignarles categoría
+(ver sección 6).
+
 ### 5.2 Leer facturas manualmente
 
-1. Clic en Leer factura.
-2. Selecciona el XML.
-3. Selecciona el PDF (opcional).
-4. La app procesa el XML y el PDF automáticamente.
-5. El registro aparece en la tabla.
+1. Clic en **Leer factura**.
+2. Selecciona el **XML** de la factura.
+
+La app **busca automáticamente el PDF** con el mismo nombre en la misma
+carpeta. Por ejemplo, si eliges `factura_123.xml`, busca `factura_123.pdf`.
+
+Si no lo encuentra:
+
+- Si hay **un solo PDF** en la carpeta, lo usa.
+- Si hay varios o ninguno, te pide que lo selecciones.
+
+3. El registro se guarda automáticamente y aparece en la tabla.
+4. Aparece un mensaje de confirmación con:
+   - No. de factura, centro, año, mes.
+   - Total.
+   - **Productos procesados**.
+   - **No catalogados** (si hay).
+   - **Reclasificaciones** (si hay).
+
+> 💡 **Importante:** el PDF es obligatorio. La app lee los productos del
+> PDF (nombre, cantidad, importe) y solo la cabecera del XML (RFC,
+> nombre, folio, fecha, total). Si falta el PDF, la factura no se procesa.
 
 ### 5.3 La tabla de registros
 
@@ -264,7 +286,9 @@ La tabla muestra:
 - Folio Fiscal, Centro.
 - Ícono 📎 si tiene adjuntos.
 
-Los campos de categorías (U, ACCESORIOS, MEDICAMENTOS, HIGIENE, ESTETICA, TRANSPORTE, PENSION, VACUNA, CLINICA) **se guardan automáticamente** cuando procesas una factura, y se usan al generar el Excel.
+Los campos de categorías (U, ACCESORIOS, MEDICAMENTOS, HIGIENE, ESTETICA,
+TRANSPORTE, PENSION, VACUNA, CLINICA) **se guardan automáticamente**
+cuando procesas una factura, y se usan al generar el Excel.
 
 ### 5.4 Ver adjuntos y editar
 
@@ -285,29 +309,120 @@ En la barra superior:
 
 ---
 
-## 6. Reclasificación de productos
+## 6. Catálogo de productos y reclasificación
 
-### 6.1 Productos huérfanos
+El módulo de Ingresos usa un **catálogo** para saber a qué categoría
+pertenece cada producto (por ejemplo, si `SHAMPOO ALOE` es `HIGIENE` o
+`ESTETICA`). El catálogo se puede importar desde un Excel que exportas
+de QVET.
 
-Son productos que no están en el catálogo o que están mal clasificados.
+### 6.1 Importar o actualizar el catálogo QVET
 
-La app te avisa con un diálogo y ofrece registrarlos.
+El botón cambia de texto según el estado:
 
-### 6.2 El reclasificador
+- **📥 Importar catálogo QVET** — cuando **no existe** catálogo todavía.
+- **🔄 Actualizar catálogo QVET** — cuando **ya existe**.
 
-1. Clic en Reclasificar.
+En ambos casos:
+
+1. Clic en el botón.
+2. Selecciona el archivo `.xlsx`, `.xls` o `.json`.
+3. La app detecta la estructura del Excel automáticamente (no importa
+   cómo se llame el archivo ni cómo se llame la hoja).
+4. Aparece un resumen:
+   - Productos en el archivo.
+   - Ya existían en el catálogo.
+   - **🆕 Nuevos agregados**.
+   - Filas descartadas (si las hay).
+   - Total en catálogo.
+   - Ubicación del archivo.
+5. Si el Excel trae **nombres duplicados**, aparece una segunda ventana
+   con la lista completa y sus **códigos internos** de QVET, para que
+   los corrijas en tu sistema.
+
+> 💡 **Importante:** la actualización es **no destructiva**. Los productos
+> que ya existen en el catálogo **no se sobreescriben**. Solo se agregan
+> los nuevos.
+
+**Columnas esperadas en el Excel de QVET:**
+
+`CODIGO INTERNO | DESCRIPCION | SECCION | FAMILIA | SUBFAMILIA | PVP`
+
+Las columnas `DESCRIPCION` y `SECCION` (o `FAMILIA`) son obligatorias.
+La app las detecta por nombre, sin importar el orden.
+
+**Filas descartadas automáticamente:**
+
+- Descripción vacía.
+- Descripciones que empiezan con `*`, `**` o `***` (marcadores internos).
+- Descripciones tipo `Concepto_Migracion...`.
+
+### 6.2 La ventana de registro de productos
+
+Cuando la app detecta productos que necesitan categoría, se abre **una
+sola ventana** con dos tipos de pendientes mezclados:
+
+- 🆕 **Productos nuevos**: no están en el catálogo (categoría `U`).
+- 🏷️ **Por reclasificar**: están en categorías que no admiten IVA (ej.
+  VACUNA o CLINICA) pero traen IVA en la factura.
+
+Cada fila tiene un **badge** al inicio que distingue el tipo:
+
+| Badge | Significado |
+|-------|-------------|
+| 🆕 | Producto nuevo, hay que asignarle categoría |
+| 🏷️ | Producto mal clasificado, hay que corregirlo |
+
+**Cómo usar la ventana:**
+
+1. Revisa la lista. El subtítulo te dice cuántos hay de cada tipo.
+2. Para cada producto, elige la **nueva categoría** en el combo.
+3. Si no estás seguro, puedes dejar `U` y reclasificar después.
+4. Clic en **💾 Guardar todos**.
+
+Las asignaciones se guardan en `categorias_manuales.json` y se aplican
+**la próxima vez** que leas una factura.
+
+**Scroll:** puedes usar la rueda del mouse o la barra lateral. Si hay
+pocos productos, el scroll se deshabilita automáticamente.
+
+### 6.3 El reclasificador (manual)
+
+Además de la ventana automática, puedes abrir el reclasificador cuando
+quieras:
+
+1. Clic en **🏷️ Reclasificar**.
 2. Busca el producto.
 3. Filtra por categoría u origen.
 4. Cambia la categoría.
 5. Guardar.
 
-### 6.3 Registrar productos nuevos
+### 6.4 Categorías válidas
 
-Desde el reclasificador:
+El catálogo usa 9 categorías:
 
-1. Clic en "+ Nuevo producto".
-2. Llena nombre y categoría.
-3. Guardar.
+| Categoría | Qué incluye |
+|-----------|-------------|
+| `U` | Sin clasificar (se muestra en el Excel como "U") |
+| `ACCESORIOS` | Ropa, juguetes, camas, collares, correas, bozales, platos |
+| `MEDICAMENTOS` | Farmacia, antiparasitarios, antibióticos, vitaminas |
+| `HIGIENE` | Shampoos, jabones, desinfectantes, dentales, ecto |
+| `ESTETICA` | Baños, cortes, servicios de estética |
+| `TRANSPORTE` | Servicios de transporte, fletes |
+| `PENSION` | Alimentos, pensión diaria, guardería |
+| `VACUNA` | Vacunas aplicadas |
+| `CLINICA` | Consultas, cirugías, laboratorio, rayos X, odontología |
+
+### 6.5 IVA vs IEPS
+
+La app detecta automáticamente el tipo de impuesto de cada producto:
+
+- **IVA 16%**: la mayoría de productos y servicios.
+- **IEPS 6%**: algunos productos (ej. alimentos con alta densidad calórica).
+- **IEPS 7%**: otros productos específicos.
+- **Sin impuesto** (exento): consultas, vacunas, medicamentos controlados.
+
+Esto se refleja en las columnas del Excel generado (ver sección 7).
 
 ---
 
@@ -342,7 +457,31 @@ Reordenar:
 - Ordena por fecha y No. factura.
 - Crea un backup antes.
 
-### 7.3 Backups
+### 7.3 Sobre las columnas de impuestos
+
+El Excel resultante tiene columnas separadas según el tipo fiscal de
+cada categoría:
+
+- **U, ACCESORIOS, ESTETICA, TRANSPORTE, PENSION**: IMPORTE + IVA (16%).
+- **VACUNA, CLINICA**: IMPORTE (sin IVA).
+- **MEDICAMENTOS**: IMPORTE (sin IVA) + SIN IVA + IVA (16%).
+- **HIGIENE**: IMPORTE (sin IVA) + SIN IVA + IVA + SIN IEPS 6% + IEPS 6%
+  + SIN IEPS 7% + IEPS 7%.
+
+Cada columna tiene la fórmula que refleja el desglose por remisión:
+
+- 1 producto → `114`
+- 2+ productos en la misma remisión → `(114+100)`
+- Varias remisiones → `(114+100)+(200)+(58)`
+
+Las columnas con IVA o IEPS llevan el divisor al final:
+`=((114+100)+(200)+(58))/1.16`.
+
+> 💡 **No edites manualmente las fórmulas del Excel.** Si modificas un
+> registro y quieres regenerar, elige "No" al preguntar (reordenar todo)
+> para que se recalculen todas las fórmulas.
+
+### 7.4 Backups
 
 Los backups se guardan en la misma carpeta como:
 
@@ -350,7 +489,7 @@ Los backups se guardan en la misma carpeta como:
 
 No se borran automáticamente. Puedes eliminarlos manualmente cuando ya no los necesites.
 
-### 7.4 Recuperar un backup
+### 7.5 Recuperar un backup
 
 1. Abre la carpeta del Excel.
 2. Busca el archivo con `_backup_`.
@@ -979,6 +1118,46 @@ Tkinter (la librería gráfica) no renderiza emojis de forma nativa. Es normal.
 
 **Los emojis SÍ se ven correctamente en WhatsApp** cuando pegas el mensaje.
 
+### 15.9 La factura no se procesa (falta PDF)
+
+Causa: al leer una factura manualmente, no se encontró el PDF con el
+mismo nombre que el XML.
+
+Solución:
+
+- Renombra el PDF para que coincida con el XML, o
+- Asegúrate de que solo haya un PDF en la carpeta, o
+- Selecciona el PDF manualmente cuando la app te lo pida.
+
+### 15.10 Los productos salen como "no catalogados"
+
+Causa: el catálogo no tiene esos productos, o los nombres no coinciden
+exactamente.
+
+Solución:
+
+1. Exporta el Excel de productos desde QVET.
+2. Clic en **🔄 Actualizar catálogo QVET** en Ingresos.
+3. Selecciona el Excel.
+4. La app agregará los productos nuevos al catálogo.
+5. Los que aún salgan como no catalogados, se pueden reclasificar
+   manualmente (sección 6).
+
+### 15.11 Un producto se clasificó mal
+
+Causa: el catálogo tiene una categoría incorrecta para ese producto.
+
+Solución:
+
+1. Clic en **🏷️ Reclasificar**.
+2. Busca el producto.
+3. Cambia la categoría.
+4. Guardar.
+
+La corrección se guarda en `categorias_manuales.json` y se aplica a las
+próximas facturas. Para corregir facturas ya procesadas, edita el
+registro manualmente o regenera el Excel eligiendo "No" (reordenar todo).
+
 ---
 
 ## 16. Preguntas frecuentes
@@ -1051,6 +1230,37 @@ tiene permitido (no hay restricción por usuario dentro de un módulo).
 Sí. Crea un usuario nuevo y asígnale el perfil `admin`. El sistema solo
 bloquea eliminarlo si sería el último admin activo.
 
+### ¿De dónde sale el catálogo de productos?
+
+Del Excel de productos que exportas de QVET. Se importa una vez, y
+después se puede **actualizar** con nuevos productos sin perder los que
+ya estaban.
+
+### ¿Qué diferencia hay entre "no catalogado" y "mal categorizado"?
+
+- **No catalogado**: el producto no está en el catálogo, no se sabe su
+  categoría.
+- **Mal categorizado**: el producto está en el catálogo pero en una
+  categoría que no aplica (ej. un producto VACUNA con IVA cuando las
+  vacunas son exentas).
+
+Ambos aparecen en la misma ventana de registro con distinto badge (🆕 vs 🏷️).
+
+### ¿Por qué me pide el PDF además del XML?
+
+Porque el XML puede agrupar varios productos en una sola línea (por
+ejemplo, un solo concepto de $700 cuando en realidad son dos productos
+de $500 y $200). El PDF siempre trae los productos separados, con sus
+importes individuales y sus tasas de impuesto. La app usa el PDF para
+los productos y el XML para los datos fiscales (RFC, folio, total).
+
+### ¿Qué pasa si el PDF no coincide con el XML?
+
+La app usa el **total del XML** (fuente fiscal) y valida que la suma de
+los productos del PDF coincida con el total de cada remisión. Si hay
+diferencias mayores a $0.02 por remisión, se avisa en consola y en el
+registro. Pero no bloquea el procesamiento.
+
 ---
 
 ## 17. Glosario
@@ -1059,15 +1269,16 @@ bloquea eliminarlo si sería el último admin activo.
 |---------|-------------|
 | QVET | Sistema de gestión veterinaria. |
 | CFDI | Comprobante Fiscal Digital por Internet. |
-| XML | Archivo del CFDI. |
-| PDF | Representación impresa del CFDI. |
+| XML | Archivo del CFDI (datos fiscales estructurados). |
+| PDF | Representación impresa del CFDI (con nombres de productos). |
 | UUID | Identificador único del CFDI. |
 | Folio Fiscal | Ver UUID. |
 | RFC | Registro Federal de Contribuyentes. |
 | IVA | Impuesto al Valor Agregado (16%). |
-| IEPS | Impuesto Especial sobre Producción y Servicios. |
+| IEPS | Impuesto Especial sobre Producción y Servicios (6% o 7% en los casos que maneja la app). |
 | Serie | Prefijo del folio. |
 | Folio | Número consecutivo de la factura. |
+| Remisión | Nota de venta que agrupa varios productos. Un CFDI puede incluir varias remisiones. |
 | PUE | Pago en Una Exhibición. |
 | PPD | Pago en Parcialidades o Diferido. |
 | FIEL | Firma Electrónica Avanzada (e.firma). |
@@ -1081,6 +1292,11 @@ bloquea eliminarlo si sería el último admin activo.
 | Perfil | Conjunto de módulos que puede ver un usuario. |
 | Sesión | Estado activo de un usuario tras iniciar sesión. |
 | Administrador | Usuario con acceso total a la app y su configuración. |
+| Catálogo | Lista de productos con su categoría. Se importa de QVET. |
+| Categoría | Clasificación de cada producto (U, HIGIENE, CLINICA, etc.). |
+| No catalogado | Producto que no está en el catálogo. |
+| Reclasificación | Cambiar la categoría de un producto. |
+| Remisión | Ver arriba. |
 
 ---
 
@@ -1096,5 +1312,5 @@ Si tienes problemas:
 
 **Fin del manual.**
 
-**Versión:** 2.2.0  
+**Versión:** 2.3.0  
 **Última actualización:** Octubre 2026
